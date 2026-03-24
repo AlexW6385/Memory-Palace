@@ -1,5 +1,6 @@
 /**
  * graph.js - Wraps ForceGraph for rendering the Knowledge Universe
+ * v2
  */
 export class UniverseGraph {
     constructor(containerId, onNodeClick) {
@@ -19,37 +20,50 @@ export class UniverseGraph {
             .linkSource("source_node_id")
             .linkTarget("target_node_id")
             .linkLabel("relation_type")
-            .linkColor(() => "rgba(255, 255, 255, 0.2)")
-            .linkWidth(1.5)
+            .linkWidth(1.2)
             .linkDirectionalParticles(2)
-            .linkDirectionalParticleSpeed(0.005)
+            .linkDirectionalParticleSpeed(d => 0.002 + (d.value || 0) * 0.001)
+            .linkDirectionalParticleWidth(1.5)
+            .linkColor(() => "rgba(255, 255, 255, 0.08)")
             .onNodeClick(node => {
                 this.centerAt(node);
                 if (this.onNodeClick) this.onNodeClick(node);
             })
             // Custom node rendering for glow effect
             .nodeCanvasObject((node, ctx, globalScale) => {
-                const label = node.title || "";
-                const fontSize = 14 / globalScale;
-                ctx.font = `${fontSize}px Sans-Serif`;
+                const label = node.title || "Untitled";
+                const fontSize = 12 / globalScale;
+                const r = Math.sqrt(node.val || 4) * 2;
+                const color = this.getColorForType(node.content_type);
                 
-                const r = Math.sqrt(Math.max(4, (node.topics?.length || 1) * 2)) * 2;
+                // Outer Glow
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = color;
                 
-                // Glow
-                ctx.shadowBlur = 10 * globalScale;
-                ctx.shadowColor = this.getColorForType(node.content_type);
+                // Draw Node Circle
                 ctx.beginPath();
                 ctx.arc(node.x, node.y, r, 0, 2 * Math.PI, false);
-                ctx.fillStyle = this.getColorForType(node.content_type);
+                ctx.fillStyle = color;
                 ctx.fill();
-                ctx.shadowBlur = 0; // reset
+                
+                // Reset shadow for text
+                ctx.shadowBlur = 0;
 
-                // Text
-                if (globalScale > 1.5) {
-                    ctx.textAlign = "center";
-                    ctx.textBaseline = "middle";
-                    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-                    ctx.fillText(label.length > 20 ? label.substring(0, 20) + "..." : label, node.x, node.y + r + fontSize);
+                // Label only when zoomed in
+                if (globalScale > 1.2) {
+                    ctx.font = `${fontSize}px 'Outfit', sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    
+                    // Simple text shadow for readability
+                    ctx.shadowBlur = 4;
+                    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                    
+                    ctx.fillStyle = '#FFFFFF';
+                    const displayLabel = label.length > 25 ? label.substring(0, 22) + '...' : label;
+                    ctx.fillText(displayLabel, node.x, node.y + r + fontSize + 2);
+                    
+                    ctx.shadowBlur = 0;
                 }
             });
 

@@ -3,9 +3,11 @@ Arq task definitions — the actual unit of work executed by workers.
 
 Each task is idempotent (uses IngestionTask.idempotency_key).
 Failure → DLQ (FailedTask table) after max retries.
-Each step logs its completion to task.last_completed_step for crash recovery.
+Task status is stored in Redis (key: task:{id}) so the API process
+can read it without in-process state sharing.
 """
 import asyncio
+import json
 from datetime import datetime
 
 from arq import ArqRedis
@@ -17,8 +19,25 @@ from shared.schemas.ingestion import IngestionTask, IngestionTaskStatus
 log = get_logger(__name__)
 settings = get_settings()
 
-# ── In-memory task store (replace with Redis hash or DB table in production) ──
-_task_store: dict[str, dict] = {}
+_TASK_TTL = 3600  # keep task status in Redis for 1 hour
+
+
+# ── Redis-backed task state (worker writes, API reads) ─────────────────────────
+
+async def _update_task(redis: ArqRedis, task_id: str, updates: dict) -> None:
+    key = f"task:{task_id}"
+    raw = await redis.get(key)
+    data: dict = json.loads(raw) if raw else {"task_id": task_id}
+    data.update(updates)
+    await redis.setex(key, _TASK_TTL, json.dumps(data, default=str))
+
+
+async def get_task_status_from_redis(task_id: str) -> dict | None:
+    """Read task status from Redis. Called by the API process."""
+    from universe.cache.redis import get_redis
+    r = get_redis()
+    raw = await r.get(f"task:{task_id}")
+    return json.loads(raw) if raw else None
 
 
 async def ingest_url_task(
@@ -35,6 +54,13 @@ async def ingest_url_task(
     At-least-once: function is idempotent via source_checksum and canonical_url uniqueness.
     """
     import uuid
+    from agent.events.publisher import (
+        publish_ingestion_progress,
+        publish_ingestion_completed,
+        publish_ingestion_failed,
+    )
+
+    redis: ArqRedis = ctx["redis"]
     task = IngestionTask(
         id=task_id or str(uuid.uuid4()),
         url=url,
@@ -43,29 +69,45 @@ async def ingest_url_task(
         triggered_by=triggered_by,
         parent_task_id=parent_node_id,
     )
-    _update_task(task.id, {"status": IngestionTaskStatus.ACQUIRING, "url": url})
+
+    async def _progress(step: str, step_index: int, detail: str = "") -> None:
+        await _update_task(redis, task.id, {"status": step, "step": step_index})
+        await publish_ingestion_progress(
+            task_id=task.id, url=url,
+            step=step, step_index=step_index, detail=detail,
+        )
+
+    await _update_task(redis, task.id, {
+        "status": IngestionTaskStatus.ACQUIRING,
+        "url": url,
+        "triggered_by": triggered_by,
+        "started_at": datetime.utcnow().isoformat(),
+    })
 
     try:
         # Step 1: Acquisition
+        await _progress("acquiring", 1, f"Fetching {url}")
         from agent.pipeline.acquisition import acquire
-        task.status = IngestionTaskStatus.ACQUIRING
         doc = await acquire(task)
         task.last_completed_step = "acquisition"
+        log.info("step_done", task_id=task.id, step="acquisition")
 
         # Step 2: Normalization
-        task.status = IngestionTaskStatus.NORMALIZING
-        _update_task(task.id, {"status": task.status})
+        await _progress("normalizing", 2)
         from agent.pipeline.normalization import normalize
         doc = normalize(doc)
         task.normalized_doc = doc
         task.last_completed_step = "normalization"
+        log.info("step_done", task_id=task.id, step="normalization")
 
         # Step 3: Understanding
-        task.status = IngestionTaskStatus.UNDERSTANDING
-        _update_task(task.id, {"status": task.status})
+        await _progress("understanding", 3)
         from agent.pipeline.understanding import understand
         understanding = await understand(doc)
         task.last_completed_step = "understanding"
+        log.info("step_done", task_id=task.id, step="understanding",
+                 content_type=understanding.get("content_type"),
+                 topics=understanding.get("topics"))
 
         # Compute embedding
         embedding = await _compute_embedding(
@@ -73,38 +115,38 @@ async def ingest_url_task(
         )
 
         # Step 4: Placement
-        task.status = IngestionTaskStatus.PLACING
-        _update_task(task.id, {"status": task.status})
+        await _progress("placing", 4)
         from agent.pipeline.placement import place
         placement = await place(doc, understanding, embedding)
         task.last_completed_step = "placement"
+        log.info("step_done", task_id=task.id, step="placement")
 
         # Step 5: Integration
-        task.status = IngestionTaskStatus.INTEGRATING
-        _update_task(task.id, {"status": task.status})
+        await _progress("integrating", 5)
         from agent.pipeline.integration import integrate
         result = await integrate(doc, understanding, placement, embedding, task.id)
         task.node_id = result["node_id"]
         task.last_completed_step = "integration"
+        log.info("step_done", task_id=task.id, step="integration",
+                 node_id=task.node_id, was_new=result["was_new"])
 
-        # Step 6: Expansion
+        # Step 6: Expansion (optional)
         if depth_remaining > 0 and triggered_by != "expansion":
-            task.status = IngestionTaskStatus.EXPANDING
-            _update_task(task.id, {"status": task.status})
+            await _progress("expanding", 6)
             from agent.pipeline.expansion import maybe_expand
             await maybe_expand(doc, result["node_id"], depth_remaining, triggered_by)
             task.last_completed_step = "expansion"
+            log.info("step_done", task_id=task.id, step="expansion")
 
         # Complete
-        task.status = IngestionTaskStatus.COMPLETED
-        _update_task(task.id, {
-            "status": task.status,
+        await _update_task(redis, task.id, {
+            "status": IngestionTaskStatus.COMPLETED,
             "node_id": task.node_id,
+            "was_duplicate": not result["was_new"],
+            "edges_created": result["edges_created"],
             "completed_at": datetime.utcnow().isoformat(),
         })
 
-        # Publish completion event
-        from agent.events.publisher import publish_ingestion_completed
         await publish_ingestion_completed(
             task_id=task.id,
             url=url,
@@ -117,21 +159,22 @@ async def ingest_url_task(
         return {"task_id": task.id, "node_id": task.node_id, "status": "completed"}
 
     except Exception as e:
-        log.error("ingestion_task_failed", task_id=task.id, url=url, error=str(e))
         attempt = ctx.get("job_try", 1)
-        _update_task(task.id, {
+        log.error("ingestion_task_failed", task_id=task.id, url=url,
+                  error=str(e), attempt=attempt,
+                  last_step=task.last_completed_step)
+
+        await _update_task(redis, task.id, {
             "status": IngestionTaskStatus.FAILED,
             "error": str(e),
             "attempt": attempt,
+            "failed_at": datetime.utcnow().isoformat(),
         })
 
-        # Move to DLQ after max retries
         if attempt >= settings.retry_max_attempts:
             await _send_to_dlq(task.id, url, str(e), attempt)
 
-        from agent.events.publisher import publish_ingestion_failed
         await publish_ingestion_failed(task.id, url, str(e), attempt)
-
         raise  # re-raise so Arq can retry with backoff
 
 
@@ -146,19 +189,7 @@ async def run_directed_exploration(
     Searches for URLs related to a topic and enqueues ingestion tasks.
     """
     log.info("directed_exploration_start", topic=topic, depth=depth)
-    # In a full implementation this would call a search API or LLM to find URLs
-    # For now, return a placeholder
     return {"status": "directed_exploration_enqueued", "topic": topic}
-
-
-def _update_task(task_id: str, updates: dict) -> None:
-    if task_id not in _task_store:
-        _task_store[task_id] = {"task_id": task_id}
-    _task_store[task_id].update(updates)
-
-
-def get_task_status(task_id: str) -> dict | None:
-    return _task_store.get(task_id)
 
 
 async def _compute_embedding(text: str) -> list[float] | None:
@@ -169,7 +200,7 @@ async def _compute_embedding(text: str) -> list[float] | None:
         client = AsyncOpenAI(api_key=settings.openai_api_key)
         resp = await client.embeddings.create(
             model=settings.embedding_model,
-            input=text[:8000],  # token limit
+            input=text[:8000],
         )
         return resp.data[0].embedding
     except Exception as e:
@@ -194,3 +225,9 @@ async def _send_to_dlq(task_id: str, url: str, error: str, attempt: int) -> None
         log.warning("task_sent_to_dlq", task_id=task_id)
     except Exception as e:
         log.error("dlq_write_failed", error=str(e))
+
+
+# Legacy sync shim — kept so existing imports don't break at module load
+def get_task_status(task_id: str) -> dict | None:
+    """Deprecated: use get_task_status_from_redis instead (async)."""
+    return None

@@ -62,7 +62,7 @@ async def _find_candidates(embedding: list[float]) -> list[dict]:
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.post(
-                f"http://{settings.postgres_host}:8000/search",  # internal service call
+                f"{settings.universe_api_url}/search",
                 params={"q": "__vector__", "mode": "vector", "limit": 20},
                 json={"embedding": embedding},
             )

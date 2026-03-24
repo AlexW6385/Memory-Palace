@@ -3,8 +3,6 @@ Redis Streams event publisher for the Agent service.
 Publishes typed events after each successful pipeline step.
 """
 import json
-from datetime import datetime
-
 import redis.asyncio as aioredis
 
 from shared.config import get_settings
@@ -14,6 +12,7 @@ from shared.events import (
     EdgeCreatedEvent,
     IngestionCompletedEvent,
     IngestionFailedEvent,
+    IngestionProgressEvent,
 )
 from shared.logging_config import get_logger
 
@@ -32,10 +31,18 @@ def _get_redis() -> aioredis.Redis:
 
 async def _publish(event_dict: dict) -> None:
     r = _get_redis()
-    # Redis Streams XADD — each field must be str
-    fields = {k: str(v) if not isinstance(v, str) else v
-              for k, v in event_dict.items()
-              if v is not None}
+    # Redis Streams XADD — all field values must be str.
+    # Lists/dicts are JSON-encoded so the frontend can parse them back.
+    fields: dict[str, str] = {}
+    for k, v in event_dict.items():
+        if v is None:
+            continue
+        if isinstance(v, (list, dict)):
+            fields[k] = json.dumps(v)
+        elif isinstance(v, bool):
+            fields[k] = str(v).lower()
+        else:
+            fields[k] = str(v)
     await r.xadd(settings.stream_name, fields, maxlen=10_000, approximate=True)
 
 
@@ -81,3 +88,21 @@ async def publish_ingestion_completed(task_id: str, url: str, node_id: str, edge
 async def publish_ingestion_failed(task_id: str, url: str, error: str, attempt: int) -> None:
     event = IngestionFailedEvent(task_id=task_id, url=url, error=error, attempt=attempt)
     await _publish(event.model_dump(mode="json"))
+
+
+async def publish_ingestion_progress(
+    task_id: str,
+    url: str,
+    step: str,
+    step_index: int,
+    detail: str = "",
+) -> None:
+    event = IngestionProgressEvent(
+        task_id=task_id,
+        url=url,
+        step=step,
+        step_index=step_index,
+        detail=detail,
+    )
+    await _publish(event.model_dump(mode="json"))
+    log.debug("progress_published", task_id=task_id, step=step, step_index=step_index)

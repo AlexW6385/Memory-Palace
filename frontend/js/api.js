@@ -1,5 +1,6 @@
 /**
  * api.js - API Client for Universe and Agent services
+ * v2
  */
 const API_BASE = window.location.origin;
 
@@ -52,7 +53,17 @@ export const api = {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text })
         });
-        if (!res.ok) throw new Error("Direct ingestion failed to start");
+        if (!res.ok) {
+            const body = await res.text().catch(() => "");
+            throw new Error(`Direct ingestion failed (${res.status}): ${body}`);
+        }
+        return res.json();
+    },
+
+    async getTaskStatus(taskId) {
+        const res = await fetch(`${API_BASE}/tasks/${taskId}`);
+        if (res.status === 404) return null;
+        if (!res.ok) throw new Error(`Task status fetch failed (${res.status})`);
         return res.json();
     },
 

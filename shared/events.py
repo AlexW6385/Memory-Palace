@@ -10,12 +10,13 @@ import uuid
 
 
 class EventType(StrEnum):
-    NODE_CREATED = "node.created"
-    NODE_UPDATED = "node.updated"
-    EDGE_CREATED = "edge.created"
-    EXPANSION_REQUESTED = "expansion.requested"
-    INGESTION_FAILED = "ingestion.failed"
-    INGESTION_COMPLETED = "ingestion.completed"
+    NODE_CREATED = "NODE_CREATED"
+    NODE_UPDATED = "NODE_UPDATED"
+    EDGE_CREATED = "EDGE_CREATED"
+    EXPANSION_REQUESTED = "EXPANSION_REQUESTED"
+    INGESTION_FAILED = "INGESTION_FAILED"
+    INGESTION_COMPLETED = "INGESTION_COMPLETED"
+    INGESTION_PROGRESS = "INGESTION_PROGRESS"
 
 
 class BaseEvent(BaseModel):
@@ -75,6 +76,16 @@ class IngestionCompletedEvent(BaseEvent):
     was_duplicate: bool = False
 
 
+class IngestionProgressEvent(BaseEvent):
+    event_type: EventType = EventType.INGESTION_PROGRESS
+    task_id: str
+    url: str
+    step: str          # e.g. "acquiring", "normalizing", "understanding", ...
+    step_index: int    # 1-based
+    total_steps: int = 6
+    detail: str = ""   # optional human-readable detail
+
+
 # discriminator union for deserialization
 AnyEvent = (
     NodeCreatedEvent
@@ -83,12 +94,32 @@ AnyEvent = (
     | ExpansionRequestedEvent
     | IngestionFailedEvent
     | IngestionCompletedEvent
+    | IngestionProgressEvent
 )
 
 
 def parse_event(data: dict[str, Any]) -> AnyEvent:
-    """Deserialize a raw dict from Redis Streams into a typed event."""
-    event_type = data.get("event_type")
+    """Deserialize a raw dict from Redis Streams into a typed event.
+
+    Redis Streams stores all values as strings. List/dict fields are stored as
+    JSON-encoded strings (see publisher._publish). We decode them here before
+    handing off to Pydantic so model_validate receives the correct types.
+    """
+    import json as _json
+
+    decoded: dict[str, Any] = {}
+    for k, v in data.items():
+        if isinstance(v, str):
+            try:
+                parsed = _json.loads(v)
+                if isinstance(parsed, (list, dict)):
+                    decoded[k] = parsed
+                    continue
+            except (_json.JSONDecodeError, ValueError):
+                pass
+        decoded[k] = v
+
+    event_type = decoded.get("event_type")
     _map = {
         EventType.NODE_CREATED: NodeCreatedEvent,
         EventType.NODE_UPDATED: NodeUpdatedEvent,
@@ -96,8 +127,9 @@ def parse_event(data: dict[str, Any]) -> AnyEvent:
         EventType.EXPANSION_REQUESTED: ExpansionRequestedEvent,
         EventType.INGESTION_FAILED: IngestionFailedEvent,
         EventType.INGESTION_COMPLETED: IngestionCompletedEvent,
+        EventType.INGESTION_PROGRESS: IngestionProgressEvent,
     }
     cls = _map.get(event_type)
     if cls is None:
         raise ValueError(f"Unknown event_type: {event_type}")
-    return cls.model_validate(data)
+    return cls.model_validate(decoded)

@@ -72,7 +72,9 @@ services:
         condition: service_healthy
     restart: unless-stopped
     # Start the custom Arq worker pool
-    command: poetry run arq agent.workers.pool.get_worker_settings
+    command: poetry run arq agent.workers.pool.WorkerSettings
+    healthcheck:
+      disable: true
 
   nginx:
     image: nginx:1.25-alpine

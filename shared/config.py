@@ -84,6 +84,9 @@ class Settings(BaseSettings):
     retry_max_attempts: int = 3
     retry_delays: list[int] = [5, 30, 300]  # seconds
 
+    # ── Internal service URLs (Docker service names) ──────────────────────
+    universe_api_url: str = "http://universe_api:8000"
+
     # ── App meta ─────────────────────────────────────────────────────────
     environment: str = "development"
     log_level: str = "INFO"

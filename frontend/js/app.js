@@ -43,48 +43,65 @@ class App {
     }
 
     bindForms() {
-        // URL Ingestion
-        document.getElementById("btn-ingest-url").addEventListener("click", async () => {
-            const url = document.getElementById("ingest-url").value;
-            const depth = parseInt(document.getElementById("url-depth").value, 10);
-            if (!url) return alert("Enter a URL");
-            
+        // Helper to handle button states
+        const withLoading = async (btnId, taskFn) => {
+            const btn = document.getElementById(btnId);
+            btn.classList.add("loading");
             try {
-                this.feed.addSystemMessage(`Submitting URL: ${url}`);
-                await api.ingestUrl(url, depth);
-                document.getElementById("ingest-url").value = "";
+                await taskFn();
             } catch (err) {
-                alert("Task failed: " + err.message);
+                this.feed.addSystemMessage(`Error: ${err.message}`, "error");
+                console.error(err);
+            } finally {
+                btn.classList.remove("loading");
             }
+        };
+
+        // URL Ingestion
+        document.getElementById("btn-ingest-url").addEventListener("click", () => {
+            withLoading("btn-ingest-url", async () => {
+                const url = document.getElementById("ingest-url").value.trim();
+                const depth = parseInt(document.getElementById("url-depth").value, 10);
+                if (!url) { this.feed.addSystemMessage("Please enter a URL.", "error"); return; }
+
+                this.feed.addSystemMessage(`Submitting URL: ${url}`);
+                const res = await api.ingestUrl(url, depth);
+                this.feed.addSystemMessage(
+                    `Enqueued · task <code>${(res.task_id || "").slice(0, 8)}</code> · watching for progress...`
+                );
+                document.getElementById("ingest-url").value = "";
+            });
         });
 
         // Direct Text Ingestion
-        document.getElementById("btn-ingest-text").addEventListener("click", async () => {
-            const text = document.getElementById("ingest-text").value;
-            if (!text) return alert("Enter some text");
-            
-            try {
-                this.feed.addSystemMessage(`Submitting direct text...`);
-                await api.ingestDirectText(text);
+        document.getElementById("btn-ingest-text").addEventListener("click", () => {
+            withLoading("btn-ingest-text", async () => {
+                const text = document.getElementById("ingest-text").value.trim();
+                if (!text) { this.feed.addSystemMessage("Please enter some text.", "error"); return; }
+
+                this.feed.addSystemMessage(`Submitting direct text (${text.length} chars)...`);
+                const res = await api.ingestDirectText(text);
+                this.feed.addSystemMessage(
+                    `Enqueued · task <code>${(res.task_id || "").slice(0, 8)}</code> · watching for progress...`
+                );
                 document.getElementById("ingest-text").value = "";
-            } catch (err) {
-                alert("Task failed: " + err.message);
-            }
+            });
         });
 
         // Topic Exploration
-        document.getElementById("btn-explore-topic").addEventListener("click", async () => {
-            const topic = document.getElementById("explore-topic").value;
-            const depth = parseInt(document.getElementById("topic-depth").value, 10);
-            if (!topic) return alert("Enter a topic");
-            
-            try {
-                this.feed.addSystemMessage(`Agent launched for topic: ${topic}`);
-                await api.exploreTopic(topic, depth);
+        document.getElementById("btn-explore-topic").addEventListener("click", () => {
+            withLoading("btn-explore-topic", async () => {
+                const topic = document.getElementById("explore-topic").value.trim();
+                const depth = parseInt(document.getElementById("topic-depth").value, 10);
+                if (!topic) { this.feed.addSystemMessage("Please enter a topic.", "error"); return; }
+
+                this.feed.addSystemMessage(`Launching agent for topic: "${topic}"`);
+                const res = await api.exploreTopic(topic, depth);
+                this.feed.addSystemMessage(
+                    `Exploration enqueued · task <code>${(res.task_id || "").slice(0, 8)}</code>`
+                );
                 document.getElementById("explore-topic").value = "";
-            } catch (err) {
-                alert("Task failed: " + err.message);
-            }
+            });
         });
     }
 
@@ -265,6 +282,4 @@ class App {
 }
 
 // Bootstrap
-document.addEventListener("DOMContentLoaded", () => {
-    window.app = new App();
-});
+window.app = new App();

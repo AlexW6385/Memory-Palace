@@ -15,7 +15,6 @@ def configure_logging(log_level: str = "INFO", service_name: str = "universe") -
             structlog.contextvars.merge_contextvars,
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso"),
-            structlog.stdlib.add_logger_name,
             structlog.processors.StackInfoRenderer(),
             structlog.processors.ExceptionRenderer(),
             structlog.processors.JSONRenderer(),

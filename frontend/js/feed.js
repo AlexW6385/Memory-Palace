@@ -1,5 +1,6 @@
 /**
  * feed.js - WebSocket event feed handler
+ * v2
  */
 export class EventFeed {
     constructor(containerId) {
@@ -10,30 +11,43 @@ export class EventFeed {
     }
 
     connect() {
+        console.log("EventFeed: Starting connection and establishing handshake...");
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        // Connect to the Nginx /ws route which proxies to Universe
         const wsUrl = `${protocol}//${window.location.host}/ws`;
         
-        this.ws = new WebSocket(wsUrl);
-        
-        this.ws.onopen = () => {
-            this.addSystemMessage("Connected to Knowledge Universe stream.");
-        };
-        
-        this.ws.onmessage = (event) => {
-            try {
+        try {
+            this.ws = new WebSocket(wsUrl);
+            console.log("EventFeed: WebSocket instance created", wsUrl);
+
+            this.ws.onopen = () => {
+                console.log("EventFeed: Connection opened successfully");
+                const statusEl = document.getElementById("ws-status");
+                if (statusEl) statusEl.remove();
+                this.addSystemMessage("Universe synchronization active. System ready.");
+            };
+            
+            this.ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                if (data.type === "ping") return; // Keepalive
+                if (data.type === "ping") return;
+                if (data.type === "info") {
+                    this.addSystemMessage(data.message);
+                    return;
+                }
                 this.handleEvent(data);
-            } catch (err) {
-                console.error("Feed parse error", err);
-            }
-        };
-        
-        this.ws.onclose = () => {
-            this.addSystemMessage("Connection lost. Reconnecting in 5s...", "error");
-            setTimeout(() => this.connect(), 5000);
-        };
+            };
+            
+            this.ws.onclose = (e) => {
+                console.warn("EventFeed: Connection closed", e.code, e.reason);
+                this.addSystemMessage("Connection lost. Reconnecting in 5s...", "error");
+                setTimeout(() => this.connect(), 5000);
+            };
+
+            this.ws.onerror = (err) => {
+                console.error("EventFeed: WebSocket error detected", err);
+            };
+        } catch (err) {
+            console.error("EventFeed: Failed to create WebSocket", err);
+        }
     }
 
     onEvent(callback) {
@@ -44,30 +58,41 @@ export class EventFeed {
         const type = data.event_type;
         if (!type) return;
 
+        // Parse JSON-encoded list fields that come back as strings from Redis Streams
+        const topics = (() => { try { return JSON.parse(data.topics || "[]"); } catch { return []; } })();
+
         let title = "Unknown Event";
         let message = "";
-        
+        let style = "";
+
         if (type === "NODE_CREATED") {
             title = "New Node Discovered";
-            message = `[${data.content_type}] ${data.title}`;
+            const topicStr = topics.length ? ` · ${topics.slice(0, 3).join(", ")}` : "";
+            message = `[${data.content_type}] ${data.title}${topicStr}`;
         } else if (type === "EDGE_CREATED") {
             title = "Knowledge Link Formed";
-            message = `${data.relation_type.toUpperCase()} connection established.`;
+            message = `${(data.relation_type || "").toUpperCase()} connection established.`;
         } else if (type === "INGESTION_COMPLETED") {
-            title = data.was_duplicate ? "Node Updated" : "Ingestion Complete";
-            message = `Added ${data.edges_created} new edges from ${data.url}`;
+            title = data.was_duplicate === "true" ? "Node Updated" : "Ingestion Complete";
+            message = `${data.edges_created} new edge(s) · task <code>${(data.task_id || "").slice(0, 8)}</code>`;
         } else if (type === "INGESTION_FAILED") {
             title = "Ingestion Failed";
-            message = `Error on ${data.url}`;
+            style = "error";
+            message = `<b>${data.error || "unknown error"}</b><br><small>${data.url}</small>`;
+        } else if (type === "INGESTION_PROGRESS") {
+            title = `Step ${data.step_index}/6: ${data.step}`;
+            style = "progress";
+            const detail = data.detail ? ` — ${data.detail}` : "";
+            message = `task <code>${(data.task_id || "").slice(0, 8)}</code>${detail}`;
         } else {
-            return; // Ignore other internal events
+            return; // Ignore unknown internal events
         }
 
         const item = document.createElement("div");
-        item.className = `feed-item ${type.toLowerCase()}`;
-        
+        item.className = `feed-item ${type.toLowerCase()} ${style}`.trim();
+
         const timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-        
+
         item.innerHTML = `
             <span class="feed-time">${timeStr}</span>
             <span class="feed-title">${title}</span>

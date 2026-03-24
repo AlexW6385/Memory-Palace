@@ -41,23 +41,36 @@ async def close_arq_pool() -> None:
         _pool = None
 
 
-def get_worker_settings():
+from agent.workers.tasks import ingest_url_task, run_directed_exploration
+
+
+async def startup(ctx: dict) -> None:
+    """Worker startup hook: initialise skill registry and logging."""
+    from shared.logging_config import configure_logging
+    configure_logging(settings.log_level, service_name="agent_worker")
+    from agent.skills.registry import setup_registry
+    setup_registry(settings)
+    log.info("worker_startup_complete")
+
+
+async def shutdown(ctx: dict) -> None:
+    log.info("worker_shutdown")
+
+
+class WorkerSettings:
     """
-    Return Arq WorkerSettings class for use with `arq worker agent.workers.pool.WorkerSettings`.
+    Arq WorkerSettings class for use with `arq agent.workers.pool.WorkerSettings`.
     """
-    from agent.workers.tasks import ingest_url_task, run_directed_exploration
+    functions = [ingest_url_task, run_directed_exploration]
+    on_startup = startup
+    on_shutdown = shutdown
+    redis_settings = _redis_settings()
+    max_jobs = settings.worker_max_jobs
+    job_timeout = 600       # 10 min max per job
+    keep_result = 3600      # keep results for 1 hour
+    retry_jobs = True
+    max_tries = settings.retry_max_attempts
+    health_check_interval = 30  # heartbeat every 30s
 
-    class WorkerSettings:
-        functions = [ingest_url_task, run_directed_exploration]
-        redis_settings = _redis_settings()
-        max_jobs = settings.worker_max_jobs
-        job_timeout = 600       # 10 min max per job
-        keep_result = 3600      # keep results for 1 hour
-        retry_jobs = True
-        max_tries = settings.retry_max_attempts
-        health_check_interval = 30  # heartbeat every 30s
-
-        # Queues: ingestion (normal priority) and expansion (low priority)
-        queue_read_limit = 100
-
-    return WorkerSettings
+    # Queues: ingestion (normal priority) and expansion (low priority)
+    queue_read_limit = 100

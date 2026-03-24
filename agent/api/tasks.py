@@ -7,7 +7,7 @@ from pydantic import BaseModel, HttpUrl
 
 from shared.logging_config import get_logger
 from agent.workers.pool import get_arq_pool
-from agent.workers.tasks import get_task_status
+from agent.workers.tasks import get_task_status_from_redis
 from shared.config import get_settings
 
 log = get_logger(__name__)
@@ -68,11 +68,11 @@ async def submit_direct_ingestion(req: DirectIngestRequest):
     """
     from universe.cache.redis import get_redis
     pool = await get_arq_pool()
-    r = await get_redis()
-    
+    r = get_redis()   # sync factory — returns aioredis.Redis, no await needed
+
     task_id = str(uuid.uuid4())
     virtual_url = f"text://{task_id}"
-    
+
     # Store text in Redis temporarily for the skill to pick up (expires in 10 mins)
     await r.setex(virtual_url, 600, req.text)
 
@@ -95,9 +95,9 @@ async def submit_direct_ingestion(req: DirectIngestRequest):
 @router.get("/{task_id}")
 async def get_task(task_id: str):
     """
-    Check the current status of an ingestion task.
+    Check the current status of an ingestion task (reads from Redis).
     """
-    status = get_task_status(task_id)
+    status = await get_task_status_from_redis(task_id)
     if status is None:
         raise HTTPException(status_code=404, detail="Task not found")
     return status

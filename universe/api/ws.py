@@ -56,10 +56,18 @@ manager = ConnectionManager()
 async def websocket_endpoint(ws: WebSocket):
     await manager.connect(ws)
     try:
+        # Immediate welcome to confirm handshake
+        await ws.send_json({"type": "info", "message": "Connected to stream"})
+        
         while True:
-            # Keep connection alive; events arrive via manager.broadcast()
-            await asyncio.sleep(30)
-            await ws.send_json({"type": "ping"})
+            # Wait for client message or timeout for ping
+            try:
+                # We don't expect messages, but receiving is required to detect disconnects
+                # across all proxy layers.
+                await asyncio.wait_for(ws.receive_text(), timeout=20.0)
+            except asyncio.TimeoutError:
+                # Send heartbeat
+                await ws.send_json({"type": "ping"})
     except WebSocketDisconnect:
         manager.disconnect(ws)
     except Exception as e:

@@ -1,16 +1,16 @@
 :root {
-    --bg-color: #05050A;
-    --text-main: #E2E8F0;
+    --bg-color: #06070D;
+    --text-main: #F1F5F9;
     --text-muted: #94A3B8;
     
-    --accent-cyan: #06B6D4;
-    --accent-cyan-glow: rgba(6, 182, 212, 0.4);
-    --accent-purple: #8B5CF6;
-    --accent-purple-glow: rgba(139, 92, 246, 0.4);
+    --accent-cyan: #22D3EE;
+    --accent-cyan-glow: rgba(34, 211, 238, 0.4);
+    --accent-purple: #A78BFA;
+    --accent-purple-glow: rgba(167, 139, 250, 0.4);
     
-    --glass-bg: rgba(20, 22, 35, 0.65);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    --glass-bg: rgba(15, 17, 26, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.05);
+    --glass-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
     
     --font-main: 'Outfit', -apple-system, sans-serif;
 }
@@ -38,40 +38,46 @@ body {
     width: 100vw;
     height: 100vh;
     z-index: 1;
+    cursor: grab;
 }
 
 .bg-glow {
     position: absolute;
     border-radius: 50%;
-    filter: blur(120px);
+    filter: blur(150px);
     z-index: 0;
-    opacity: 0.5;
+    opacity: 0.4;
     pointer-events: none;
 }
 .glow-blue {
-    top: -10%;
-    left: 20%;
+    top: 5%;
+    left: 15%;
     width: 60vw;
     height: 60vh;
-    background: radial-gradient(circle, rgba(6,182,212,0.15) 0%, rgba(0,0,0,0) 70%);
+    background: radial-gradient(circle, rgba(34, 211, 238, 0.2) 0%, rgba(0,0,0,0) 70%);
 }
 .glow-purple {
-    bottom: -10%;
-    right: 10%;
+    bottom: 5%;
+    right: 5%;
     width: 50vw;
     height: 50vh;
-    background: radial-gradient(circle, rgba(139,92,246,0.15) 0%, rgba(0,0,0,0) 70%);
+    background: radial-gradient(circle, rgba(167, 139, 250, 0.2) 0%, rgba(0,0,0,0) 70%);
 }
 
 /* Glassmorphism Panel Utilities */
 .glass-panel {
     background: var(--glass-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
     border: 1px solid var(--glass-border);
-    border-radius: 16px;
+    border-radius: 20px;
     box-shadow: var(--glass-shadow);
     z-index: 10;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.glass-panel:hover {
+    border-color: rgba(34, 211, 238, 0.2);
+    box-shadow: 0 10px 40px rgba(34, 211, 238, 0.1);
 }
 
 h1, h2, h3 {
@@ -116,15 +122,43 @@ input:focus, textarea:focus {
     font-family: var(--font-main);
 }
 .primary-btn {
-    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+    background: linear-gradient(135deg, #06B6D4 0%, #8B5CF6 100%);
     color: white;
-    box-shadow: 0 4px 12px var(--accent-purple-glow);
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 .primary-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px var(--accent-purple-glow);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
     filter: brightness(1.1);
 }
+.primary-btn:active {
+    transform: translateY(1px);
+}
+.btn.loading {
+    opacity: 0.7;
+    pointer-events: none;
+    position: relative;
+    color: transparent !important;
+}
+.btn.loading::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-top: -8px;
+    margin-left: -8px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 .secondary-btn {
     background: rgba(255,255,255,0.05);
     color: var(--text-main);
@@ -160,6 +194,7 @@ input:focus, textarea:focus {
     font-size: 1.2rem;
     background: linear-gradient(90deg, #fff, var(--text-muted));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 .search-box {
@@ -374,7 +409,9 @@ input:focus, textarea:focus {
 .feed-item.node_created { border-left-color: var(--accent-cyan); }
 .feed-item.edge_created { border-left-color: var(--accent-purple); }
 .feed-item.ingestion_completed { border-left-color: #10B981; }
-.feed-item.ingestion_failed { border-left-color: #EF4444; }
+.feed-item.ingestion_failed, .feed-item.error { border-left-color: #EF4444; }
+.feed-item.ingestion_progress, .feed-item.progress { border-left-color: #F59E0B; opacity: 0.85; }
+.feed-item.sys-msg.error { border-left-color: #EF4444; }
 
 .feed-time {
     font-size: 0.7rem;

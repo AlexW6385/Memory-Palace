@@ -74,7 +74,12 @@ class BaseSkill(ABC):
         """Check if this skill supports the given URL."""
         from urllib.parse import urlparse
         try:
-            host = urlparse(url).netloc.lower()
+            parsed = urlparse(url)
+            # Check scheme (e.g., text://)
+            if any(p.lower().startswith(f"{parsed.scheme}://") for p in cls.source_patterns):
+                return True
+            # Check hostname (e.g., wikipedia.org)
+            host = parsed.netloc.lower()
             return any(p.lower() in host for p in cls.source_patterns)
         except Exception:
             return False
