@@ -219,6 +219,51 @@
       "source": "softdev/docker-container",
       "target": "cs/process-thread",
       "relation": "隔离的进程"
+    },
+    {
+      "source": "hegel/true-infinite",
+      "target": "math/sequence-limit",
+      "relation": "对照数学极限"
+    },
+    {
+      "source": "hegel/identity-contradiction",
+      "target": "math/proof-by-contradiction",
+      "relation": "矛盾的两种用法"
+    },
+    {
+      "source": "hegel/syllogism",
+      "target": "math/implication",
+      "relation": "对比形式推理"
+    },
+    {
+      "source": "hegel/judgment",
+      "target": "math/propositional-logic",
+      "relation": "对比形式命题"
+    },
+    {
+      "source": "hegel/measure",
+      "target": "llm-agents/scaling-laws",
+      "relation": "对照量变质变"
+    },
+    {
+      "source": "hegel/essence-reflection",
+      "target": "llm-agents/reflection",
+      "relation": "两种反思"
+    },
+    {
+      "source": "hegel/concept",
+      "target": "cs/type-system",
+      "relation": "类比类型与实例"
+    },
+    {
+      "source": "hegel/aufhebung",
+      "target": "softdev/refactoring",
+      "relation": "类比保留与提升"
+    },
+    {
+      "source": "hegel/minerva-owl",
+      "target": "softdev/postmortem",
+      "relation": "类比事后理解"
     }
   ]
 }
