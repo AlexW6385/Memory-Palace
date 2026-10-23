@@ -4,6 +4,8 @@
 > architecture for each; a deterministic layout engine turns them into a walkable
 > 3D world you browse in the browser. You remember things by where they stand.
 
+**在线浏览：<https://alexw6385.github.io/Agent-assisted-Knowledge-Universe/>**（手机、电脑都可以）
+
 把一个个知识体系建成一座可以在浏览器里漫游的三维宫殿。LLM 负责“设计”：拆分区、展厅、展品，写讲解和记忆画面，
 并为每个体系挑一种建筑形式；布局引擎负责“施工”：把语义结构确定性地变成坐标、可行走的地面和导览路线。
 访客只需要走一走、看一看。
@@ -27,6 +29,13 @@ python -m palace serve          # 打开 http://127.0.0.1:8000
 ```
 
 只想看看的话，任何静态服务器都行：`python -m http.server -d web`。
+
+浏览和建造是分开的两部分：
+
+- **浏览**只需要 `web/` 下的静态文件（`world.json` 已包含全部内容和布局），所以可以放在 GitHub Pages 这类静态托管上。
+  每次推送到 `master`，`.github/workflows/pages.yml` 会跑测试、重新布局，再把 `web/` 发布出去。
+- **建造**（让 LLM 写新体系）需要 Python 和 API key，在本地用 `palace generate` 或 `palace serve` 完成，
+  提交生成的 `content/` 后推送，线上页面就会更新。静态托管上没有生成接口，页面会自动隐藏「建一个新区域」的表单。
 
 **操作**：手机上左下摇杆走路、拖动屏幕转头、点展品看卡片；电脑上 W A S D 走、拖动鼠标转头、Shift 奔跑。
 「导览」会自动沿路线走过一个体系的全部展品，在每件前停下展示卡片；「目录」可以搜索和跳转；「地图」点哪去哪。
