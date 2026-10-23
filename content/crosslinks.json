@@ -1,0 +1,224 @@
+{
+  "links": [
+    {
+      "source": "cs/twos-complement",
+      "target": "math/ring",
+      "relation": "模2ⁿ整数环"
+    },
+    {
+      "source": "cs/logic-gates",
+      "target": "math/propositional-logic",
+      "relation": "电路实现"
+    },
+    {
+      "source": "cs/big-o",
+      "target": "math/sequence-limit",
+      "relation": "建立在极限上"
+    },
+    {
+      "source": "cs/graph-traversal",
+      "target": "math/handshake-lemma",
+      "relation": "图论基础"
+    },
+    {
+      "source": "cs/bst-balanced",
+      "target": "math/trees",
+      "relation": "树的性质"
+    },
+    {
+      "source": "cs/divide-and-conquer",
+      "target": "math/recurrence-relation",
+      "relation": "复杂度递推"
+    },
+    {
+      "source": "cs/dynamic-programming",
+      "target": "math/recurrence-relation",
+      "relation": "按递推求解"
+    },
+    {
+      "source": "cs/halting-problem",
+      "target": "math/cantor-diagonal",
+      "relation": "同为对角线法"
+    },
+    {
+      "source": "cs/turing-machine",
+      "target": "math/countable-sets",
+      "relation": "程序可数"
+    },
+    {
+      "source": "cs/hash-table",
+      "target": "math/pigeonhole",
+      "relation": "冲突不可避免"
+    },
+    {
+      "source": "cs/floating-point",
+      "target": "math/completeness-axiom",
+      "relation": "实数的近似"
+    },
+    {
+      "source": "cs/sorting",
+      "target": "math/expectation",
+      "relation": "期望复杂度"
+    },
+    {
+      "source": "llm-agents/gradient-descent",
+      "target": "math/derivative",
+      "relation": "依赖导数"
+    },
+    {
+      "source": "llm-agents/backpropagation",
+      "target": "math/derivative",
+      "relation": "链式法则"
+    },
+    {
+      "source": "llm-agents/word-embedding",
+      "target": "math/vector-space",
+      "relation": "向量空间"
+    },
+    {
+      "source": "llm-agents/cosine-similarity",
+      "target": "math/inner-product",
+      "relation": "归一化内积"
+    },
+    {
+      "source": "llm-agents/self-attention",
+      "target": "math/inner-product",
+      "relation": "点积打分"
+    },
+    {
+      "source": "llm-agents/softmax",
+      "target": "math/random-variable",
+      "relation": "得到分布"
+    },
+    {
+      "source": "llm-agents/loss-function",
+      "target": "math/maximum-likelihood",
+      "relation": "交叉熵即MLE"
+    },
+    {
+      "source": "llm-agents/lora",
+      "target": "math/rank-nullity",
+      "relation": "低秩矩阵"
+    },
+    {
+      "source": "llm-agents/temperature",
+      "target": "math/random-variable",
+      "relation": "改变分布形状"
+    },
+    {
+      "source": "llm-agents/kv-cache",
+      "target": "cs/cache",
+      "relation": "缓存思想"
+    },
+    {
+      "source": "llm-agents/vector-index",
+      "target": "cs/graph-traversal",
+      "relation": "在图上搜索"
+    },
+    {
+      "source": "llm-agents/greedy-beam-search",
+      "target": "cs/greedy",
+      "relation": "贪心策略"
+    },
+    {
+      "source": "llm-agents/bpe",
+      "target": "cs/lexical-analysis",
+      "relation": "对比分词"
+    },
+    {
+      "source": "llm-agents/function-calling",
+      "target": "cs/kernel-syscall",
+      "relation": "类比系统调用"
+    },
+    {
+      "source": "llm-agents/long-term-memory",
+      "target": "cs/memory-hierarchy",
+      "relation": "类比存储层次"
+    },
+    {
+      "source": "llm-agents/self-attention",
+      "target": "cs/big-o",
+      "relation": "O(n²)代价"
+    },
+    {
+      "source": "llm-agents/quantization",
+      "target": "cs/floating-point",
+      "relation": "降低数值精度"
+    },
+    {
+      "source": "llm-agents/speculative-decoding",
+      "target": "cs/pipeline-hazards",
+      "relation": "类比分支预测"
+    },
+    {
+      "source": "llm-agents/agent-evaluation",
+      "target": "softdev/test-pyramid",
+      "relation": "类比测试"
+    },
+    {
+      "source": "llm-agents/function-calling",
+      "target": "softdev/rest-resources",
+      "relation": "调用API"
+    },
+    {
+      "source": "llm-agents/least-privilege",
+      "target": "softdev/feature-flags",
+      "relation": "限制行为"
+    },
+    {
+      "source": "softdev/cache-aside",
+      "target": "cs/cache",
+      "relation": "缓存思想"
+    },
+    {
+      "source": "softdev/b-plus-tree-index",
+      "target": "cs/bst-balanced",
+      "relation": "多路平衡树"
+    },
+    {
+      "source": "softdev/optimistic-pessimistic-lock",
+      "target": "cs/mutex",
+      "relation": "锁机制"
+    },
+    {
+      "source": "softdev/optimistic-pessimistic-lock",
+      "target": "cs/deadlock",
+      "relation": "可能死锁"
+    },
+    {
+      "source": "softdev/consistent-hashing",
+      "target": "cs/hash-table",
+      "relation": "哈希的扩展"
+    },
+    {
+      "source": "softdev/rest-resources",
+      "target": "cs/http",
+      "relation": "建立在HTTP上"
+    },
+    {
+      "source": "softdev/http-status-codes",
+      "target": "cs/http",
+      "relation": "HTTP语义"
+    },
+    {
+      "source": "softdev/timeout-retry",
+      "target": "cs/tcp-reliability",
+      "relation": "同靠重传"
+    },
+    {
+      "source": "softdev/rate-limiting",
+      "target": "cs/tcp-congestion",
+      "relation": "类比拥塞控制"
+    },
+    {
+      "source": "softdev/distributed-tracing",
+      "target": "cs/call-stack",
+      "relation": "跨服务调用栈"
+    },
+    {
+      "source": "softdev/docker-container",
+      "target": "cs/process-thread",
+      "relation": "隔离的进程"
+    }
+  ]
+}
