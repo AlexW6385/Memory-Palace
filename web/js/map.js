@@ -120,12 +120,14 @@ export class MapView {
     const r = this.canvas.getBoundingClientRect();
     const wx = this.cx + (clientX - r.left - r.width / 2) / this.k;
     const wz = this.cz + (clientY - r.top - r.height / 2) / this.k;
-    let best = null, bestD = Math.max(1.6, 12 / this.k);
-    for (const [ref, ex] of Object.entries(this.world.exhibits)) {
-      const d = Math.hypot(ex.pos[0] - wx, ex.pos[2] - wz);
-      if (d < bestD) { bestD = d; best = ref; }
+    // a click near a room's loci goes to that room's entrance; anywhere else, to that spot
+    let best = null, bestD = Math.max(3, 14 / this.k);
+    for (const b of this.world.buildings) for (const w of b.wings) for (const r of w.rooms) for (const id of r.loci) {
+      const l = this.world.loci[id];
+      const d = Math.hypot(l.pos[0] - wx, l.pos[2] - wz);
+      if (d < bestD) { bestD = d; best = r; }
     }
-    if (best) this.h.go(best);
+    if (best) this.h.goRoom(best);
     else this.h.goPoint(wx, wz);
   }
 
@@ -151,7 +153,7 @@ export class MapView {
     ctx.fillRect(0, 0, W, H);
     // plots
     for (const p of this.world.plots) {
-      const sys = p.system && this.world.systems.find((s) => s.id === p.system);
+      const sys = p.building && this.world.buildings.find((s) => s.id === p.building);
       ctx.fillStyle = sys ? (night ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.22)") : "rgba(0,0,0,0.04)";
       ctx.fillRect(X(p.center[0] - p.half), Z(p.center[1] - p.half), p.half * 2 * k, p.half * 2 * k);
       if (sys) {
@@ -195,33 +197,19 @@ export class MapView {
     for (const w of S.waters) { ctx.fillStyle = w.c; poly(w.pts); ctx.fill(); }
     ctx.fillStyle = night ? "rgba(230,220,200,0.55)" : "rgba(40,36,30,0.55)";
     for (const w of S.walls) { poly(w.pts); ctx.fill(); }
-    // stages
-    const visited = this.h.visited();
-    const sysColor = Object.fromEntries(this.world.systems.map((s) => [s.id, s.color]));
-    const rad = Math.max(2.2, 1.35 * k);
-    for (const [ref, ex] of Object.entries(this.world.exhibits)) {
-      const x = X(ex.pos[0]), z = Z(ex.pos[2]);
+    // loci
+    const colorOf = Object.fromEntries(this.world.buildings.map((b) => [b.id, b.color]));
+    const rad = Math.max(1.8, 1.35 * k);
+    for (const l of Object.values(this.world.loci)) {
+      const x = X(l.pos[0]), z = Z(l.pos[2]);
       if (x < -20 || z < -20 || x > W + 20 || z > H + 20) continue;
       ctx.beginPath();
       ctx.arc(x, z, rad, 0, Math.PI * 2);
-      ctx.fillStyle = sysColor[ex.system];
+      ctx.fillStyle = colorOf[l.building];
       ctx.fill();
-      ctx.lineWidth = ex.locus % 5 === 0 ? 2.5 : 1.2;
-      ctx.strokeStyle = ex.locus % 5 === 0 ? "#e2b552" : "rgba(255,255,255,0.85)";
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
       ctx.stroke();
-      if (visited.has(ref)) {
-        ctx.beginPath();
-        ctx.arc(x, z, rad * 0.42, 0, Math.PI * 2);
-        ctx.fillStyle = "#fff";
-        ctx.fill();
-      }
-      if (k > 5) {
-        ctx.fillStyle = "#fff";
-        ctx.font = `600 ${Math.min(13, rad)}px "IBM Plex Sans", system-ui, sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(String(ex.locus), x, z + 0.5);
-      }
     }
     // labels
     ctx.textAlign = "center";
@@ -240,7 +228,7 @@ export class MapView {
       ctx.fillStyle = fg;
       ctx.fillText(text, x, z);
     };
-    for (const s of this.world.systems) {
+    for (const s of this.world.buildings) {
       const p = this.world.plots[s.plot];
       if (k < 3.2) label(tr(s.title), X(p.center[0]), Z(p.center[1]) - Math.min(40, p.half * k * 0.6), k < 1 ? 13 : 16, 700);
       if (k >= 1.6) for (const w of s.wings) {
@@ -248,7 +236,6 @@ export class MapView {
         else for (const r of w.rooms) label(tr(r.title), X(r.anchor[0]), Z(r.anchor[2]), 12, 600);
       }
     }
-    if (k < 3.2) label(tr(this.world.title), X(0), Z(0), 15, 700);
     // the visitor
     const pl = this.h.player();
     const px = X(pl.x), pz = Z(pl.z);

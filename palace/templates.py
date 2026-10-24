@@ -1,7 +1,7 @@
-"""Architecture templates: each lays out one knowledge system inside a plot.
+"""Architecture templates: each lays out one building inside a plot.
 
-Every template strings the system's rooms (themed through-halls, see
-halls.py) along one walking route, so the route order is the learning order.
+Every template strings the building's rooms (themed through-halls, see
+halls.py) along one walking route.
 Templates differ in the shape of that route and what marks a wing:
 
   spiral    a ramp winding up a tower; stages on both sides of the ramp
@@ -20,7 +20,7 @@ import math
 from palace.geometry import look_yaw, polar, shade
 from palace.halls import STEP, VIEW_DIST, Layout, Placement, hall, hall_length, style_of
 from palace.scene import LocalScene
-from palace.schema import KnowledgeSystem
+from palace.schema import Building
 
 PLOT_HALF = 115.0
 HALL_SPAN = 12.0          # hall width including walls and a little margin
@@ -33,7 +33,7 @@ class LayoutOverflow(Exception):
 
 
 class Palette:
-    def __init__(self, system: KnowledgeSystem):
+    def __init__(self, system: Building):
         self.base = system.color
         self.n = len(system.wings)
 
@@ -58,7 +58,7 @@ def _wing_marker(ls: LocalScene, x: float, z: float, yaw: float, wing, i: int, p
 
 # ── avenue ───────────────────────────────────────────────────────────────────
 
-def avenue(system: KnowledgeSystem, ls: LocalScene, pal: Palette) -> Layout:
+def avenue(system: Building, ls: LocalScene, pal: Palette) -> Layout:
     out = Layout(start=(0.0, 0.0, -PLOT_HALF + 4))
     legs = [((-62.0, -96.0), (-62.0, 98.0)), ((-46.0, 106.0), (46.0, 106.0)), ((62.0, 98.0), (62.0, -96.0))]
     # street
@@ -94,7 +94,7 @@ def avenue(system: KnowledgeSystem, ls: LocalScene, pal: Palette) -> Layout:
                 color=pal.wing(wi))
         out.wings[wing.id] = (gx, 0.0, gz)
         for room in wing.rooms:
-            L = hall_length(len(room.exhibits))
+            L = hall_length(room.loci)
             cx, cz, yaw = take(L + 3.0)
             hall(ls, room, cx, cz, yaw, out, sign_sub=wing.title.model_dump(), accent=pal.wing(wi))
     return out
@@ -102,7 +102,7 @@ def avenue(system: KnowledgeSystem, ls: LocalScene, pal: Palette) -> Layout:
 
 # ── city ─────────────────────────────────────────────────────────────────────
 
-def city(system: KnowledgeSystem, ls: LocalScene, pal: Palette) -> Layout:
+def city(system: Building, ls: LocalScene, pal: Palette) -> Layout:
     out = Layout(start=(0.0, 0.0, -PLOT_HALF + 4))
     n = len(system.wings)
     ls.strip(0, -PLOT_HALF, 0, PLOT_HALF - 8, 9.0, PATH)
@@ -112,7 +112,7 @@ def city(system: KnowledgeSystem, ls: LocalScene, pal: Palette) -> Layout:
         side = -1 if wi % 2 == 0 else 1
         k = wi // 2
         lane_z = -92.0 + k * spacing
-        lengths = [hall_length(len(r.exhibits)) for r in wing.rooms]
+        lengths = [hall_length(r.loci) for r in wing.rooms]
         lane_len = 9.0 + sum(lengths) + 3.0 * len(lengths)
         if 8.0 + lane_len > PLOT_HALF - 2:
             raise LayoutOverflow(f"city: district {wing.id} is too long")
@@ -138,7 +138,7 @@ def city(system: KnowledgeSystem, ls: LocalScene, pal: Palette) -> Layout:
 
 # ── radial ───────────────────────────────────────────────────────────────────
 
-def radial(system: KnowledgeSystem, ls: LocalScene, pal: Palette) -> Layout:
+def radial(system: Building, ls: LocalScene, pal: Palette) -> Layout:
     out = Layout(start=(0.0, 0.0, -PLOT_HALF + 4))
     n = len(system.wings)
     hub_r = 17.0
@@ -147,7 +147,7 @@ def radial(system: KnowledgeSystem, ls: LocalScene, pal: Palette) -> Layout:
     ls.circle_collider(0, 0, 1.8, 0, 9)
     ls.sphere(0, 8.7, 0, 1.5, pal.base, mat="gloss")
     ls.lamp(0, 8.7, 0, pal.light(0), kind="halo")
-    ls.sign(0, 11.6, 0, system.title.model_dump(), sub=system.architecture.metaphor.model_dump(), level="wing",
+    ls.sign(0, 11.6, 0, system.title.model_dump(), sub=system.subtitle.model_dump(), level="wing",
             color=pal.base)
     ls.strip(0, -PLOT_HALF, 0, -hub_r, 7.0, PATH)
     wedge = math.radians(28)
@@ -155,7 +155,7 @@ def radial(system: KnowledgeSystem, ls: LocalScene, pal: Palette) -> Layout:
     first_r = 23.0
     for wi, wing in enumerate(system.wings):
         phi = wedge + usable * (wi + 0.5) / n
-        lengths = [hall_length(len(r.exhibits)) for r in wing.rooms]
+        lengths = [hall_length(r.loci) for r in wing.rooms]
         total = sum(lengths) + 3.0 * (len(lengths) - 1)
         if first_r + total > PLOT_HALF - 3:
             raise LayoutOverflow(f"radial: gallery {wing.id} is too long")
@@ -191,7 +191,7 @@ def _ramp_x(k: int) -> float:
     return -10.0 if k % 2 == 0 else 10.0
 
 
-def terraces(system: KnowledgeSystem, ls: LocalScene, pal: Palette) -> Layout:
+def terraces(system: Building, ls: LocalScene, pal: Palette) -> Layout:
     out = Layout(start=(0.0, 0.0, -PLOT_HALF + 4))
     n = len(system.wings)
     sizes = [S0 - RING * k for k in range(n)]
@@ -220,7 +220,7 @@ def terraces(system: KnowledgeSystem, ls: LocalScene, pal: Palette) -> Layout:
         ls.sign(arrive_x, y + 6.5, -s + 3.0, wing.title.model_dump(), sub=wing.summary.model_dump(),
                 level="wing", color=pal.wing(k))
         out.wings[wing.id] = (arrive_x, y, -s + 4.0)
-        lengths = [hall_length(len(r.exhibits)) for r in wing.rooms]
+        lengths = [hall_length(r.loci) for r in wing.rooms]
         if k == n - 1:
             # summit: halls side by side, entered from the front
             total_w = len(lengths) * HALL_SPAN + (len(lengths) - 1) * 4.0
@@ -260,7 +260,7 @@ def terraces(system: KnowledgeSystem, ls: LocalScene, pal: Palette) -> Layout:
 R_IN = 14.0
 R_OUT = 25.5
 PITCH = 9.0
-R_WALK = 19.5             # radius along which exhibits are spaced
+R_WALK = 19.5             # radius along which loci are spaced
 R_STAGE_OUT = R_OUT - 1.8
 R_STAGE_IN = R_IN + 1.8
 TAU = 2 * math.pi
@@ -270,7 +270,7 @@ def _h(phi: float) -> float:
     return PITCH * phi / TAU
 
 
-def spiral(system: KnowledgeSystem, ls: LocalScene, pal: Palette) -> Layout:
+def spiral(system: Building, ls: LocalScene, pal: Palette) -> Layout:
     out = Layout(start=(0.0, 0.0, -PLOT_HALF + 4))
     d = STEP / R_WALK
     phi = math.radians(12)
@@ -284,8 +284,8 @@ def spiral(system: KnowledgeSystem, ls: LocalScene, pal: Palette) -> Layout:
             start = phi
             events.append(("room", phi, (wi, room)))
             phi += d * 1.6
-            for i, e in enumerate(room.exhibits):
-                events.append(("exhibit", phi, (wi, room, i, e)))
+            for i, e in enumerate(room.locus_list()):
+                events.append(("locus", phi, (wi, room, i, e)))
                 phi += d
             phi += d * 0.8
             room_ranges.append((start, phi, room.style))
@@ -353,10 +353,10 @@ def spiral(system: KnowledgeSystem, ls: LocalScene, pal: Palette) -> Layout:
             face = math.atan2(-sx, -sz) if outer else math.atan2(sx, sz)
             vr = r - VIEW_DIST if outer else r + VIEW_DIST
             vx, vz = polar(phi, vr)
-            ls.stage(e.id, sx, sz, y, face)
-            out.exhibits[e.id] = Placement((sx, y, sz), face, (vx, y, vz), look_yaw(vx, vz, sx, sz))
+            ls.locus(e.id, sx, sz, y, face)
+            out.loci[e.id] = Placement((sx, y, sz), face, (vx, y, vz), look_yaw(vx, vz, sx, sz))
             # decor between consecutive outer stages
-            if outer and i + 2 < len(room.exhibits):
+            if outer and i + 2 < room.loci:
                 gaps = [d for d in style_of(room.style)["decor"] if d["where"] == "gap"]
                 if gaps:
                     dphi = phi + d

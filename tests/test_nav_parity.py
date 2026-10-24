@@ -7,11 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from palace.content import Manifest
 from palace.nav import Nav
-from palace.schema import CrossLinks
-from palace.world import assign_plots, build_world
-from tests.factory import make_system
+from palace.world import build_world
+from tests.factory import make_city
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -27,13 +25,11 @@ console.log(JSON.stringify(out));
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
 def test_js_and_python_agree(tmp_path):
-    specs = [("a", "spiral", 3, 2, 4), ("c", "terraces", 4, 2, 4), ("e", "radial", 3, 2, 4)]
-    systems = {s[0]: make_system(*s) for s in specs}
-    world = build_world(systems, CrossLinks(), assign_plots(systems, Manifest()), with_tours=False)
+    world = build_world(make_city([("a", "spiral", 3, 2, 4), ("c", "terraces", 4, 2, 4), ("e", "radial", 3, 2, 4)]))
     nav = Nav(world["nav"]["surfaces"], world["nav"]["colliders"])
     rng = random.Random(1)
     samples = []
-    for so in world["systems"]:
+    for so in world["buildings"]:
         cx, cz = world["plots"][so["plot"]]["center"]
         for _ in range(1500):
             samples.append([cx + rng.uniform(-100, 100), cz + rng.uniform(-100, 100), rng.choice([0, 0.2, 0.5, 4.5, 9, 12])])

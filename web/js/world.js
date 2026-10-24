@@ -8,7 +8,7 @@ import { tr } from "./i18n.js";
 import { expand } from "./scene.js";
 import { floorTexture, signTexture, glowTexture, cloudTexture } from "./textures.js";
 import {
-  Chunk, addArch, addDisc, addFloor, addHelix, addLamp, addPath, addRamp, addRoof, addShape, addStageShell,
+  Chunk, addArch, addDisc, addFloor, addHelix, addLamp, addPath, addRamp, addRoof, addShape, addLocusShell,
   addSupport, addWall, addWater,
 } from "./arch.js";
 
@@ -84,36 +84,6 @@ function buildHills(half) {
   for (const geo of Object.values(geos)) g.add(new THREE.Mesh(geo, mat));
   g.userData.mat = mat;
   return g;
-}
-
-/** Faint arcs of light across the sky between systems that link to each other. */
-function buildBridges(d) {
-  const group = new THREE.Group();
-  const plotOf = Object.fromEntries(d.systems.map((s) => [s.id, d.plots[s.plot]]));
-  const colorOf = Object.fromEntries(d.systems.map((s) => [s.id, new THREE.Color(s.color)]));
-  for (const br of d.bridges || []) {
-    const pa = plotOf[br.a], pb = plotOf[br.b];
-    if (!pa || !pb) continue;
-    const a = new THREE.Vector3(pa.center[0], 46, pa.center[1]);
-    const b = new THREE.Vector3(pb.center[0], 46, pb.center[1]);
-    const mid = a.clone().add(b).multiplyScalar(0.5);
-    mid.y = 70 + a.distanceTo(b) * 0.32;
-    const curve = new THREE.QuadraticBezierCurve3(a, mid, b);
-    const geo = new THREE.TubeGeometry(curve, 64, 0.45 + Math.min(1.6, br.n * 0.12), 6, false);
-    const col = new Float32Array(geo.attributes.position.count * 3);
-    const uv = geo.attributes.uv;
-    const c = new THREE.Color();
-    for (let i = 0; i < uv.count; i++) {
-      c.copy(colorOf[br.a]).lerp(colorOf[br.b], uv.getX(i));
-      col.set([c.r, c.g, c.b], i * 3);
-    }
-    geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
-    const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.3,
-      depthWrite: false, fog: false }));
-    mesh.renderOrder = -5;
-    group.add(mesh);
-  }
-  return group;
 }
 
 function buildGround(half, color) {
@@ -246,11 +216,9 @@ export class World {
     this.scene.add(this.hills);
     this.ground = buildGround(d.half, "#93ad7c");
     this.scene.add(this.ground);
-    this.bridges = buildBridges(d);
-    this.scene.add(this.bridges);
 
-    const exByRef = d.exhibits;
-    const sysColor = Object.fromEntries(d.systems.map((s) => [s.id, s.color]));
+    const lociById = d.loci;
+    const colorOf = Object.fromEntries(d.buildings.map((b) => [b.id, b.color]));
     let n = 0;
     const t0 = performance.now();
     for (const p of d.prims) {
@@ -277,12 +245,10 @@ export class World {
           break;
         }
         case "prop": this.addDecor(ch, p); break;
-        case "stage": {
-          const ex = exByRef[p.g + "/" + p.ref];
-          const st = ex && d.styles[ex.style];
-          const stage = st ? st.stage : "#9a8f7e";
-          const gold = ex && ex.locus % 5 === 0;
-          addStageShell(ch, p, { stage, frame: shade(sysColor[p.g] || "#777777", -0.1), gold });
+        case "locus": {
+          const l = lociById[p.ref];
+          const st = l && d.styles[l.style];
+          addLocusShell(ch, p, { stage: mix(st ? st.stage : "#9a8f7e", "#e6dfd2", 0.5), accent: shade(colorOf[p.g] || "#b8862f", -0.05) });
           break;
         }
         default: break;
@@ -422,7 +388,7 @@ export class World {
     this.ground.material.needsUpdate = true;
     this.haloMat.uniforms.intensity.value = t.night ? 1.0 : 0.22;
     for (const c of this.clouds) c.s.material.opacity = t.night ? 0.25 : 0.85;
-    for (const m of this.bridges.children) m.material.opacity = t.night ? 0.55 : 0.28;
+
   }
 
   setViewport(height, fov) {

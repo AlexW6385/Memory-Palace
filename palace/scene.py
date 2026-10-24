@@ -6,7 +6,7 @@ here); the viewer decides how each element looks. Element types:
   floor    walkable slab with a pattern            support  column/post of a style
   wall     wall segment of a style                 roof     roof of a style
   arch     entrance frame                          sign     text panel (fixed or billboard)
-  prop     a catalogue prop (decor)                stage    an exhibit stage (built lazily by the viewer)
+  prop     a catalogue prop (decor)                locus    a locus: plinth + object (built lazily)
   box/cyl/sphere  plain shapes                     water    a water surface
   ramp/helix      sloped walkways                  lamp     a hanging lamp / light halo
 
@@ -194,10 +194,11 @@ class LocalScene:
                 reach = max(reach, spacing * (n - 1) / 2 + reach)
             self.circle_collider(x, z, reach, y, y + h * scale)
 
-    def stage(self, ref, x, z, y, yaw) -> None:
+    def locus(self, ref, x, z, y, yaw) -> None:
+        """A place to hang a memory: a low plinth whose object the viewer builds near the visitor."""
         self._track(x, z, 1.6, 1.6)
         wx, wz = self._p(x, z)
-        self._add({"t": "stage", "ref": ref, "p": [wx, r2(y), wz], "r": self._yaw(yaw)})
+        self._add({"t": "locus", "ref": ref, "p": [wx, r2(y), wz], "r": self._yaw(yaw)})
         self.circle_collider(x, z, 1.62, y, y + 3.0)
 
     def lamp(self, x, y, z, color, kind="pendant") -> None:

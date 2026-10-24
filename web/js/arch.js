@@ -669,59 +669,20 @@ export function addLamp(ch, p) {
   return [{ x, y, z, color: p.c, size: 7 }];
 }
 
-/** Stage plinth and backdrop shell (static); the scene and labels are built later, near the visitor. */
-export const STAGE = { R: 1.35, H: 0.42, BACK_R: 1.5, BACK_H: 2.35, BACK_ARC: (160 * Math.PI) / 180 };
+/** A locus: a round plinth (static); its object is built near the visitor (loci.js). */
+export const STAGE = { R: 1.35, H: 0.42 };
 
-export function addStageShell(ch, p, look) {
+export function addLocusShell(ch, p, look) {
   const [x, y, z] = p.p;
-  const { stage, frame, gold } = look;
+  const { stage, accent } = look;
   ch.solid.group({ at: [x, y, z], rot: [0, p.r, 0] }, (b) => {
     const R = STAGE.R, H = STAGE.H;
-    b.cyl(R, R + 0.06, H - 0.08, { at: [0, (H - 0.08) / 2, 0], color: shade(stage, -0.1), seg: 40 });
-    b.cyl(R + 0.04, R + 0.04, 0.08, { at: [0, H - 0.04, 0], color: gold ? "#d4a548" : shade(stage, 0.12), seg: 40, kind: gold ? "metal" : "matte" });
-    b.cyl(R - 0.02, R - 0.02, 0.012, { at: [0, H + 0.004, 0], color: shade(stage, 0.04), seg: 40 });
-    // backdrop: posts, top rail; the patterned panel itself is a separate textured mesh
-    const BR = STAGE.BACK_R, BH = STAGE.BACK_H, arc = STAGE.BACK_ARC;
-    b.cyl(BR + 0.05, BR + 0.05, BH, { at: [0, H + BH / 2, 0], color: mix(shade(stage, -0.04), "#e9e2d4", 0.35), seg: 40, open: true,
-      thetaStart: Math.PI - arc / 2, thetaLength: arc });
-    for (const s of [-1, 1]) {
-      const a = Math.PI + s * arc / 2;
-      b.cyl(0.07, 0.08, BH + 0.25, { at: [Math.sin(a) * (BR + 0.02), H + (BH + 0.25) / 2, Math.cos(a) * (BR + 0.02)], color: frame, seg: 10, kind: "metal" });
-      b.sphere(0.1, { at: [Math.sin(a) * (BR + 0.02), H + BH + 0.32, Math.cos(a) * (BR + 0.02)], color: gold ? "#d4a548" : frame, kind: "metal", seg: 12 });
-    }
-    b.torus(BR + 0.02, 0.05, { at: [0, H + BH, 0], rot: [Math.PI / 2, 0, Math.PI / 2 - arc / 2 + Math.PI], color: frame, arc, seg: 32, tubeSeg: 6, kind: "metal" });
+    b.cyl(R + 0.1, R + 0.14, 0.08, { at: [0, 0.04, 0], color: shade(stage, -0.16), seg: 40 });
+    b.cyl(R - 0.02, R + 0.03, H - 0.16, { at: [0, 0.08 + (H - 0.16) / 2, 0], color: shade(stage, -0.06), seg: 40 });
+    b.cyl(R + 0.04, R + 0.04, 0.06, { at: [0, H - 0.05, 0], color: accent, seg: 40, kind: "metal" });
+    b.cyl(R, R, 0.03, { at: [0, H - 0.01, 0], color: shade(stage, 0.08), seg: 40 });
   });
-  ch.maxY = Math.max(ch.maxY, y + STAGE.H + STAGE.BACK_H + 0.5);
-}
-
-/** Inside of the backdrop as a curved, UV-mapped panel (u left→right as seen by the viewer). */
-export function backdropGeometry() {
-  const R = STAGE.BACK_R, H = STAGE.BACK_H, arc = STAGE.BACK_ARC, n = 40;
-  const pos = [], uv = [], idx = [];
-  for (let k = 0; k <= n; k++) {
-    const t = k / n;
-    const a = Math.PI + arc / 2 - arc * t; // viewer's left (−x) to right (+x)
-    const xx = Math.sin(a) * R, zz = Math.cos(a) * R;
-    pos.push(xx, 0, zz, xx, H, zz);
-    uv.push(t, 0, t, 1);
-  }
-  for (let k = 0; k < n; k++) {
-    const i = k * 2;
-    idx.push(i, i + 2, i + 1, i + 1, i + 2, i + 3);
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-  g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
-  g.setIndex(idx);
-  g.computeVertexNormals();
-  // normals must point at the viewer (towards +z, inward)
-  const nz = g.attributes.normal.getZ(n);
-  if (nz < 0) {
-    const ix = g.index.array;
-    for (let k = 0; k < ix.length; k += 3) { const tmp = ix[k + 1]; ix[k + 1] = ix[k + 2]; ix[k + 2] = tmp; }
-    g.computeVertexNormals();
-  }
-  return g;
+  ch.maxY = Math.max(ch.maxY, y + 2.5);
 }
 
 export { mix };

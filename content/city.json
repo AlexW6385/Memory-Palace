@@ -1,0 +1,1212 @@
+{
+ "title": {
+  "en": "Memory Palace",
+  "zh": "记忆宫殿"
+ },
+ "buildings": [
+  {
+   "id": "palace",
+   "plot": 0,
+   "title": {
+    "en": "The Palace",
+    "zh": "宫殿"
+   },
+   "subtitle": {
+    "en": "The heart of the city",
+    "zh": "城市的中心"
+   },
+   "color": "#b8862f",
+   "template": "radial",
+   "wings": [
+    {
+     "id": "palace-state",
+     "title": {
+      "en": "Hall of State",
+      "zh": "国事厅"
+     },
+     "summary": {
+      "en": "Where the court gathers",
+      "zh": "朝臣聚集的地方"
+     },
+     "rooms": [
+      {
+       "id": "palace-throne",
+       "title": {
+        "en": "Throne Room",
+        "zh": "王座厅"
+       },
+       "style": "throne_room"
+      },
+      {
+       "id": "palace-council",
+       "title": {
+        "en": "Council Chamber",
+        "zh": "议事厅"
+       },
+       "style": "courtroom"
+      }
+     ]
+    },
+    {
+     "id": "palace-mirrors",
+     "title": {
+      "en": "Hall of Mirrors",
+      "zh": "镜厅"
+     },
+     "summary": {
+      "en": "Light on every wall",
+      "zh": "四壁皆是光"
+     },
+     "rooms": [
+      {
+       "id": "palace-mirror-gallery",
+       "title": {
+        "en": "Mirror Gallery",
+        "zh": "镜廊"
+       },
+       "style": "mirror_hall"
+      },
+      {
+       "id": "palace-portraits",
+       "title": {
+        "en": "Portrait Gallery",
+        "zh": "肖像画廊"
+       },
+       "style": "gallery"
+      }
+     ]
+    },
+    {
+     "id": "palace-apartments",
+     "title": {
+      "en": "Royal Apartments",
+      "zh": "寝宫"
+     },
+     "summary": {
+      "en": "The private rooms",
+      "zh": "私人起居的房间"
+     },
+     "rooms": [
+      {
+       "id": "palace-cabinet",
+       "title": {
+        "en": "The Cabinet",
+        "zh": "书房"
+       },
+       "style": "study"
+      },
+      {
+       "id": "palace-kitchen",
+       "title": {
+        "en": "Royal Kitchen",
+        "zh": "御膳房"
+       },
+       "style": "kitchen"
+      }
+     ]
+    },
+    {
+     "id": "palace-treasury",
+     "title": {
+      "en": "Treasury",
+      "zh": "宝库"
+     },
+     "summary": {
+      "en": "Gold behind iron doors",
+      "zh": "铁门后的黄金"
+     },
+     "rooms": [
+      {
+       "id": "palace-strongroom",
+       "title": {
+        "en": "Strongroom",
+        "zh": "金库"
+       },
+       "style": "vault"
+      },
+      {
+       "id": "palace-card-room",
+       "title": {
+        "en": "Card Room",
+        "zh": "牌室"
+       },
+       "style": "casino"
+      }
+     ]
+    },
+    {
+     "id": "palace-gardens",
+     "title": {
+      "en": "Palace Gardens",
+      "zh": "御花园"
+     },
+     "summary": {
+      "en": "Hedges, roses and an orangery",
+      "zh": "绿篱、玫瑰与橘园"
+     },
+     "rooms": [
+      {
+       "id": "palace-rose-garden",
+       "title": {
+        "en": "Rose Garden",
+        "zh": "玫瑰园"
+       },
+       "style": "garden"
+      },
+      {
+       "id": "palace-orangery",
+       "title": {
+        "en": "Orangery",
+        "zh": "橘园"
+       },
+       "style": "greenhouse"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "observatory",
+   "plot": 1,
+   "title": {
+    "en": "The Observatory",
+    "zh": "天文台"
+   },
+   "subtitle": {
+    "en": "A tower that climbs to the stars",
+    "zh": "一座通向星空的塔"
+   },
+   "color": "#3b5ba5",
+   "template": "spiral",
+   "wings": [
+    {
+     "id": "observatory-base",
+     "title": {
+      "en": "The Base",
+      "zh": "塔基"
+     },
+     "summary": {
+      "en": "Instruments and archives",
+      "zh": "仪器与档案"
+     },
+     "rooms": [
+      {
+       "id": "observatory-instruments",
+       "title": {
+        "en": "Instrument Workshop",
+        "zh": "仪器工坊"
+       },
+       "style": "workshop"
+      },
+      {
+       "id": "observatory-star-archive",
+       "title": {
+        "en": "Star Archive",
+        "zh": "星图档案室"
+       },
+       "style": "library"
+      }
+     ]
+    },
+    {
+     "id": "observatory-middle",
+     "title": {
+      "en": "The Middle Levels",
+      "zh": "塔身"
+     },
+     "summary": {
+      "en": "Lenses, lectures and clocks",
+      "zh": "透镜、讲堂与时钟"
+     },
+     "rooms": [
+      {
+       "id": "observatory-optics",
+       "title": {
+        "en": "Optics Laboratory",
+        "zh": "光学实验室"
+       },
+       "style": "laboratory"
+      },
+      {
+       "id": "observatory-lecture",
+       "title": {
+        "en": "Lecture Hall",
+        "zh": "讲堂"
+       },
+       "style": "classroom"
+      },
+      {
+       "id": "observatory-clocks",
+       "title": {
+        "en": "Clock Room",
+        "zh": "钟房"
+       },
+       "style": "railway_station"
+      }
+     ]
+    },
+    {
+     "id": "observatory-summit",
+     "title": {
+      "en": "The Summit",
+      "zh": "塔顶"
+     },
+     "summary": {
+      "en": "Under the open sky",
+      "zh": "在天空之下"
+     },
+     "rooms": [
+      {
+       "id": "observatory-great-dome",
+       "title": {
+        "en": "Great Dome",
+        "zh": "大穹顶"
+       },
+       "style": "observatory"
+      },
+      {
+       "id": "observatory-signal-room",
+       "title": {
+        "en": "Signal Room",
+        "zh": "信号室"
+       },
+       "style": "control_room"
+      },
+      {
+       "id": "observatory-night-chapel",
+       "title": {
+        "en": "Night Chapel",
+        "zh": "夜之礼拜堂"
+       },
+       "style": "temple"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "library",
+   "plot": 2,
+   "title": {
+    "en": "The Library",
+    "zh": "图书馆"
+   },
+   "subtitle": {
+    "en": "Four floors of books",
+    "zh": "四层楼的书"
+   },
+   "color": "#8a5a36",
+   "template": "terraces",
+   "wings": [
+    {
+     "id": "library-ground",
+     "title": {
+      "en": "Ground Floor",
+      "zh": "一层"
+     },
+     "summary": {
+      "en": "Reading and finding",
+      "zh": "阅读与查找"
+     },
+     "rooms": [
+      {
+       "id": "library-reading",
+       "title": {
+        "en": "Reading Room",
+        "zh": "阅览室"
+       },
+       "style": "library"
+      },
+      {
+       "id": "library-catalogue",
+       "title": {
+        "en": "Catalogue Hall",
+        "zh": "目录大厅"
+       },
+       "style": "post_office"
+      }
+     ]
+    },
+    {
+     "id": "library-second",
+     "title": {
+      "en": "Second Floor",
+      "zh": "二层"
+     },
+     "summary": {
+      "en": "Maps and manuscripts",
+      "zh": "地图与手稿"
+     },
+     "rooms": [
+      {
+       "id": "library-maps",
+       "title": {
+        "en": "Map Room",
+        "zh": "地图室"
+       },
+       "style": "study"
+      },
+      {
+       "id": "library-manuscripts",
+       "title": {
+        "en": "Manuscript Room",
+        "zh": "手稿室"
+       },
+       "style": "vault"
+      }
+     ]
+    },
+    {
+     "id": "library-third",
+     "title": {
+      "en": "Third Floor",
+      "zh": "三层"
+     },
+     "summary": {
+      "en": "Where books are made",
+      "zh": "书的诞生之处"
+     },
+     "rooms": [
+      {
+       "id": "library-scriptorium",
+       "title": {
+        "en": "Scriptorium",
+        "zh": "抄写室"
+       },
+       "style": "classroom"
+      },
+      {
+       "id": "library-bindery",
+       "title": {
+        "en": "Bindery",
+        "zh": "装订坊"
+       },
+       "style": "workshop"
+      }
+     ]
+    },
+    {
+     "id": "library-top",
+     "title": {
+      "en": "Top Floor",
+      "zh": "顶层"
+     },
+     "summary": {
+      "en": "Treasures and a garden",
+      "zh": "珍藏与花园"
+     },
+     "rooms": [
+      {
+       "id": "library-rare-books",
+       "title": {
+        "en": "Rare Books",
+        "zh": "珍本室"
+       },
+       "style": "mirror_hall"
+      },
+      {
+       "id": "library-roof-garden",
+       "title": {
+        "en": "Roof Garden",
+        "zh": "屋顶花园"
+       },
+       "style": "garden"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "theatre",
+   "plot": 3,
+   "title": {
+    "en": "The Theatre",
+    "zh": "剧院"
+   },
+   "subtitle": {
+    "en": "Every room a stage",
+    "zh": "每个房间都是舞台"
+   },
+   "color": "#a5243a",
+   "template": "radial",
+   "wings": [
+    {
+     "id": "theatre-front",
+     "title": {
+      "en": "Front of House",
+      "zh": "前厅"
+     },
+     "summary": {
+      "en": "Where the audience arrives",
+      "zh": "观众入场的地方"
+     },
+     "rooms": [
+      {
+       "id": "theatre-foyer",
+       "title": {
+        "en": "Grand Foyer",
+        "zh": "大前厅"
+       },
+       "style": "mirror_hall"
+      },
+      {
+       "id": "theatre-bar",
+       "title": {
+        "en": "Theatre Bar",
+        "zh": "剧院酒吧"
+       },
+       "style": "casino"
+      }
+     ]
+    },
+    {
+     "id": "theatre-stage",
+     "title": {
+      "en": "The Stage",
+      "zh": "舞台区"
+     },
+     "summary": {
+      "en": "Lights and music",
+      "zh": "灯光与音乐"
+     },
+     "rooms": [
+      {
+       "id": "theatre-main-stage",
+       "title": {
+        "en": "Main Stage",
+        "zh": "主舞台"
+       },
+       "style": "theater"
+      },
+      {
+       "id": "theatre-orchestra",
+       "title": {
+        "en": "Orchestra Pit",
+        "zh": "乐池"
+       },
+       "style": "arena"
+      }
+     ]
+    },
+    {
+     "id": "theatre-backstage",
+     "title": {
+      "en": "Backstage",
+      "zh": "后台"
+     },
+     "summary": {
+      "en": "Costumes and scenery",
+      "zh": "服装与布景"
+     },
+     "rooms": [
+      {
+       "id": "theatre-costumes",
+       "title": {
+        "en": "Costume Room",
+        "zh": "服装间"
+       },
+       "style": "study"
+      },
+      {
+       "id": "theatre-scenery",
+       "title": {
+        "en": "Scenery Workshop",
+        "zh": "布景工坊"
+       },
+       "style": "workshop"
+      }
+     ]
+    },
+    {
+     "id": "theatre-rehearsal",
+     "title": {
+      "en": "Rehearsal Wing",
+      "zh": "排练区"
+     },
+     "summary": {
+      "en": "Practice and rest",
+      "zh": "排练与休息"
+     },
+     "rooms": [
+      {
+       "id": "theatre-rehearsal-hall",
+       "title": {
+        "en": "Rehearsal Hall",
+        "zh": "排练厅"
+       },
+       "style": "classroom"
+      },
+      {
+       "id": "theatre-green-room",
+       "title": {
+        "en": "Green Room",
+        "zh": "休息室"
+       },
+       "style": "greenhouse"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "harbour",
+   "plot": 4,
+   "title": {
+    "en": "The Harbour",
+    "zh": "港口"
+   },
+   "subtitle": {
+    "en": "Where the ships come in",
+    "zh": "船只靠岸的地方"
+   },
+   "color": "#2f7d9a",
+   "template": "avenue",
+   "wings": [
+    {
+     "id": "harbour-docks",
+     "title": {
+      "en": "The Docks",
+      "zh": "码头"
+     },
+     "summary": {
+      "en": "Ropes, nets and fish",
+      "zh": "缆绳、渔网与鱼"
+     },
+     "rooms": [
+      {
+       "id": "harbour-quay",
+       "title": {
+        "en": "Quay",
+        "zh": "码头岸边"
+       },
+       "style": "harbor"
+      },
+      {
+       "id": "harbour-fish-market",
+       "title": {
+        "en": "Fish Market",
+        "zh": "鱼市"
+       },
+       "style": "market"
+      }
+     ]
+    },
+    {
+     "id": "harbour-customs",
+     "title": {
+      "en": "Customs House",
+      "zh": "海关"
+     },
+     "summary": {
+      "en": "Papers and parcels",
+      "zh": "文件与包裹"
+     },
+     "rooms": [
+      {
+       "id": "harbour-customs-hall",
+       "title": {
+        "en": "Customs Hall",
+        "zh": "海关大厅"
+       },
+       "style": "courtroom"
+      },
+      {
+       "id": "harbour-harbour-post",
+       "title": {
+        "en": "Harbour Post",
+        "zh": "港口邮局"
+       },
+       "style": "post_office"
+      }
+     ]
+    },
+    {
+     "id": "harbour-shipyard",
+     "title": {
+      "en": "Shipyard",
+      "zh": "船厂"
+     },
+     "summary": {
+      "en": "Hulls and rigging",
+      "zh": "船体与缆索"
+     },
+     "rooms": [
+      {
+       "id": "harbour-slipway",
+       "title": {
+        "en": "Slipway",
+        "zh": "船台"
+       },
+       "style": "factory"
+      },
+      {
+       "id": "harbour-ropewalk",
+       "title": {
+        "en": "Ropewalk",
+        "zh": "制绳坊"
+       },
+       "style": "workshop"
+      }
+     ]
+    },
+    {
+     "id": "harbour-lighthouse",
+     "title": {
+      "en": "Lighthouse Quarter",
+      "zh": "灯塔区"
+     },
+     "summary": {
+      "en": "A light for the night",
+      "zh": "照亮夜晚的灯"
+     },
+     "rooms": [
+      {
+       "id": "harbour-lamp-room",
+       "title": {
+        "en": "Lamp Room",
+        "zh": "灯室"
+       },
+       "style": "observatory"
+      },
+      {
+       "id": "harbour-sailors-inn",
+       "title": {
+        "en": "Sailors' Inn",
+        "zh": "水手旅店"
+       },
+       "style": "kitchen"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "market",
+   "plot": 5,
+   "title": {
+    "en": "The Market",
+    "zh": "集市"
+   },
+   "subtitle": {
+    "en": "Stalls, scales and spices",
+    "zh": "摊位、秤与香料"
+   },
+   "color": "#d08a2e",
+   "template": "city",
+   "wings": [
+    {
+     "id": "market-bazaar",
+     "title": {
+      "en": "Grand Bazaar",
+      "zh": "大巴扎"
+     },
+     "summary": {
+      "en": "Spices and silk",
+      "zh": "香料与丝绸"
+     },
+     "rooms": [
+      {
+       "id": "market-spice-row",
+       "title": {
+        "en": "Spice Row",
+        "zh": "香料街"
+       },
+       "style": "market"
+      },
+      {
+       "id": "market-silk-hall",
+       "title": {
+        "en": "Silk Hall",
+        "zh": "丝绸厅"
+       },
+       "style": "theater"
+      }
+     ]
+    },
+    {
+     "id": "market-exchange",
+     "title": {
+      "en": "The Exchange",
+      "zh": "交易所"
+     },
+     "summary": {
+      "en": "Coins and ledgers",
+      "zh": "钱币与账本"
+     },
+     "rooms": [
+      {
+       "id": "market-trading-floor",
+       "title": {
+        "en": "Trading Floor",
+        "zh": "交易大厅"
+       },
+       "style": "casino"
+      },
+      {
+       "id": "market-counting-house",
+       "title": {
+        "en": "Counting House",
+        "zh": "账房"
+       },
+       "style": "vault"
+      }
+     ]
+    },
+    {
+     "id": "market-food",
+     "title": {
+      "en": "Food Hall",
+      "zh": "美食街"
+     },
+     "summary": {
+      "en": "Bread and tea",
+      "zh": "面包与茶"
+     },
+     "rooms": [
+      {
+       "id": "market-bakery",
+       "title": {
+        "en": "Bakery",
+        "zh": "面包房"
+       },
+       "style": "kitchen"
+      },
+      {
+       "id": "market-tea-house",
+       "title": {
+        "en": "Tea House",
+        "zh": "茶馆"
+       },
+       "style": "study"
+      }
+     ]
+    },
+    {
+     "id": "market-crafts",
+     "title": {
+      "en": "Crafts Lane",
+      "zh": "手艺巷"
+     },
+     "summary": {
+      "en": "Clay and toys",
+      "zh": "陶土与玩具"
+     },
+     "rooms": [
+      {
+       "id": "market-potters",
+       "title": {
+        "en": "Potters' Yard",
+        "zh": "陶艺院"
+       },
+       "style": "forge"
+      },
+      {
+       "id": "market-toy-shop",
+       "title": {
+        "en": "Toy Shop",
+        "zh": "玩具店"
+       },
+       "style": "classroom"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "foundry",
+   "plot": 6,
+   "title": {
+    "en": "The Foundry",
+    "zh": "铸造厂"
+   },
+   "subtitle": {
+    "en": "Fire, iron and machines",
+    "zh": "火、铁与机器"
+   },
+   "color": "#6d6f78",
+   "template": "terraces",
+   "wings": [
+    {
+     "id": "foundry-forge-floor",
+     "title": {
+      "en": "Forge Floor",
+      "zh": "锻造层"
+     },
+     "summary": {
+      "en": "Hammers and furnaces",
+      "zh": "铁锤与熔炉"
+     },
+     "rooms": [
+      {
+       "id": "foundry-smithy",
+       "title": {
+        "en": "Smithy",
+        "zh": "铁匠铺"
+       },
+       "style": "forge"
+      },
+      {
+       "id": "foundry-furnace",
+       "title": {
+        "en": "Furnace Hall",
+        "zh": "熔炉厅"
+       },
+       "style": "factory"
+      }
+     ]
+    },
+    {
+     "id": "foundry-machine-floor",
+     "title": {
+      "en": "Machine Floor",
+      "zh": "机器层"
+     },
+     "summary": {
+      "en": "Gears and engines",
+      "zh": "齿轮与引擎"
+     },
+     "rooms": [
+      {
+       "id": "foundry-gears",
+       "title": {
+        "en": "Gear Room",
+        "zh": "齿轮室"
+       },
+       "style": "workshop"
+      },
+      {
+       "id": "foundry-engine",
+       "title": {
+        "en": "Engine Room",
+        "zh": "引擎室"
+       },
+       "style": "control_room"
+      }
+     ]
+    },
+    {
+     "id": "foundry-design-floor",
+     "title": {
+      "en": "Design Floor",
+      "zh": "设计层"
+     },
+     "summary": {
+      "en": "Drawings and tests",
+      "zh": "图纸与试验"
+     },
+     "rooms": [
+      {
+       "id": "foundry-drafting",
+       "title": {
+        "en": "Drafting Room",
+        "zh": "绘图室"
+       },
+       "style": "classroom"
+      },
+      {
+       "id": "foundry-testing",
+       "title": {
+        "en": "Test Laboratory",
+        "zh": "测试实验室"
+       },
+       "style": "laboratory"
+      }
+     ]
+    },
+    {
+     "id": "foundry-stores",
+     "title": {
+      "en": "Stores",
+      "zh": "仓储层"
+     },
+     "summary": {
+      "en": "Crates and tools",
+      "zh": "货箱与工具"
+     },
+     "rooms": [
+      {
+       "id": "foundry-depot",
+       "title": {
+        "en": "Depot",
+        "zh": "货仓"
+       },
+       "style": "railway_station"
+      },
+      {
+       "id": "foundry-tool-vault",
+       "title": {
+        "en": "Tool Vault",
+        "zh": "工具库"
+       },
+       "style": "vault"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cathedral",
+   "plot": 7,
+   "title": {
+    "en": "The Cathedral",
+    "zh": "大教堂"
+   },
+   "subtitle": {
+    "en": "Light through coloured glass",
+    "zh": "穿过彩窗的光"
+   },
+   "color": "#7a55b8",
+   "template": "avenue",
+   "wings": [
+    {
+     "id": "cathedral-nave",
+     "title": {
+      "en": "The Nave",
+      "zh": "中殿"
+     },
+     "summary": {
+      "en": "Columns and candles",
+      "zh": "立柱与烛光"
+     },
+     "rooms": [
+      {
+       "id": "cathedral-narthex",
+       "title": {
+        "en": "Narthex",
+        "zh": "前廊"
+       },
+       "style": "temple"
+      },
+      {
+       "id": "cathedral-nave-hall",
+       "title": {
+        "en": "Great Nave",
+        "zh": "大中殿"
+       },
+       "style": "cathedral"
+      }
+     ]
+    },
+    {
+     "id": "cathedral-transept",
+     "title": {
+      "en": "The Transept",
+      "zh": "耳堂"
+     },
+     "summary": {
+      "en": "Song and council",
+      "zh": "歌声与议事"
+     },
+     "rooms": [
+      {
+       "id": "cathedral-choir",
+       "title": {
+        "en": "Choir",
+        "zh": "唱诗班席"
+       },
+       "style": "theater"
+      },
+      {
+       "id": "cathedral-chapter-house",
+       "title": {
+        "en": "Chapter House",
+        "zh": "牧师会堂"
+       },
+       "style": "courtroom"
+      }
+     ]
+    },
+    {
+     "id": "cathedral-cloister",
+     "title": {
+      "en": "The Cloister",
+      "zh": "回廊"
+     },
+     "summary": {
+      "en": "A quiet garden",
+      "zh": "安静的花园"
+     },
+     "rooms": [
+      {
+       "id": "cathedral-cloister-garden",
+       "title": {
+        "en": "Cloister Garden",
+        "zh": "回廊花园"
+       },
+       "style": "garden"
+      },
+      {
+       "id": "cathedral-refectory",
+       "title": {
+        "en": "Refectory",
+        "zh": "食堂"
+       },
+       "style": "kitchen"
+      }
+     ]
+    },
+    {
+     "id": "cathedral-depths",
+     "title": {
+      "en": "Crypt and Tower",
+      "zh": "墓室与钟楼"
+     },
+     "summary": {
+      "en": "Below and above",
+      "zh": "地下与高处"
+     },
+     "rooms": [
+      {
+       "id": "cathedral-crypt",
+       "title": {
+        "en": "Crypt",
+        "zh": "墓室"
+       },
+       "style": "vault"
+      },
+      {
+       "id": "cathedral-bell-chamber",
+       "title": {
+        "en": "Bell Chamber",
+        "zh": "钟楼"
+       },
+       "style": "observatory"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "conservatory",
+   "plot": 8,
+   "title": {
+    "en": "The Conservatory",
+    "zh": "植物温室"
+   },
+   "subtitle": {
+    "en": "Gardens under glass",
+    "zh": "玻璃下的花园"
+   },
+   "color": "#3f8a4f",
+   "template": "city",
+   "wings": [
+    {
+     "id": "conservatory-tropics",
+     "title": {
+      "en": "Tropical House",
+      "zh": "热带馆"
+     },
+     "summary": {
+      "en": "Palms and orchids",
+      "zh": "棕榈与兰花"
+     },
+     "rooms": [
+      {
+       "id": "conservatory-palm-house",
+       "title": {
+        "en": "Palm House",
+        "zh": "棕榈馆"
+       },
+       "style": "greenhouse"
+      },
+      {
+       "id": "conservatory-orchid-room",
+       "title": {
+        "en": "Orchid Room",
+        "zh": "兰花室"
+       },
+       "style": "mirror_hall"
+      }
+     ]
+    },
+    {
+     "id": "conservatory-desert",
+     "title": {
+      "en": "Desert House",
+      "zh": "沙漠馆"
+     },
+     "summary": {
+      "en": "Sand and cactus",
+      "zh": "沙与仙人掌"
+     },
+     "rooms": [
+      {
+       "id": "conservatory-cactus-court",
+       "title": {
+        "en": "Cactus Court",
+        "zh": "仙人掌庭"
+       },
+       "style": "arena"
+      },
+      {
+       "id": "conservatory-succulents",
+       "title": {
+        "en": "Succulent Hall",
+        "zh": "多肉馆"
+       },
+       "style": "gallery"
+      }
+     ]
+    },
+    {
+     "id": "conservatory-water",
+     "title": {
+      "en": "Water Gardens",
+      "zh": "水上花园"
+     },
+     "summary": {
+      "en": "Lilies and ferns",
+      "zh": "睡莲与蕨类"
+     },
+     "rooms": [
+      {
+       "id": "conservatory-lily-pond",
+       "title": {
+        "en": "Lily Pond",
+        "zh": "睡莲池"
+       },
+       "style": "harbor"
+      },
+      {
+       "id": "conservatory-fern-grotto",
+       "title": {
+        "en": "Fern Grotto",
+        "zh": "蕨类洞"
+       },
+       "style": "garden"
+      }
+     ]
+    },
+    {
+     "id": "conservatory-seeds",
+     "title": {
+      "en": "Seed Bank",
+      "zh": "种子库"
+     },
+     "summary": {
+      "en": "Saved for the future",
+      "zh": "为未来保存"
+     },
+     "rooms": [
+      {
+       "id": "conservatory-seed-vault",
+       "title": {
+        "en": "Seed Vault",
+        "zh": "种子库房"
+       },
+       "style": "vault"
+      },
+      {
+       "id": "conservatory-herbarium",
+       "title": {
+        "en": "Herbarium",
+        "zh": "植物标本馆"
+       },
+       "style": "laboratory"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

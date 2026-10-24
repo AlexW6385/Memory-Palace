@@ -1,81 +1,55 @@
+import json
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
 from palace import scenes
-from palace.content import ContentStore
-from palace.schema import KnowledgeSystem, T, scene_problems, text_problems
-from palace.world import check_crosslinks
-from tests.factory import make_system
+from palace.loci import assign
+from palace.schema import City, T
+from tests.factory import make_city
+
+ROOT = Path(__file__).resolve().parent.parent
 
 
-def test_factory_system_is_valid():
-    s = make_system("x", "city", 3, 2, 3)
-    assert len(s.exhibits()) == 18
+def test_shipped_city_is_valid():
+    city = City.model_validate_json((ROOT / "content" / "city.json").read_text(encoding="utf-8"))
+    assert len(city.buildings) == 9
+    assert {b.plot for b in city.buildings} == set(range(9))
 
 
-def _data():
-    return make_system("x", "city", 3, 2, 3).model_dump()
+def test_text_needs_both_languages():
+    T(en="Library", zh="图书馆")
+    with pytest.raises(ValidationError):
+        T(en="Library", zh="Library")
+    with pytest.raises(ValidationError):
+        T(en="图书馆", zh="图书馆")
 
 
-def test_unknown_prop_and_bad_variant_are_rejected():
-    data = _data()
-    data["wings"][0]["rooms"][0]["exhibits"][0]["scene"]["items"][0]["prop"] = "dragon"
-    with pytest.raises(ValidationError, match="unknown prop"):
-        KnowledgeSystem.model_validate(data)
-    data = _data()
-    data["wings"][0]["rooms"][0]["exhibits"][0]["scene"]["items"][0]["variant"] = "golden"
-    with pytest.raises(ValidationError, match="no variant"):
-        KnowledgeSystem.model_validate(data)
+def test_duplicate_ids_and_plots_are_rejected():
+    data = make_city([("a", "city", 2, 2, 6), ("b", "city", 2, 2, 6)]).model_dump()
+    data["buildings"][1]["plot"] = 0
+    with pytest.raises(ValidationError, match="plot 0"):
+        City.model_validate(data)
+    data = make_city([("a", "city", 2, 2, 6), ("b", "city", 2, 2, 6)]).model_dump()
+    data["buildings"][1]["wings"][0]["rooms"][0]["id"] = data["buildings"][0]["wings"][0]["rooms"][0]["id"]
+    with pytest.raises(ValidationError, match="duplicate id"):
+        City.model_validate(data)
 
 
-def test_figure_options_are_checked():
-    data = _data()
-    item = data["wings"][0]["rooms"][0]["exhibits"][0]["scene"]["items"][1]
-    item["hat"] = "sombrero"
-    with pytest.raises(ValidationError, match="hat"):
-        KnowledgeSystem.model_validate(data)
+def test_every_locus_gets_its_own_object_that_fits_the_plinth():
+    city = City.model_validate_json((ROOT / "content" / "city.json").read_text(encoding="utf-8"))
+    objects = assign(city)
+    assert len(objects) == sum(r.loci for b in city.buildings for r in b.rooms())
+    keys = [(v[0]["prop"], v[0].get("variant"), v[0].get("color")) for v in objects.values()]
+    assert len(set(keys)) == len(keys), "two loci share the same object"
+    for items in objects.values():
+        assert scenes.check(items) == []
 
 
-def test_dangling_link_and_duplicate_id_are_rejected():
-    data = _data()
-    data["wings"][0]["rooms"][0]["exhibits"][0]["links"] = [{"to": "nowhere", "relation": {"en": "needs", "zh": "需要"}}]
-    data["wings"][1]["rooms"][0]["exhibits"][0]["id"] = "e1"
-    with pytest.raises(ValidationError) as err:
-        KnowledgeSystem.model_validate(data)
-    assert "unknown exhibit" in str(err.value) and "duplicate exhibit" in str(err.value)
-
-
-def test_room_size_limits():
-    with pytest.raises(ValidationError, match="exhibits"):
-        make_system("x", "city", 3, 2, 7)
-
-
-def test_text_checks():
-    assert T(en="Sets", zh="集合").check("room.title") == []
-    assert any("no Chinese" in p for p in T(en="Sets", zh="Sets").check("room.title"))
-    assert any("contains Chinese" in p for p in T(en="集合 sets", zh="集合").check("room.title"))
-    assert any("characters" in p for p in T(en="x" * 900, zh="解释" * 10).check("exhibit.explain"))
-    assert text_problems(make_system("x", "city", 3, 2, 3)) == []
-
-
-def test_scene_checks():
-    assert scenes.check([{"prop": "crate", "at": [0, 0]}, {"prop": "crate", "at": [0.6, 0]}]) == []
-    assert any("collides" in p for p in scenes.check([{"prop": "crate", "at": [0, 0]}, {"prop": "crate", "at": [0.1, 0]}]))
-    assert any("off the stage" in p for p in scenes.check([{"prop": "crate", "at": [0, -1.2]}]))
-    # stacking with `on` and seated figures are allowed to overlap
-    assert scenes.check([{"prop": "table"}, {"prop": "candle", "on": 0}]) == []
-    assert scenes.check([{"prop": "chair"}, {"prop": "figure", "pose": "sit"}]) == []
-    placed = scenes.place([{"prop": "table"}, {"prop": "book", "count": 3, "arrange": "stack", "on": 0}])
-    table_h = placed[0].h
-    assert [round(p.y, 3) for p in placed[1:]] == [round(table_h + i * (placed[1].h + 0.01), 3) for i in range(3)]
-    assert scene_problems(make_system("x", "city", 3, 2, 3)) == []
-
-
-def test_shipped_content_is_valid_and_clean():
-    store = ContentStore()
-    systems = store.load_systems()
-    assert systems, "content/systems is empty"
-    assert check_crosslinks(systems, store.load_crosslinks()) == []
-    for s in systems.values():
-        assert text_problems(s) == [], s.id
-        assert scene_problems(s) == [], s.id
+def test_assignment_is_stable_when_a_building_is_added():
+    small = make_city([("a", "city", 2, 2, 6), ("b", "avenue", 2, 2, 6)])
+    big = make_city([("a", "city", 2, 2, 6), ("b", "avenue", 2, 2, 6), ("c", "radial", 2, 2, 6)])
+    before, after = assign(small), assign(big)
+    for k, v in before.items():
+        assert after[k] == v

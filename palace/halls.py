@@ -1,6 +1,6 @@
 """Themed through-halls: the building block of every architecture template.
 
-A hall is entered at its local −z end and left at its +z end. Exhibits stand
+A hall is entered at its local −z end and left at its +z end. Loci stand
 in alcoves along both walls, alternating left and right every STEP metres, so
 walking the aisle visits them in order. The room style decides the floor,
 supports, walls, roof, lighting and decor.
@@ -18,7 +18,7 @@ import math
 from dataclasses import dataclass, field
 
 from palace.catalog import PROPS, ROOM_STYLES
-from palace.geometry import Frame, look_yaw
+from palace.geometry import Frame, look_yaw, mix
 from palace.scene import LocalScene
 
 HALL_W = 11.0           # inner width
@@ -26,7 +26,7 @@ WALL_X = 5.65           # wall centre line
 WALL_T = 0.3
 WALL_H = 4.2
 STAGE_X = 3.55          # stage centre, from the hall axis
-STEP = 2.5              # distance along the hall between consecutive exhibits
+STEP = 2.5              # distance along the hall between consecutive loci
 END = 3.4               # from a hall end to the first / last stage centre
 VIEW_DIST = 4.3         # from a stage centre to where the visitor stands
 FLOOR_Y = 0.15
@@ -39,7 +39,7 @@ def hall_length(n: int) -> float:
 
 @dataclass
 class Placement:
-    """Where an exhibit stands and where it is viewed from (plot-local frame)."""
+    """Where a locus stands and where it is viewed from (plot-local frame)."""
 
     pos: tuple[float, float, float]
     yaw: float              # direction the stage faces (towards the visitor)
@@ -49,7 +49,7 @@ class Placement:
 
 @dataclass
 class Layout:
-    exhibits: dict[str, Placement] = field(default_factory=dict)
+    loci: dict[str, Placement] = field(default_factory=dict)
     rooms: dict[str, tuple[float, float, float]] = field(default_factory=dict)  # entrance point
     wings: dict[str, tuple[float, float, float]] = field(default_factory=dict)
     start: tuple[float, float, float] = (0.0, 0.0, 0.0)
@@ -75,14 +75,16 @@ def hall(ls: LocalScene, room, cx: float, cz: float, yaw: float, out: Layout, si
          y: float = FLOOR_Y, accent: str | None = None) -> float:
     """Build one themed hall centred at (cx, cz) whose entrance faces local −z rotated by yaw.
 
-    Returns the hall length. Exhibit placements are written to out.exhibits.
+    Returns the hall length. Locus placements are written to out.loci.
     """
     st = style_of(room.style)
-    n = len(room.exhibits)
+    loci = room.locus_list()
+    n = len(loci)
     L = hall_length(n)
     f = Frame(cx, cz, yaw)
     P = f.point
-    floor_cols = st["floor"]["colors"]
+    tint = getattr(ls, "tint", None)
+    floor_cols = [mix(c, tint, 0.12) for c in st["floor"]["colors"]] if tint else st["floor"]["colors"]
 
     # floor (slightly larger than the walls)
     fx, fz = P(0, 0)
@@ -95,7 +97,8 @@ def hall(ls: LocalScene, room, cx: float, cz: float, yaw: float, out: Layout, si
         if wall["type"] != "none":
             h = 1.2 if wall["type"] == "low_stone" else WALL_H
             wx, wz = P(side * WALL_X, 0)
-            ls.wall(wx, wz, y, WALL_T, h, L, wall["type"], wall["color"], wall.get("color2"), yaw=f.yaw)
+            wc = mix(wall["color"], tint, 0.1) if tint else wall["color"]
+            ls.wall(wx, wz, y, WALL_T, h, L, wall["type"], wc, wall.get("color2"), yaw=f.yaw)
         if sup["type"] != "none":
             zs = [-L / 2 + 0.35, L / 2 - 0.35]
             # supports between same-side alcoves
@@ -122,15 +125,15 @@ def hall(ls: LocalScene, room, cx: float, cz: float, yaw: float, out: Layout, si
     ls.sign(sx, y + WALL_H - 0.55, sz, room.title.model_dump(), sub=sign_sub, level="room",
             color=accent or wall.get("color") or "#888888", yaw=f.angle(math.pi), w=6.0)
 
-    # exhibits, alternating left (−x) and right (+x)
-    for i, e in enumerate(room.exhibits):
+    # loci, alternating left (−x) and right (+x)
+    for i, e in enumerate(loci):
         side = -1 if i % 2 == 0 else 1
         z = -L / 2 + END + i * STEP
         sx, sz = P(side * STAGE_X, z)
         face = f.angle(math.atan2(-side, 0.0))           # towards the aisle
         vx, vz = P(side * (STAGE_X - VIEW_DIST), z)
-        ls.stage(f"{e.id}", sx, sz, y, face)
-        out.exhibits[e.id] = Placement((sx, y, sz), face, (vx, y, vz), look_yaw(vx, vz, sx, sz))
+        ls.locus(e.id, sx, sz, y, face)
+        out.loci[e.id] = Placement((sx, y, sz), face, (vx, y, vz), look_yaw(vx, vz, sx, sz))
 
     # decor: between alcoves against the walls, in the corners, hanging, outside
     gaps = _decor_cycle(st, "gap")

@@ -4,7 +4,7 @@
 <title>Memory Palace</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="A walkable 3D memory palace: knowledge systems laid out as buildings, each idea a vivid scene at a numbered place.">
+<meta name="description" content="A walkable 3D memory palace: a city of distinct rooms and objects to hang your memories on, by the method of loci.">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M8 54h48M12 54V28M24 54V28M40 54V28M52 54V28M6 28h52L32 10z' fill='none' stroke='%23a8741f' stroke-width='5' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,15 +33,13 @@
   </div>
 
   <header class="topbar">
-    <button id="where" class="where" type="button" data-t-label="directory">
+    <button id="where" class="where" type="button" data-t-label="places">
       <span class="where-mark" aria-hidden="true"></span>
       <span class="where-text"><span id="where-sys" class="where-sys"></span><span id="where-room" class="where-room"></span></span>
     </button>
     <nav class="tools" aria-label="Tools">
-      <button id="btn-dir" class="tool" type="button" aria-pressed="false" data-t-label="directory"><span class="tool-label" data-t="directory"></span></button>
+      <button id="btn-places" class="tool" type="button" aria-pressed="false" data-t-label="places"><span class="tool-label" data-t="places"></span></button>
       <button id="btn-map" class="tool" type="button" aria-pressed="false" data-t-label="map"><span class="tool-label" data-t="map"></span></button>
-      <button id="btn-tour" class="tool tool-accent" type="button" aria-pressed="false" data-t-label="tour"><span class="tool-label" data-t="tour"></span></button>
-      <button id="btn-recall" class="tool" type="button" aria-pressed="false" data-t-label="recall"><span class="tool-label" data-t="recall"></span></button>
       <button id="btn-lang" class="tool tool-lang" type="button"><span class="tool-label"></span></button>
       <button id="btn-help" class="tool tool-icon" type="button" data-t-label="help"></button>
     </nav>
@@ -51,29 +49,13 @@
   <p id="hint" class="hint" hidden></p>
   <div id="joy" class="joy" hidden aria-hidden="true"><div class="joy-knob"></div></div>
 
-  <aside id="card" class="card" hidden aria-live="polite">
-    <div class="card-grip" aria-hidden="true"></div>
-    <button id="card-close" class="icon-btn card-close" type="button" data-t-label="close"></button>
-    <div class="card-scroll"></div>
-    <footer class="card-foot"></footer>
-  </aside>
-
-  <div id="routebar" class="routebar" hidden></div>
-
-  <aside id="dir" class="drawer" hidden>
+  <aside id="places" class="drawer" hidden>
     <div class="drawer-head">
       <label class="search-wrap"><span class="search-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span>
         <input id="search" class="search" type="search" data-t-ph="search" autocomplete="off"></label>
-      <button id="dir-close" class="icon-btn" type="button" data-t-label="close"></button>
+      <button id="places-close" class="icon-btn" type="button" data-t-label="close"></button>
     </div>
-    <div id="dir-body" class="drawer-body"></div>
-    <form id="gen" class="gen" hidden>
-      <p class="gen-title" data-t="build"></p>
-      <input id="gen-topic" class="search" type="text" data-t-ph="buildTopic" required>
-      <textarea id="gen-notes" class="search gen-notes" rows="3" data-t-ph="buildNotes"></textarea>
-      <button id="gen-go" class="btn btn-primary" type="submit" data-t="buildGo"></button>
-      <pre id="gen-log" class="gen-log" hidden></pre>
-    </form>
+    <div id="places-body" class="drawer-body"></div>
   </aside>
 
   <div id="map" class="mapview" hidden>
@@ -87,29 +69,19 @@
     <button id="map-close" class="icon-btn map-close" type="button" data-t-label="close"></button>
   </div>
 
-  <div id="chooser" class="popover" hidden>
-    <div class="popover-head">
-      <p id="chooser-title" class="popover-title"></p>
-      <button id="chooser-close" class="icon-btn" type="button" data-t-label="close"></button>
-    </div>
-    <p id="chooser-intro" class="popover-intro" hidden></p>
-    <ul id="chooser-list" class="choices"></ul>
-  </div>
-
-  <div id="welcome" class="modal" hidden>
-    <div class="modal-card" role="dialog" aria-labelledby="welcome-title">
+  <div id="help" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-labelledby="help-title">
       <svg class="modal-mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M8 54h48M12 54V28M24 54V28M40 54V28M52 54V28M6 28h52L32 10z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>
-      <h2 id="welcome-title" class="modal-title" data-t="welcomeTitle"></h2>
+      <h2 id="help-title" class="modal-title" data-t="welcomeTitle"></h2>
       <p class="modal-body" data-t="welcomeBody"></p>
       <ol class="how">
         <li><span class="how-n">1</span><span data-t="welcomeHow1"></span></li>
         <li><span class="how-n">2</span><span data-t="welcomeHow2"></span></li>
-        <li><span class="how-n gold">5</span><span data-t="welcomeHow3"></span></li>
-        <li><span class="how-n">?</span><span data-t="welcomeHow4"></span></li>
+        <li><span class="how-n">3</span><span data-t="welcomeHow3"></span></li>
+        <li><span class="how-n">4</span><span data-t="welcomeHow4"></span></li>
       </ol>
       <div class="modal-actions">
-        <button id="welcome-go" class="btn btn-primary" type="button" data-t="welcomeGo"></button>
-        <button id="welcome-walk" class="btn btn-ghost" type="button" data-t="welcomeWalk"></button>
+        <button id="help-close" class="btn btn-primary" type="button" data-t="welcomeGo"></button>
       </div>
     </div>
   </div>
