@@ -226,8 +226,14 @@ export class MapView {
     // labels
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
+    const placed = [];
     const label = (text, x, z, size, weight = 600, fg = night ? "#f4efe4" : "#1d2430") => {
       ctx.font = `${weight} ${size}px "IBM Plex Sans", "Noto Sans SC", system-ui, sans-serif`;
+      // skip labels that would overlap one already drawn (stacked floors of the spiral, dense districts)
+      const w = ctx.measureText(text).width + 6, h = size + 4;
+      const box = [x - w / 2, z - h / 2, x + w / 2, z + h / 2];
+      if (placed.some((q) => box[0] < q[2] && box[2] > q[0] && box[1] < q[3] && box[3] > q[1])) return;
+      placed.push(box);
       ctx.lineWidth = 3.5;
       ctx.strokeStyle = night ? "rgba(10,14,20,0.8)" : "rgba(255,255,255,0.85)";
       ctx.strokeText(text, x, z);
