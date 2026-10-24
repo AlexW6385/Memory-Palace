@@ -105,24 +105,24 @@ function outfit(p, seed, variant, mono) {
 // Legs rl/ll: { f: thigh forward, a: sideways, t: twist, k: knee bend, tip: toes down (feet are kept flat
 //   on the ground otherwise), an: fixed ankle angle }.
 // two: both hands hold one item (carry, lift, read). hold: how a held item sits in the right hand.
-const POSES = {
+export const POSES = {
   stand: {
     ra: { f: 4, a: 9, e: 12 }, la: { f: 4, a: 9, e: 12 }, rl: { a: 3 }, ll: { a: 3 },
   },
   walk: {
     sp: [4, -6, 0], nk: [-3, 5, 0],
-    ra: { f: -22, a: 9, e: 16 }, la: { f: 20, a: 8, e: 34 },
-    rl: { f: 11, k: 4 }, ll: { f: -8, k: 24, tip: 16 },
+    ra: { f: -22, a: 9, e: 16 }, la: { f: 16, a: 8, e: 30 },
+    rl: { f: 11, k: 4 }, ll: { f: -8, k: 18, tip: 12 },
   },
   run: {
     sp: [10, -8, 0], nk: [-10, 6, 0], mouth: "open",
-    ra: { f: -34, a: 16, e: 95 }, la: { f: 30, a: 12, e: 100 },
-    rl: { f: 42, k: 86 }, ll: { f: 4, a: 8, t: -50, k: 94, tip: 30 }, skirt: "short",
+    ra: { f: -24, a: 16, e: 95 }, la: { f: 24, a: 12, e: 108 },
+    rl: { f: 42, k: 86 }, ll: { f: 4, a: 8, t: -65, k: 88, tip: 30 }, skirt: "short",
   },
   point: {
     nk: [-6, -12, 0],
-    ra: { f: 128, a: 36, e: 6, hand: "point" },
-    la: { to: [0.135, -0.04, -0.01], pole: [1, -0.1, -0.6], hand: "fist" },
+    ra: { f: 128, a: 29, e: 6, hand: "point" },
+    la: { to: [0.13, -0.04, -0.01], pole: [0.5, -0.1, -1], hand: "fist" },
     rl: { a: 4 }, ll: { f: 4, a: 3, k: 4 }, hold: "along",
   },
   wave: {
@@ -155,7 +155,7 @@ const POSES = {
     nk: [-12, 0, 0], two: "lift", rl: { a: 9, k: 4 }, ll: { a: 9, k: 4 },
   },
   carry: {
-    sp: [-4, 0, 0], two: "carry", rl: { a: 3 }, ll: { f: 4, a: 3, k: 6 },
+    two: "carry", rl: { a: 3 }, ll: { f: 4, a: 3, k: 6 },
   },
   push: {
     sp: [14, 0, 0], nk: [-14, 0, 0], skirt: "short", brow: -1, mouth: "flat",
@@ -164,15 +164,15 @@ const POSES = {
     rl: { f: 16, k: 26 }, ll: { f: -13, k: 4, tip: 20 },
   },
   pull: {
-    rz: 7, sp: [-10, 24, 5], nk: [4, 10, -4], skirt: "short", brow: -1, mouth: "flat", rope: true,
-    ra: { to: [-0.02, 0.05, 0.12], pole: [-1, -0.6, -0.4], hand: "fist" },
-    la: { to: [0.05, 0.06, 0.2], pole: [1, -0.6, -0.4], hand: "fist" },
+    rz: 7, sp: [-10, 34, 5], nk: [4, 10, -4], skirt: "short", brow: -1, mouth: "flat", rope: true,
+    ra: { to: [-0.03, 0.03, 0.1], pole: [-1, -0.6, -0.4], hand: "fist" },
+    la: { to: [0.04, 0.04, 0.16], pole: [1, -0.6, -0.4], hand: "fist" },
     rl: { f: -8, a: 4, k: 22 }, ll: { f: 16, a: 16, k: 2 },
   },
   throw: {
-    ry: 24, sp: [-6, 20, 0], nk: [0, -24, 0], skirt: "short", ball: true,
-    ra: { f: -48, a: 96, t: 90, e: 100 }, la: { f: 80, a: 10, e: 14, hand: "point" },
-    rl: { f: -14, k: 12 }, ll: { f: 16, a: 4, k: 8 },
+    ry: -4, sp: [-6, -6, 0], nk: [0, 10, 0], skirt: "short", ball: true,
+    ra: { f: -8, a: 92, t: 90, e: 100 }, la: { f: 38, a: 48, e: 58, hand: "open", palm: [0.3, -0.2, 1], fing: [0.2, 0.5, 1] },
+    rl: { f: -10, k: 12 }, ll: { f: 12, a: 6, k: 6 },
   },
   lie: {
     rx: -90, nk: [-8, 0, 0], skirt: "long",
@@ -180,7 +180,7 @@ const POSES = {
     rl: { a: 4, an: -12 }, ll: { a: 4, an: -12 },
   },
   bow: {
-    sp: [27, 0, 0], nk: [12, 0, 0],
+    sp: [23, 0, 0], nk: [14, 0, 0],
     ra: { to: [0.02, 0.06, 0.1], pole: [-1, -0.6, 0.2], hand: "fist" },
     la: { f: -14, a: 12, e: 20 },
     rl: { f: -5 }, ll: { f: -5 },
@@ -201,9 +201,9 @@ const POSES = {
     rl: { f: -7, a: 10, k: 18 }, ll: { f: 10, a: 8, k: 22 },
   },
   fall: {
-    rx: -8, rz: 9, sp: [-8, 0, 4], nk: [-20, 0, 6], mouth: "open", brow: 1, skirt: "short",
-    ra: { f: -20, a: 100, e: 40, hand: "open" }, la: { f: -25, a: 160, e: 30, hand: "open" },
-    rl: { f: -2, a: 4, k: 4 }, ll: { f: 30, a: 18, k: 22 },
+    rx: -6, rz: 6, sp: [-6, 0, 4], nk: [-14, 0, 6], mouth: "open", brow: 1, skirt: "short",
+    ra: { f: -20, a: 165, e: 45, hand: "open" }, la: { f: -25, a: 165, e: 30, hand: "open" },
+    rl: { f: -2, a: 4, k: 4 }, ll: { f: 18, a: 24, k: 30 },
   },
 };
 
@@ -256,7 +256,7 @@ function twoHand(kind, hold, D) {
   let w, h, d, lie = false, item = hold;
   if (kind === "read" && (!hold || hold === "book")) { w = 0.27 * k; h = 0.19 * k; d = 0.03; item = "@book"; }
   else if (!hold && kind === "lift") { w = 0.5 * k; h = 0.17 * k; d = 0.17 * k; item = "@barbell"; }
-  else if (!hold) { w = h = d = 0.17 * k; item = "crate"; }
+  else if (!hold) { w = h = d = 0.16 * k; item = "crate"; }
   else {
     ({ w, h, d } = heldSize(hold));
     if (kind !== "read" && h > 1.7 * w) { lie = true; [w, h] = [h, w]; }
@@ -277,7 +277,7 @@ function twoHand(kind, hold, D) {
       hands = (s) => side(s, s * (w / 2 + r * 0.36), hy, 0.03, [-s, 0, 0], [0, 1, 0.15], "open", [s, -0.3, -0.5]);
     }
   } else if (kind === "carry") {
-    c = V3(0, D.shoulderY - 0.11 * D.th, chest + d / 2 + 0.025);
+    c = V3(0, D.shoulderY - 0.11 * D.th, chest + d / 2 + 0.008);
     hands = (s) => side(s, s * (w / 2 + r * 0.36), c.y - h * 0.08, c.z + d * 0.05, [-s, 0, 0], [0, 0.25, 1]);
   } else {
     c = V3(0, D.shoulderY - 0.085 * D.th, chest + 0.1 * k);
@@ -600,7 +600,7 @@ function rope(b, frames, D) {
   const dir = front.clone().sub(back).normalize();
   const flat = V3(dir.x, 0, dir.z).normalize();
   const tail = back.clone().addScaledVector(dir, -0.05);
-  const peg = V3(front.x + flat.x * 0.15, 0, front.z + flat.z * 0.15);
+  const peg = V3(front.x + flat.x * 0.12, 0, front.z + flat.z * 0.12);
   const o = { color: "#c9a46a", radial: 6 };
   b.tube([[tail.x - 0.01, tail.y - 0.16, tail.z - 0.02], [tail.x, tail.y - 0.05, tail.z], [back.x, back.y, back.z]],
     0.011, { ...o, seg: 12 });

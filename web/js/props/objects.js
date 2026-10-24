@@ -14,6 +14,8 @@ const TAU = 2 * PI;
 const DEG = PI / 180;
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
 const INK = "#22252b";
+// gold a touch lighter than C.gold: large curved metal surfaces mostly mirror the darker parts of the room
+const GOLD = shade(C.gold, 0.05);
 
 // ── small helpers ────────────────────────────────────────────────────────────
 
@@ -374,11 +376,14 @@ function coinBody(b, R, t, col, o = {}) {
   const k = Math.min(0.003, t * 0.25);
   b.lathe([[0, -t / 2], [R - k, -t / 2], [R, -t / 2 + k], [R, t / 2 - k], [R - k, t / 2], [0, t / 2]],
     { rot: [PI / 2, 0, 0], color: col, kind: "metal", seg: o.seg ?? 36 });
-  const hi = shade(col, 0.06);
+  const hi = shade(col, 0.08);
   for (const s of o.oneSide ? [1] : [1, -1]) {
-    b.torus(R - 0.006, Math.min(0.0028, t * 0.2), { at: [0, 0, (s * t) / 2], color: hi, kind: "metal", seg: 36, tubeSeg: 5 });
-    b.extrude(star2(R * 0.46, R * 0.2), 0.0016, { at: [0, 0, s * (t / 2 + 0.0006)], rot: [0, s > 0 ? 0 : PI, 0],
-      color: hi, kind: "metal", bevel: 0.0007 });
+    b.torus(R - 0.0055, Math.min(0.0032, t * 0.22), { at: [0, 0, (s * t) / 2], color: hi, kind: "metal", seg: 36,
+      tubeSeg: 5 });
+    b.cyl(R - 0.009, R - 0.009, 0.001, { at: [0, 0, s * (t / 2 + 0.0001)], rot: [PI / 2, 0, 0], color: shade(col, -0.06),
+      kind: "metal", seg: 32 });
+    b.extrude(star2(R * 0.56, R * 0.24), 0.0022, { at: [0, 0, s * (t / 2 + 0.0009)], rot: [0, s > 0 ? 0 : PI, 0],
+      color: hi, kind: "metal", bevel: 0.0008 });
   }
 }
 
@@ -781,8 +786,8 @@ export default {
         { at: [xp, 0, 0], color: C.charcoal, kind: "gloss", seg: 20 });
     }
     b.cyl(poleR, poleR * 1.08, top, { at: [xp, top / 2, 0], color: "#e8e2d6", kind: "gloss", seg: 12 });
-    b.sphere(0.022, { at: [xp, top + 0.016, 0], color: C.gold, kind: "metal", seg: 14 });
-    b.cyl(0.012, 0.016, 0.012, { at: [xp, top - 0.002, 0], color: C.gold, kind: "metal", seg: 12 });
+    b.sphere(0.022, { at: [xp, top + 0.016, 0], color: GOLD, kind: "metal", seg: 14 });
+    b.cyl(0.012, 0.016, 0.012, { at: [xp, top - 0.002, 0], color: GOLD, kind: "metal", seg: 12 });
     // cloth
     const L = 0.33, Hc = 0.22, x0 = xp + poleR * 0.5, yTop = top - 0.035;
     const wave = (u) => 0.03 * u * u * Math.sin(2.4 * PI * u);
@@ -819,7 +824,7 @@ export default {
 
   // A two-handled trophy cup on a wooden plinth with a plaque.
   trophy(b, p) {
-    const gold = p.color || C.gold;
+    const gold = p.color || GOLD;
     const metal = { color: gold, kind: "metal" };
     b.box(0.17, 0.062, 0.15, { at: [0, 0.031, 0], color: "#4a3326", kind: "gloss", r: 0.008 });
     b.box(0.19, 0.012, 0.17, { at: [0, 0.006, 0], color: "#3c2a20", kind: "gloss", r: 0.004 });
@@ -843,7 +848,7 @@ export default {
 
   // A medal on a V of striped ribbon: a thick metal disc with a rim and a raised star.
   medal(b, p) {
-    const col = p.color || C.gold;
+    const col = p.color || GOLD;
     const R = 0.056, cy = R + 0.003, th = 0.018;
     const yTop = 0.256, yJoin = cy + R + 0.034;
     for (const s of [-1, 1]) {
@@ -860,22 +865,23 @@ export default {
     b.group({ at: [0, cy, 0] }, () => {
       b.cyl(R, R, th, { rot: [PI / 2, 0, 0], color: col, kind: "metal", seg: 40 });
       for (const s of [-1, 1]) {
-        b.torus(R - 0.004, 0.0035, { at: [0, 0, (s * th) / 2], color: shade(col, 0.05), kind: "metal", seg: 40, tubeSeg: 6 });
-        b.torus(R * 0.72, 0.0013, { at: [0, 0, (s * th) / 2], color: shade(col, -0.06), kind: "metal", seg: 36,
-          tubeSeg: 4 });
+        b.torus(R - 0.0045, 0.004, { at: [0, 0, (s * th) / 2], color: shade(col, 0.06), kind: "metal", seg: 40, tubeSeg: 6 });
       }
-      b.extrude(star2(0.03, 0.013), 0.003, { at: [0, 0, th / 2 + 0.0015], color: shade(col, 0.08), kind: "metal",
-        bevel: 0.001 });
+      // a slightly sunken field and a big raised star
+      b.cyl(R - 0.008, R - 0.008, 0.002, { at: [0, 0, th / 2 - 0.0006], rot: [PI / 2, 0, 0], color: shade(col, -0.07),
+        kind: "metal", seg: 36 });
+      b.extrude(star2(0.04, 0.017), 0.004, { at: [0, 0, th / 2 + 0.0016], color: shade(col, 0.1), kind: "metal",
+        bevel: 0.0014 });
     });
   },
 
   // A royal crown: a gold band rising into eight points tipped with pearls, set with gems, over a velvet cap.
   crown(b, p) {
-    const gold = p.color || C.gold;
+    const gold = p.color || GOLD;
     const n = 8, R0 = 0.138, flare = 0.07, t = 0.01, Hb = 0.075, Hs = 0.118;
     const h = (th) => {
       const s = ((((th / TAU) * n + 0.5) % 1) + 1) % 1;
-      return Hb + Hs * Math.pow(1 - Math.abs(2 * s - 1), 1.7);
+      return Hb + Hs * Math.pow(1 - Math.abs(2 * s - 1), 1.25);
     };
     const Ro = (y) => R0 + flare * y;
     const N = n * 12, M = 6;
@@ -883,7 +889,8 @@ export default {
       const th = u * TAU, y = h(th) * v, r = Ro(y) + rOff;
       return [r * Math.sin(th), y, r * Math.cos(th)];
     }, { wrapU: true, flip });
-    b.geo(ring(0, false), { color: gold, kind: "metal" });
+    // the outer wall is faceted (flat-shaded) so that its gold catches the light in bright planes
+    b.geo(ring(0, false), { color: gold, kind: "metal", flat: true });
     b.geo(ring(-t, true), { color: shade(gold, -0.06), kind: "metal" });
     b.geo(gridGeo(N, 1, (u, v) => {
       const th = u * TAU, y = h(th), r = Ro(y) - t * v;
@@ -907,21 +914,27 @@ export default {
       const a2 = a + PI / n, yp = Hb * 0.5, rp = Ro(yp) + 0.002;
       b.sphere(0.0072, { at: [rp * Math.sin(a2), yp, rp * Math.cos(a2)], color: "#f7f1e6", kind: "gloss", seg: 8 });
     }
-    b.sphere(R0 - 0.004, { at: [0, Hb * 0.45, 0], scale: [1, 0.86, 1], thetaLength: PI / 2, color: C.crimson, seg: 28 });
-    b.sphere(0.017, { at: [0, Hb * 0.45 + (R0 - 0.004) * 0.86 + 0.012, 0], color: gold, kind: "metal", seg: 12 });
+    b.sphere(R0 - 0.004, { at: [0, Hb * 0.3, 0], scale: [1, 0.72, 1], thetaLength: PI / 2, color: C.crimson, seg: 28 });
+    b.sphere(0.016, { at: [0, Hb * 0.3 + (R0 - 0.004) * 0.72 + 0.011, 0], color: gold, kind: "metal", seg: 12 });
   },
 
   // A sword standing on its point: diamond-section steel blade, gold cross-guard with a gem, wire-wrapped grip.
   sword(b, p) {
-    const steel = { color: "#d5dae1", kind: "metal" };
-    const gold = { color: C.gold, kind: "metal" };
+    const steel = { color: "#e6ebf1", kind: "metal" };
+    const gold = { color: GOLD, kind: "metal" };
     const grip = p.color || "#7a3b2e";
-    b.lathe([[0, 0], [0.012, 0.025], [0.021, 0.075], [0.024, 0.15], [0.023, 0.53], [0.025, 0.597], [0, 0.606]],
+    // blade: a diamond-section lathe (4 sides, flat-shaded) — cutting edges left and right, a ridge down the middle
+    b.lathe([[0, 0], [0.014, 0.026], [0.025, 0.08], [0.028, 0.15], [0.027, 0.53], [0.029, 0.597], [0, 0.606]],
       { ...steel, seg: 4, scale: [1, 1, 0.24], flat: true });
+    // a dark fuller groove down each face
+    for (const s of [-1, 1]) {
+      b.box(0.0065, 0.42, 0.002, { at: [0, 0.37, s * 0.0058], rot: [s * -0.008, 0, 0], color: "#8f98a4", kind: "metal",
+        r: 0 });
+    }
     const gy = 0.612;
-    b.box(0.096, 0.018, 0.026, { at: [0, gy, 0], ...gold, r: 0.007 });
-    for (const s of [-1, 1]) b.sphere(0.0125, { at: [s * 0.05, gy, 0], ...gold, seg: 12 });
-    b.ico(0.0095, { at: [0, gy, 0.014], scale: [1, 1.2, 0.55], color: C.red, kind: "gloss", detail: 0 });
+    b.box(0.098, 0.022, 0.03, { at: [0, gy, 0], ...gold, r: 0.009 });
+    for (const s of [-1, 1]) b.sphere(0.0135, { at: [s * 0.051, gy, 0], ...gold, seg: 12 });
+    b.ico(0.0105, { at: [0, gy, 0.016], scale: [1, 1.2, 0.55], color: C.red, kind: "gloss", detail: 0 });
     b.cyl(0.0135, 0.0152, 0.15, { at: [0, gy + 0.084, 0], color: grip, seg: 12 });
     const helix = [];
     for (let i = 0; i <= 40; i++) {
@@ -1015,10 +1028,11 @@ export default {
   // 'open' swings the door wide, showing its bolts and the gold bars and cash inside.
   safe(b, p) {
     const open = p.variant === "open";
-    const body = p.color || "#5a6672";
+    const body = p.color || "#46505b";
     const chrome = { color: C.silver, kind: "metal" };
-    const gold = C.gold;
-    const W = open ? 0.42 : 0.52, H = open ? 0.56 : 0.585, D = open ? 0.36 : 0.44;
+    const gold = GOLD;
+    // the open safe is a little slimmer, so that its swung-out door stays near the catalogue box
+    const W = open ? 0.42 : 0.52, H = open ? 0.56 : 0.585, D = open ? 0.33 : 0.44;
     const foot = 0.038, yc = foot + H / 2, fz = D / 2;
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
       b.box(0.055, foot + 0.01, 0.055, { at: [sx * (W / 2 - 0.045), (foot + 0.01) / 2, sz * (D / 2 - 0.045)],
@@ -1057,7 +1071,7 @@ export default {
       b.prop("coin_stack", {}, { at: [0.07, ys + 0.007, 0.0], scale: 0.42 });
     }
     // the door, built in its hinge frame (hinge on the left front edge, door along +x)
-    const ang = open ? 2.35 : 0;
+    const ang = open ? 2.5 : 0;
     const door = () => {
       b.box(Wd, Hd, td, { at: [Wd / 2, 0, -td / 2 + 0.012], color: body, kind: "gloss", r: 0.014 });
       // gold pinstripe
@@ -1066,7 +1080,7 @@ export default {
         b.box(Wd - 2 * ins, lw, 0.002, { at: [Wd / 2, s * (Hd / 2 - ins), 0.0125], color: gold, r: 0 });
         b.box(lw, Hd - 2 * ins, 0.002, { at: [Wd / 2 + s * (Wd / 2 - ins), 0, 0.0125], color: gold, r: 0 });
       }
-      b.group({ at: [Wd / 2, Hd * 0.13, 0.012] }, () => dial(b, 0.062));
+      b.group({ at: [Wd / 2, Hd * 0.12, 0.012] }, () => dial(b, 0.074));
       // lever handle
       b.group({ at: [Wd / 2, -Hd * 0.2, 0.012] }, () => {
         b.cyl(0.024, 0.026, 0.02, { at: [0, 0, 0.01], rot: [PI / 2, 0, 0], ...chrome, seg: 16 });
@@ -1097,16 +1111,16 @@ export default {
 
   // A round bank-vault door in a square steel frame: radial bolt heads, a spoked wheel, a dial and a big hinge.
   vault_door(b) {
-    const frame = { color: "#7b838d", kind: "metal" };
+    const frame = { color: "#8d959f", kind: "metal" };
     const steel = { color: "#c7ccd3", kind: "metal" };
     const brass = { color: C.brass, kind: "metal" };
     const S = 1.3, cy = 0.65, Rh = 0.54, Rd = 0.515;
     const sq = [[-S / 2, -S / 2], [S / 2, -S / 2], [S / 2, S / 2], [-S / 2, S / 2]];
-    b.extrude(shape2(sq, [ellipse2(Rh, Rh, 64)]), 0.17, { at: [0, cy, -0.02], ...frame, bevel: 0.015 });
-    b.torus(Rh + 0.012, 0.022, { at: [0, cy, 0.075], color: shade(frame.color, 0.08), kind: "metal", seg: 64, tubeSeg: 8 });
+    b.extrude(shape2(sq, [ellipse2(Rh, Rh, 64)]), 0.12, { at: [0, cy, -0.02], ...frame, bevel: 0.015 });
+    b.torus(Rh + 0.012, 0.022, { at: [0, cy, 0.058], color: shade(frame.color, 0.08), kind: "metal", seg: 64, tubeSeg: 8 });
     for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
       for (const [dx, dy] of [[0.06, 0.06], [0.14, 0.06], [0.06, 0.14]]) {
-        b.sphere(0.014, { at: [sx * (S / 2 - dx), cy + sy * (S / 2 - dy), 0.075], scale: [1, 1, 0.55],
+        b.sphere(0.014, { at: [sx * (S / 2 - dx), cy + sy * (S / 2 - dy), 0.056], scale: [1, 1, 0.55],
           color: shade(frame.color, 0.1), kind: "metal", seg: 8 });
       }
     }
@@ -1167,7 +1181,7 @@ export default {
 
   // A coin standing on its edge; variant gold, silver or copper.
   coin(b, p) {
-    const col = { gold: C.gold, silver: C.silver, copper: C.copper }[p.variant] || C.gold;
+    const col = { gold: GOLD, silver: C.silver, copper: C.copper }[p.variant] || GOLD;
     const R = 0.068;
     b.group({ at: [0, R, 0] }, () => coinBody(b, R, 0.016, col));
   },
@@ -1179,7 +1193,7 @@ export default {
     for (let i = 0; i < n; i++) {
       const top = i === n - 1;
       const x = rnd.range(-0.004, 0.004), z = rnd.range(-0.004, 0.004);
-      const col = shade(C.gold, rnd.range(-0.035, 0.035));
+      const col = shade(GOLD, rnd.range(-0.035, 0.035));
       if (top) {
         b.group({ at: [x, t * i + t / 2, z], rot: [-PI / 2, 0, rnd.range(0, TAU)] }, () => coinBody(b, R, t, col,
           { oneSide: true }));
@@ -1193,11 +1207,11 @@ export default {
 
   // A cast gold ingot: tapered sides, a stamped cartouche on top.
   gold_bar(b) {
-    const gold = { color: C.gold, kind: "metal" };
+    const gold = { color: GOLD, kind: "metal" };
     const W = 0.232, H = 0.088, D = 0.116;
     taperBox(b, W, H, D, 0.82, 0.68, { at: [0, H / 2, 0], ...gold, r: 0.008 });
     const tw = W * 0.82 - 0.05, td = D * 0.68 - 0.034;
-    b.box(tw, 0.003, td, { at: [0, H + 0.0005, 0], color: shade(C.gold, -0.06), kind: "metal", r: 0.0012 });
+    b.box(tw, 0.003, td, { at: [0, H + 0.0005, 0], color: shade(GOLD, -0.06), kind: "metal", r: 0.0012 });
     b.text("999.9", { at: [0, H + 0.0035, 0.0], rot: [-PI / 2, 0, 0], w: tw * 0.9, h: td * 0.8, fg: "#7a5418",
       font: "display", weight: "700" });
   },
@@ -1313,7 +1327,7 @@ export default {
 
   // A jigsaw piece standing up: two tabs, two blanks.
   puzzle_piece(b, p) {
-    const col = p.color || "#57ad61";
+    const col = p.color || "#3f9f52";
     const S = 0.214, k = 0.245 * S, bevel = 0.009;
     const outline = puzzle2(S, [-1, 1, 1, -1]).map(([x, y]) => [x - (S + k) / 2, y + bevel]);
     b.extrude(outline, 0.054, { color: col, kind: "gloss", bevel, curveSeg: 6 });
@@ -1412,10 +1426,10 @@ export default {
     const zf = tb / 2 + 0.003;
     const wood = C.wood;
     for (const s of [-1, 1]) {
-      b.rod([s * 0.13, 0.56, -0.04], [s * 0.245, 0.012, -0.03], 0.013, { color: wood, seg: 8 });
-      b.box(0.034, 0.024, 0.09, { at: [s * 0.245, 0.012, -0.012], color: shade(wood, -0.1), r: 0.007 });
+      b.rod([s * 0.13, 0.56, -0.033], [s * 0.245, 0.012, -0.027], 0.013, { color: wood, seg: 8 });
+      b.box(0.034, 0.024, 0.08, { at: [s * 0.245, 0.012, -0.006], color: shade(wood, -0.1), r: 0.007 });
     }
-    b.rod([-0.215, 0.12, -0.034], [0.215, 0.12, -0.034], 0.01, { color: shade(wood, -0.06), seg: 8 });
+    b.rod([-0.215, 0.12, -0.03], [0.215, 0.12, -0.03], 0.01, { color: shade(wood, -0.06), seg: 8 });
     b.cyl(Rb, Rb, tb, { at: [0, yc, 0], rot: [PI / 2, 0, 0], color: "#d9b768", seg: 48 });
     for (const z of [-tb / 2 + 0.012, tb / 2 - 0.012]) {
       b.torus(Rb + 0.001, 0.0045, { at: [0, yc, z], color: "#b38d48", seg: 48, tubeSeg: 5 });
@@ -1431,16 +1445,17 @@ export default {
       }
     }
     b.geo(new THREE.RingGeometry(R - 0.002, R + 0.004, 56, 1), { at: [0, yc, zf + 0.0006], color: "#8a8d93" });
-    // an arrow in the red, shot in from the left
-    const tip = [-0.042, yc + 0.03, zf];
-    const dir = new THREE.Vector3(-0.62, 0.22, 0.75).normalize();
-    const end = [tip[0] + dir.x * 0.1, tip[1] + dir.y * 0.1, tip[2] + dir.z * 0.1];
-    b.rod(tip, end, 0.0042, { color: "#e8dcc4", seg: 6 });
+    // an arrow in the red, shot in at a slant from the left (kept shallow so the target stays thin)
+    const tip = [-0.03, yc + 0.035, zf - 0.004];
+    const dir = new THREE.Vector3(-0.84, 0.26, 0.39).normalize();
+    const L = 0.135, at = (t) => [tip[0] + dir.x * t, tip[1] + dir.y * t, tip[2] + dir.z * t];
+    b.rod(tip, at(L), 0.0048, { color: "#e9dcc2", seg: 8 });
+    b.cyl(0.0058, 0.0058, 0.008, { at: at(L + 0.002), rot: aim(dir.toArray()), color: C.charcoal, seg: 8 });
     for (let k = 0; k < 3; k++) {
-      const a = (k / 3) * TAU;
-      b.group({ at: [tip[0] + dir.x * 0.082, tip[1] + dir.y * 0.082, tip[2] + dir.z * 0.082], rot: aim(dir.toArray()) },
-        () => b.group({ rot: [0, a, 0] }, () => b.extrude([[0, -0.012], [0.012, 0.004], [0.012, 0.016], [0, 0.012]], 0.001,
-          { at: [0.002, 0, 0], color: k === 0 ? C.red : C.white, bevel: 0 })));
+      const a = (k / 3) * TAU + 0.5;
+      b.group({ at: at(L - 0.026), rot: aim(dir.toArray()) }, () => b.group({ rot: [0, a, 0] }, () =>
+        b.extrude([[0, -0.016], [0.014, 0.0], [0.014, 0.018], [0, 0.016]], 0.0012,
+          { at: [0.003, 0, 0], color: k === 0 ? C.red : C.white, bevel: 0 })));
     }
   },
 
@@ -1455,20 +1470,21 @@ export default {
       : [[0, 0.138], [0.076, 0.132], [0.12, 0.098], [0.136, 0.04], [0.134, -0.02], [0.115, -0.076], [0.078, -0.116],
         [0.036, -0.138], [0, -0.143]];
     const outline = smooth2([...half, ...half.slice(1, -1).reverse().map(([x, y]) => [-x, y])], 64);
+    // eye holes: laughing upturned crescents, or drooping almonds; and the open mouth
     const eye = (sx) => tragedy
-      ? ellipse2(0.03, 0.0135, 22, sx * 0.052, 0.034, -sx * 0.38)
-      : [...arc2(0.033, 0.03, 0.1 * PI, 0.9 * PI, 10, sx * 0.052, 0.026),
-        ...arc2(0.03, 0.013, 0.88 * PI, 0.12 * PI, 10, sx * 0.052, 0.026)];
+      ? smooth2([[sx * 0.018, 0.047], [sx * 0.05, 0.046], [sx * 0.084, 0.022], [sx * 0.056, 0.016], [sx * 0.024, 0.026]], 26)
+      : [...arc2(0.038, 0.036, 0.08 * PI, 0.92 * PI, 12, sx * 0.053, 0.02),
+        ...arc2(0.034, 0.012, 0.9 * PI, 0.1 * PI, 12, sx * 0.053, 0.02)];
     const mouth = tragedy
-      ? smooth2([[-0.068, -0.1], [-0.04, -0.07], [0, -0.06], [0.04, -0.07], [0.068, -0.1], [0.04, -0.086], [0, -0.078],
-        [-0.04, -0.086]], 32)
-      : smooth2([[-0.074, -0.03], [-0.04, -0.046], [0, -0.05], [0.04, -0.046], [0.074, -0.03], [0.06, -0.064],
-        [0.032, -0.088], [0, -0.096], [-0.032, -0.088], [-0.06, -0.064]], 36);
+      ? smooth2([[-0.072, -0.104], [-0.044, -0.068], [0, -0.056], [0.044, -0.068], [0.072, -0.104], [0.042, -0.09],
+        [0, -0.082], [-0.042, -0.09]], 32)
+      : smooth2([[-0.078, -0.028], [-0.04, -0.044], [0, -0.048], [0.04, -0.044], [0.078, -0.028], [0.064, -0.066],
+        [0.034, -0.093], [0, -0.102], [-0.034, -0.093], [-0.064, -0.066]], 36);
     const surf = (x, y) => -(x * x) / (2 * 0.15) - (y * y) / (2 * 0.5);
     const bend = (dz) => (x, y, z) => [x, yc + y, z + dz + surf(x, y)];
     warpSlab(b, outline, [eye(-1), eye(1), mouth], 0.008, bend(0.004), { color: col, kind: "gloss", bevel: 0.003,
-      maxEdge: 0.012, crease: 0.8 });
-    warpSlab(b, inset2(outline, 0.012), [], 0.004, bend(-0.008), { color: "#2a2522", bevel: 0, maxEdge: 0.02 });
+      maxEdge: 0.016, crease: 0.8 });
+    warpSlab(b, inset2(outline, 0.012), [], 0.004, bend(-0.008), { color: "#2a2522", bevel: 0, maxEdge: 0.026 });
     // brows and nose on the surface
     const on = (x, y, lift) => [x, yc + y, surf(x, y) + 0.008 + lift];
     for (const s of [-1, 1]) {

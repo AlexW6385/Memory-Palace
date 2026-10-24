@@ -542,12 +542,12 @@ const scallop = (r) => arcPts(0, 0, r, 0, -PI, 10);
 
 /** A clipped hedge W × H × D (centred): rounded edges and a softly lumpy, smooth-shaded surface. */
 function hedgeGeo(R, W, H, D, o = {}) {
-  const r = o.r ?? 0.013, amp = o.amp ?? 0.0055, step = o.step ?? 0.038;
+  const r = o.r ?? 0.013, amp = o.amp ?? 0.0042, step = o.step ?? 0.034;
   const g = new THREE.BoxGeometry(W, H, D, Math.max(2, Math.round(W / step)), 2, Math.max(1, Math.round(D / step)));
   g.deleteAttribute("uv");
   g.deleteAttribute("normal");
   const waves = Array.from({ length: 4 }, () =>
-    [new THREE.Vector3(R() - 0.5, R() - 0.5, R() - 0.5).normalize(), R() * TAU, 55 + R() * 45]);
+    [new THREE.Vector3(R() - 0.5, R() - 0.5, R() - 0.5).normalize(), R() * TAU, 70 + R() * 50]);
   const h = [W / 2 - r, H / 2 - r, D / 2 - r];
   const pos = g.attributes.position, pt = new THREE.Vector3(), q = new THREE.Vector3(), n = new THREE.Vector3();
   for (let i = 0; i < pos.count; i++) {
@@ -687,8 +687,8 @@ export default {
   bridge(b, p) {
     const stone = p.color || STONE;
     const R = randomFor(b, p, 3);
-    const L = 1.26, Dz = 0.38, span = 0.3, rise = 0.21, bev = 0.008;
-    const deck = (x) => 0.268 + 0.08 * Math.cos((x / (L / 2)) * (PI / 2));
+    const L = 1.26, Dz = 0.38, span = 0.32, rise = 0.23, bev = 0.008;
+    const deck = (x) => 0.22 + 0.15 * Math.pow(Math.cos((x / (L / 2)) * (PI / 2)), 1.3);
     const n = 18;
     const body = [[-L / 2, 0], [-span, 0]];
     for (let i = 1; i < n; i++) {
@@ -727,6 +727,28 @@ export default {
     }
     b.extrude(band(0, 0.008, -L / 2 + 0.01, L / 2 - 0.01), Dz - 2 * pt - 0.006,
       { color: "#d8c8a2", bevel: 0.002, curveSeg: 1 });
+    // a darker lining under the arch, and a little stream running through it
+    const lining = [];
+    for (let i = 0; i <= n; i++) {
+      const s2 = (i / n) * PI;
+      lining.push([-(span - 0.004) * Math.cos(s2), (rise - 0.004) * Math.sin(s2)]);
+    }
+    for (let i = n; i >= 0; i--) {
+      const s2 = (i / n) * PI;
+      lining.push([-(span + 0.02) * Math.cos(s2), (rise + 0.02) * Math.sin(s2)]);
+    }
+    b.extrude(lining, Dz - 0.004, { color: shade(stone, -0.2), bevel: 0, curveSeg: 1 });
+    const stream = [];
+    for (let i = 0; i <= 12; i++) {
+      const t2 = i / 12, z = lerp(-0.25, 0.25, t2);
+      stream.push([0.2 + 0.025 * Math.sin(t2 * 7 + 1), z]);
+    }
+    for (let i = 12; i >= 0; i--) {
+      const t2 = i / 12, z = lerp(-0.25, 0.25, t2);
+      stream.push([-0.21 + 0.025 * Math.sin(t2 * 6 + 2.5), z]);
+    }
+    b.extrude(stream, 0.004, { at: [0, 0.003, 0], rot: [PI / 2, 0, 0], color: C.water, kind: "gloss", bevel: 0.002,
+      curveSeg: 1 });
     // voussoirs round the arch, keystone in the middle
     const nv = 13;
     for (let k = 0; k < nv; k++) {
@@ -862,8 +884,10 @@ export default {
       const z = s * (L / 2 - 0.03);
       b.cyl(0.011, 0.011, H + 0.06, { at: [0, (H + 0.06) / 2, z], color: C.wood, seg: 8 });
       b.sphere(0.016, { at: [0, H + 0.066, z], color: C.darkWood, seg: 8 });
-      b.rod([0, H + 0.04, z], [0, 0.012, s * 0.39], 0.003, { color: ROPE, seg: 4 });
-      b.cyl(0.006, 0.003, 0.04, { at: [0, 0.016, s * 0.395], color: "#8d9097", seg: 5 });
+      if (s < 0) {
+        b.rod([0, H + 0.04, z], [0, 0.012, -0.39], 0.003, { color: ROPE, seg: 4 });
+        b.cyl(0.006, 0.003, 0.04, { at: [0, 0.016, -0.395], color: "#8d9097", seg: 5 });
+      }
       for (const sx of [-1, 1]) {
         b.cyl(0.005, 0.003, 0.035, { at: [sx * (W + 0.035), 0.014, s * (L / 2 - 0.03)], color: "#8d9097", seg: 5 });
       }
@@ -1413,10 +1437,10 @@ export default {
       b.box(0.04, 0.007, 0.026, { at: [rc[0] + Math.cos(ang) * 0.133, rc[1] + Math.sin(ang) * 0.133, 0], rot: [0, 0, ang],
         color: lead, r: 0 });
       b.group({ at: [rc[0] + Math.cos(ang) * 0.064, rc[1] + Math.sin(ang) * 0.064, 0], rot: [0, 0, ang] }, () => {
-        b.extrude(circleShape(1), 0.024, { scale: [0.05, 0.029, 1], ...glow(k % 2 ? J.purple : J.red), bevel: 0, curveSeg: 8 });
+        b.extrude(circleShape(1), 0.03, { scale: [0.05, 0.029, 1], ...glow(k % 2 ? J.purple : J.red), bevel: 0, curveSeg: 8 });
       });
     }
-    b.extrude(circleShape(0.026), 0.028, { at: [rc[0], rc[1], 0], ...glow(J.green), bevel: 0.002, curveSeg: 10 });
+    b.extrude(circleShape(0.026), 0.032, { at: [rc[0], rc[1], 0], ...glow(J.green), bevel: 0.002, curveSeg: 10 });
     b.torus(0.027, 0.006, { at: [rc[0], rc[1], 0], color: lead, seg: 18, tubeSeg: 5 });
     // lancet medallion below
     const lan = [];
