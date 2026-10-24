@@ -1,6 +1,7 @@
 // Builds every prop (and variant / pose / hat / held item) in node and checks it
 // against the catalogue: no exceptions, size close to the declared size, standing
-// on y = 0, roughly centred, and a sane triangle budget.
+// on y = 0, roughly centred, and a sane triangle budget. Poses, hats and held items change a figure's
+// extent on purpose, so for those a size mismatch is only a warning.
 //
 //   node tests/js/props.test.mjs                 all props
 //   node tests/js/props.test.mjs --group animals one group
@@ -19,7 +20,7 @@ const strict = args.includes("--strict");
 const errors = [], warnings = [];
 let missing = 0, built = 0;
 
-function check(name, params, label) {
+function check(name, params, label, loose = false) {
   let b;
   try {
     b = buildProp(name, { seed: 7, ...params }, { lang: "en" });
@@ -36,7 +37,7 @@ function check(name, params, label) {
   const axes = ["width", "height", "depth"];
   for (let i = 0; i < 3; i++) {
     const r = size[i] / want[i];
-    if (r > 1.35 || r < 0.65) errors.push(`${label}: ${axes[i]} ${size[i].toFixed(2)} m vs catalogue ${want[i]} m`);
+    if (r > 1.35 || r < 0.65) (loose ? warnings : errors).push(`${label}: ${axes[i]} ${size[i].toFixed(2)} m vs catalogue ${want[i]} m`);
     else if (r > 1.2 || r < 0.8) warnings.push(`${label}: ${axes[i]} ${size[i].toFixed(2)} m vs catalogue ${want[i]} m`);
   }
   if (!floats && Math.abs(box.min.y) > 0.03 && name !== "chandelier") {
@@ -58,10 +59,10 @@ for (const name of names) {
   const variants = meta.variants.length ? meta.variants : [undefined];
   for (const v of variants) check(name, v ? { variant: v } : {}, v ? `${name}/${v}` : name);
   if (meta.text) check(name, { text: { en: "Sample text", zh: "示例文字" } }, `${name}+text`);
-  if (name === "figure" || name === "statue") for (const pose of CATALOG.poses) check(name, { pose }, `${name}/pose=${pose}`);
+  if (name === "figure" || name === "statue") for (const pose of CATALOG.poses) check(name, { pose }, `${name}/pose=${pose}`, true);
   if (name === "figure") {
-    for (const hat of CATALOG.hats) check(name, { hat }, `figure/hat=${hat}`);
-    for (const p of CATALOG.props.filter((x) => x.holdable)) check(name, { hold: p.name }, `figure/hold=${p.name}`);
+    for (const hat of CATALOG.hats) check(name, { hat }, `figure/hat=${hat}`, true);
+    for (const p of CATALOG.props.filter((x) => x.holdable)) check(name, { hold: p.name }, `figure/hold=${p.name}`, true);
   }
   if (name === "cutout") check(name, { emoji: "🦘" }, "cutout+emoji");
 }
