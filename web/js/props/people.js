@@ -796,4 +796,260 @@ export default {
       });
     }
   },
+  // A classical portrait bust on a short column; variants add a laurel wreath or a full beard.
+  bust(b, p) {
+    const c = p.color || C.marble;
+    const dark = shade(c, -0.07);
+    b.box(0.3, 0.05, 0.28, { at: [0, 0.025, 0], color: dark, r: 0.01 });
+    b.cyl(0.095, 0.11, 0.26, { at: [0, 0.18, 0], color: c, seg: 16, flat: true });
+    b.box(0.26, 0.04, 0.24, { at: [0, 0.33, 0], color: dark, r: 0.01 });
+    b.cyl(0.07, 0.09, 0.05, { at: [0, 0.375, 0], color: c, seg: 18 });
+    // chest and shoulders
+    b.sphere(0.165, { at: [0, 0.455, 0], scale: [1.12, 0.52, 0.62], color: c, seg: 22 });
+    b.cyl(0.048, 0.055, 0.08, { at: [0, 0.535, 0.005], color: c, seg: 14 });
+    // head
+    const hy = 0.62;
+    b.sphere(0.092, { at: [0, hy, 0], scale: [0.9, 1.08, 1.0], color: c, seg: 22 });
+    b.box(0.026, 0.05, 0.04, { at: [0, hy - 0.005, 0.088], rot: [0.25, 0, 0], color: c, r: 0.01 });
+    b.box(0.12, 0.016, 0.03, { at: [0, hy + 0.03, 0.078], color: c, r: 0.007 });
+    for (const s of [-1, 1]) {
+      b.sphere(0.012, { at: [s * 0.033, hy + 0.012, 0.085], color: shade(c, -0.12), seg: 8 });
+      b.sphere(0.02, { at: [s * 0.083, hy, 0], scale: [0.5, 1, 0.8], color: c, seg: 10 });
+    }
+    // hair as a cap of curls
+    b.sphere(0.097, { at: [0, hy + 0.025, -0.012], scale: [0.95, 0.9, 1.0], thetaLength: 1.5, color: shade(c, -0.03), seg: 20 });
+    for (let i = 0; i < 7; i++) {
+      const a = -1.2 + i * 0.4;
+      b.sphere(0.022, { at: [Math.sin(a) * 0.08, hy + 0.075, Math.cos(a) * 0.06 + 0.012], color: shade(c, -0.04), seg: 8 });
+    }
+    if (p.variant === "bearded") {
+      b.sphere(0.07, { at: [0, hy - 0.06, 0.04], scale: [1.0, 1.1, 0.75], color: shade(c, -0.04), seg: 16 });
+      for (let i = 0; i < 5; i++) {
+        b.sphere(0.02, { at: [(i - 2) * 0.025, hy - 0.115, 0.06], color: shade(c, -0.06), seg: 8 });
+      }
+    }
+    if (p.variant === "laurel") {
+      const g = "#7f9a52";
+      b.torus(0.088, 0.008, { at: [0, hy + 0.045, -0.005], rot: [PI / 2 - 0.12, 0, 0], color: g, seg: 24, tubeSeg: 5 });
+      for (let i = 0; i < 14; i++) {
+        const a = -PI * 0.85 + (i / 13) * PI * 1.7;
+        b.sphere(0.016, { at: [Math.sin(a) * 0.09, hy + 0.05, Math.cos(a) * 0.09 - 0.005], scale: [0.55, 0.35, 1.2],
+          rot: [0, a + PI / 2, 0.4], color: shade(g, i % 2 ? 0.06 : -0.04), seg: 8 });
+      }
+    }
+  },
+
+  // A giant hand rising from the stage, palm towards the viewer; the variant sets the gesture.
+  hand(b, p) {
+    b.group({ scale: [1.3, 1.25, 1.25] }, () => {
+    const skin = p.color || C.skin[1];
+    const cuff = "#f1ece2";
+    b.cyl(0.11, 0.12, 0.05, { at: [0, 0.025, 0], color: shade(cuff, -0.1), seg: 20 });
+    b.cyl(0.085, 0.095, 0.1, { at: [0, 0.1, 0], color: cuff, seg: 20 });
+    b.cyl(0.072, 0.08, 0.12, { at: [0, 0.2, 0], color: skin, seg: 18 });
+    const v = p.variant || "open";
+    // curl per finger (index, middle, ring, little): angle of each joint towards the viewer, in radians
+    const CURL = {
+      open: [0, 0, 0, 0], point: [0, 1.5, 1.5, 1.45], fist: [1.55, 1.6, 1.6, 1.55], grab: [0.75, 0.8, 0.8, 0.75],
+      thumbs_up: [1.55, 1.6, 1.6, 1.55], pinch: [0.85, 0.35, 0.25, 0.2],
+    }[v] || [0, 0, 0, 0];
+    const spread = v === "open" ? [-0.12, -0.04, 0.04, 0.12] : [-0.03, -0.01, 0.01, 0.03];
+    const len = [0.13, 0.145, 0.135, 0.105];
+    const xs = [-0.072, -0.024, 0.024, 0.07];
+    const py = 0.33;
+    b.box(0.2, 0.2, 0.085, { at: [0, py, 0], color: skin, r: 0.035 });
+    for (let i = 0; i < 4; i++) {
+      const r = 0.024 - i * 0.0015;
+      b.group({ at: [xs[i], py + 0.095, 0], rot: [-CURL[i], 0, spread[i]] }, () => {
+        const l1 = len[i] * 0.55, l2 = len[i] * 0.45;
+        b.capsule(r, l1 - r, { at: [0, l1 / 2, 0], color: skin, seg: 10 });
+        b.group({ at: [0, l1, 0], rot: [-CURL[i] * 0.9, 0, 0] }, () => {
+          b.capsule(r * 0.92, l2 - r, { at: [0, l2 / 2, 0], color: skin, seg: 10 });
+          b.sphere(r * 0.55, { at: [0, l2 - r * 0.5, r * 0.55], scale: [1, 0.7, 0.4], color: shade(skin, 0.1), seg: 8 });
+        });
+      });
+    }
+    // thumb, on the viewer's left (a right hand seen palm-on)
+    const thumb = {
+      open: { at: [-0.1, py - 0.03, 0.01], rot: [0, 0, 0.75], bend: 0.2 },
+      point: { at: [-0.085, py - 0.02, 0.04], rot: [-0.5, 0, 1.3], bend: 0.5 },
+      fist: { at: [-0.085, py - 0.01, 0.06], rot: [-0.6, 0, 1.45], bend: 0.4 },
+      grab: { at: [-0.1, py - 0.03, 0.03], rot: [-0.6, 0, 0.9], bend: 0.5 },
+      thumbs_up: { at: [-0.09, py + 0.06, 0.03], rot: [0, 0, 0.05], bend: 0 },
+      pinch: { at: [-0.09, py - 0.02, 0.04], rot: [-0.95, 0, 0.6], bend: 0.35 },
+    }[v] || { at: [-0.1, py - 0.03, 0.01], rot: [0, 0, 0.75], bend: 0.2 };
+    b.group({ at: thumb.at, rot: thumb.rot }, () => {
+      b.capsule(0.03, 0.04, { at: [0, 0.035, 0], color: skin, seg: 10 });
+      b.group({ at: [0, 0.07, 0], rot: [-thumb.bend, 0, 0] }, () => {
+        b.capsule(0.027, 0.03, { at: [0, 0.03, 0], color: skin, seg: 10 });
+        b.sphere(0.014, { at: [0, 0.05, 0.016], scale: [1, 0.7, 0.4], color: shade(skin, 0.1), seg: 8 });
+      });
+    });
+    // palm creases on the side facing the viewer
+    for (const [y, w] of [[py + 0.02, 0.12], [py - 0.035, 0.1]]) {
+      b.box(w, 0.005, 0.004, { at: [0.01, y, 0.044], rot: [0, 0, 0.12], color: shade(skin, -0.12), r: 0 });
+    }
+    });
+  },
+
+  // A giant eyeball on a stand, looking at the viewer; color = iris.
+  eye(b, p) {
+    const iris = p.color || "#3f74c4";
+    b.cyl(0.15, 0.17, 0.04, { at: [0, 0.02, 0], color: C.darkWood, seg: 24 });
+    b.cyl(0.025, 0.03, 0.1, { at: [0, 0.09, 0], color: C.brass, kind: "metal", seg: 12 });
+    b.torus(0.1, 0.018, { at: [0, 0.15, 0], rot: [PI / 2, 0, 0], color: C.brass, kind: "metal", seg: 24 });
+    const R = 0.185, y = 0.305;
+    b.sphere(R, { at: [0, y, 0], color: "#f6f3ec", kind: "gloss", seg: 30 });
+    // iris, pupil and catchlight sit on the front of the ball
+    b.group({ at: [0, y, 0] }, () => {
+      b.sphere(R * 1.004, { rot: [PI / 2, 0, 0], thetaLength: 0.5, color: iris, kind: "gloss", seg: 30 });
+      b.sphere(R * 1.008, { rot: [PI / 2, 0, 0], thetaLength: 0.23, color: "#16181d", kind: "gloss", seg: 24 });
+      b.sphere(0.022, { at: [-0.045, 0.05, R * 0.97], scale: [1, 1, 0.4], color: "#ffffff", kind: "glow", light: false, seg: 10 });
+      // a few veins on the white
+      const red = "#d4544a";
+      for (const [a, t] of [[2.2, 0.3], [-2.3, -0.2], [2.8, -0.35], [-2.7, 0.4]]) {
+        const pts = [];
+        for (let k = 0; k <= 4; k++) {
+          const ang = a + (a > 0 ? -1 : 1) * k * 0.13;
+          const el = t + Math.sin(k * 1.7) * 0.05;
+          pts.push([Math.sin(ang) * Math.cos(el) * R * 1.003, Math.sin(el) * R * 1.003, Math.cos(ang) * Math.cos(el) * R * 1.003]);
+        }
+        b.tube(pts, 0.0035, { color: red, radial: 4 });
+      }
+    });
+  },
+
+  // A pink brain on a dish.
+  brain(b, p) {
+    const pink = p.color || "#e8a3ad";
+    b.cyl(0.24, 0.2, 0.03, { at: [0, 0.015, 0], color: "#e9ecef", kind: "gloss", seg: 32 });
+    b.torus(0.235, 0.012, { at: [0, 0.03, 0], rot: [PI / 2, 0, 0], color: "#d3d8de", kind: "gloss", seg: 32 });
+    const r = rng(seedOf(b, p) * 17 + 5);
+    const cy = 0.215;
+    for (const s of [-1, 1]) {
+      b.sphere(0.12, { at: [s * 0.068, cy, 0], scale: [0.95, 1.25, 1.75], color: pink, seg: 22 });
+      // gyri: short, curved rolls over each hemisphere
+      for (let i = 0; i < 16; i++) {
+        const th = r.range(0.15, 1.45), ph = r.range(-1.3, 1.3);
+        const nx = Math.sin(th) * Math.sin(ph) * 0.4 + 0.6 * Math.cos(th) * 0.0;
+        const px = s * 0.068 + s * Math.abs(Math.sin(th) * Math.cos(ph)) * 0.11 * 0.95;
+        const py = cy + Math.cos(th) * 0.12 * 1.25;
+        const pz = Math.sin(th) * Math.sin(ph) * 0.12 * 1.75;
+        b.capsule(0.022, r.range(0.04, 0.08), { at: [px, py, pz], rot: [r.range(0, PI), r.range(0, PI), nx],
+          color: shade(pink, r.range(-0.06, 0.03)), seg: 6, capSeg: 3 });
+      }
+    }
+    b.box(0.006, 0.18, 0.4, { at: [0, cy + 0.06, 0], color: shade(pink, -0.25), r: 0 });
+    b.sphere(0.085, { at: [0, 0.1, -0.17], scale: [1.4, 0.7, 0.8], color: shade(pink, -0.05), seg: 16 });
+    b.cyl(0.03, 0.035, 0.08, { at: [0, 0.07, -0.1], rot: [0.5, 0, 0], color: shade(pink, -0.08), seg: 10 });
+  },
+
+  // A symbolic heart shape standing upright.
+  heart(b, p) {
+    const red = p.color || "#d63a4a";
+    const s = new THREE.Shape();
+    s.moveTo(0, 0);
+    s.bezierCurveTo(-0.05, 0.06, -0.175, 0.12, -0.175, 0.235);
+    s.bezierCurveTo(-0.175, 0.32, -0.1, 0.36, -0.05, 0.355);
+    s.bezierCurveTo(-0.02, 0.35, 0, 0.33, 0, 0.3);
+    s.bezierCurveTo(0, 0.33, 0.02, 0.35, 0.05, 0.355);
+    s.bezierCurveTo(0.1, 0.36, 0.175, 0.32, 0.175, 0.235);
+    s.bezierCurveTo(0.175, 0.12, 0.05, 0.06, 0, 0);
+    b.cyl(0.07, 0.08, 0.03, { at: [0, 0.015, 0], color: C.gold, kind: "metal", seg: 20 });
+    b.extrude(s, 0.15, { at: [0, 0.04, 0], color: red, kind: "gloss", bevel: 0.02, curveSeg: 16 });
+    b.sphere(0.03, { at: [-0.085, 0.31, 0.09], scale: [1, 0.6, 0.3], color: "#ffffff", kind: "glow", light: false, seg: 10 });
+  },
+
+  // A human skull.
+  skull(b, p) {
+    const bone = p.color || "#ebe3cf";
+    const hole = "#3a332c";
+    b.sphere(0.115, { at: [0, 0.15, -0.02], scale: [0.98, 0.93, 1.15], color: bone, seg: 22 });
+    b.box(0.15, 0.09, 0.11, { at: [0, 0.075, 0.06], color: bone, r: 0.035 });
+    b.box(0.13, 0.035, 0.09, { at: [0, 0.018, 0.062], color: shade(bone, -0.04), r: 0.015 });
+    for (const s of [-1, 1]) {
+      b.sphere(0.032, { at: [s * 0.045, 0.118, 0.105], scale: [1, 0.95, 0.6], color: hole, seg: 12 });
+      b.box(0.04, 0.035, 0.05, { at: [s * 0.075, 0.07, 0.04], color: shade(bone, -0.05), r: 0.012 });
+    }
+    b.cone(0.016, 0.03, { at: [0, 0.075, 0.118], rot: [PI, 0, 0], color: hole, seg: 3 });
+    for (let i = 0; i < 6; i++) {
+      b.box(0.014, 0.018, 0.012, { at: [(i - 2.5) * 0.017, 0.042, 0.112], color: "#f6f1e3", r: 0.003 });
+    }
+  },
+
+  // A friendly robot ('humanoid') or an industrial robot arm ('arm'); color = body, color2 = accents.
+  robot(b, p) {
+    if (p.variant === "arm") {
+      const body = p.color || "#e38b3a", dark = p.color2 || "#3a3d44";
+      b.cyl(0.19, 0.2, 0.06, { at: [0, 0.03, 0], color: dark, kind: "metal", seg: 24 });
+      b.cyl(0.12, 0.14, 0.12, { at: [0, 0.12, 0], color: body, kind: "gloss", seg: 20 });
+      b.sphere(0.075, { at: [0, 0.22, 0], color: dark, kind: "metal", seg: 16 });
+      const sh = [0, 0.22, 0], el = [0, 0.82, -0.08], wr = [0, 0.74, 0.15];
+      b.rod(sh, el, 0.055, { color: body, kind: "gloss", seg: 14 });
+      b.sphere(0.065, { at: el, color: dark, kind: "metal", seg: 16 });
+      b.rod(el, wr, 0.045, { color: body, kind: "gloss", seg: 14 });
+      b.sphere(0.045, { at: wr, color: dark, kind: "metal", seg: 12 });
+      b.group({ at: wr, rot: [0.6, 0, 0] }, () => {
+        b.box(0.1, 0.03, 0.04, { at: [0, -0.03, 0.03], color: dark, kind: "metal", r: 0.008 });
+        for (const s of [-1, 1]) b.box(0.015, 0.07, 0.025, { at: [s * 0.04, -0.08, 0.04], color: "#c8ccd2", kind: "metal", r: 0.004 });
+      });
+      b.sphere(0.018, { at: [0.09, 0.15, 0.1], color: "#5be37a", kind: "glow", light: false, seg: 8 });
+      return;
+    }
+    const body = p.color || "#cfd6de", acc = p.color2 || "#3f74c4", dark = "#3a3d44";
+    b.box(0.18, 0.2, 0.09, { at: [0, 0.44, -0.14], color: shade(body, -0.15), kind: "metal", r: 0.02 });
+    for (const s of [-1, 1]) {
+      b.box(0.1, 0.05, 0.2, { at: [s * 0.08, 0.025, 0.04], color: dark, r: 0.015 });
+      b.cyl(0.035, 0.035, 0.2, { at: [s * 0.08, 0.15, 0], color: shade(body, -0.1), kind: "metal", seg: 12 });
+      b.sphere(0.042, { at: [s * 0.08, 0.26, 0], color: acc, kind: "gloss", seg: 12 });
+    }
+    b.box(0.3, 0.3, 0.22, { at: [0, 0.42, 0], color: body, kind: "gloss", r: 0.05 });
+    b.box(0.17, 0.11, 0.01, { at: [0, 0.45, 0.112], color: "#2b3140", r: 0.01 });
+    const leds = ["#ff6b6b", "#ffd166", "#5be37a"];
+    leds.forEach((c, i) => b.sphere(0.014, { at: [-0.05 + i * 0.05, 0.47, 0.118], color: c, kind: "glow", light: false, seg: 8 }));
+    b.box(0.12, 0.012, 0.006, { at: [0, 0.425, 0.118], color: "#7fd3ff", kind: "glow", light: false, r: 0 });
+    for (const s of [-1, 1]) {
+      b.sphere(0.05, { at: [s * 0.18, 0.53, 0], color: acc, kind: "gloss", seg: 14 });
+      b.group({ at: [s * 0.2, 0.53, 0], rot: [0.25, 0, s * 0.12] }, () => {
+        b.cyl(0.03, 0.03, 0.2, { at: [0, -0.12, 0], color: shade(body, -0.1), kind: "metal", seg: 12 });
+        b.sphere(0.04, { at: [0, -0.23, 0], color: acc, kind: "gloss", seg: 12 });
+        for (const f of [-1, 1]) b.box(0.015, 0.05, 0.03, { at: [f * 0.022, -0.27, 0], color: dark, kind: "metal", r: 0.005 });
+      });
+    }
+    b.cyl(0.04, 0.05, 0.05, { at: [0, 0.595, 0], color: dark, kind: "metal", seg: 12 });
+    b.box(0.26, 0.19, 0.21, { at: [0, 0.715, 0], color: body, kind: "gloss", r: 0.06 });
+    b.box(0.2, 0.09, 0.012, { at: [0, 0.725, 0.105], color: "#1f2430", r: 0.03 });
+    for (const s of [-1, 1]) {
+      b.sphere(0.024, { at: [s * 0.05, 0.73, 0.112], scale: [1, 1, 0.4], color: "#7fd3ff", kind: "glow", seg: 12 });
+      b.cyl(0.03, 0.03, 0.03, { at: [s * 0.14, 0.715, 0], rot: [0, 0, PI / 2], color: acc, kind: "gloss", seg: 12 });
+    }
+    b.box(0.07, 0.012, 0.006, { at: [0, 0.69, 0.112], color: "#7fd3ff", kind: "glow", light: false, r: 0 });
+    b.cyl(0.006, 0.006, 0.07, { at: [0, 0.84, 0], color: dark, kind: "metal", seg: 6 });
+    b.sphere(0.02, { at: [0, 0.88, 0], color: "#ff6b6b", kind: "glow", seg: 10 });
+  },
+
+  // A glowing ghost-like wisp: spirit, mind, Geist.
+  spirit(b, p) {
+    const c = p.color || "#bfe4ff";
+    const r = rng(seedOf(b, p) * 7 + 3);
+    // a spiralling tail of puffs that rises from the floor into the body
+    for (let i = 0; i < 9; i++) {
+      const t = i / 8;
+      const a = t * PI * 2.2;
+      const rad = 0.03 + t * 0.09;
+      b.sphere(rad, { at: [Math.sin(a) * 0.1 * (1 - t), 0.03 + t * 0.42, Math.cos(a) * 0.1 * (1 - t)], color: mix(c, "#ffffff", 0.2),
+        kind: "glass", seg: 14 });
+    }
+    b.sphere(0.2, { at: [0, 0.62, 0], scale: [1, 1.05, 0.9], color: c, kind: "glass", seg: 24 });
+    b.sphere(0.11, { at: [0, 0.6, 0], color: mix(c, "#ffffff", 0.6), kind: "glow", seg: 18 });
+    for (const s of [-1, 1]) {
+      b.sphere(0.07, { at: [s * 0.18, 0.5, 0.02], scale: [1.2, 0.8, 0.8], color: c, kind: "glass", seg: 14 });
+      b.sphere(0.028, { at: [s * 0.065, 0.66, 0.165], scale: [0.8, 1.15, 0.5], color: "#2b3a55", kind: "gloss", seg: 12 });
+    }
+    b.sphere(0.03, { at: [0, 0.58, 0.17], scale: [1.3, 0.6, 0.4], color: "#2b3a55", kind: "gloss", seg: 10 });
+    for (let i = 0; i < 6; i++) {
+      const a = r.range(0, PI * 2), h = r.range(0.25, 0.85);
+      b.sphere(0.012, { at: [Math.sin(a) * 0.24, h, Math.cos(a) * 0.2], color: "#ffffff", kind: "glow", light: false, seg: 6 });
+    }
+  },
 };
