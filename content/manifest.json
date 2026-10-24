@@ -1,9 +1,6 @@
 {
   "plots": {
-    "0": "hegel",
-    "1": "math",
-    "2": "cs",
-    "3": "softdev",
+    "0": "math",
     "4": "llm-agents"
   }
 }

@@ -1,47 +1,93 @@
-"""Have an LLM design a new knowledge system, in three passes.
+"""Have an LLM design a new knowledge system, bilingual and with 3D scenes, in three passes.
 
-1. outline  – title, architecture template, wings and rooms (what each covers)
-2. rooms    – the exhibits of every room, written in parallel
-3. links    – relations between exhibits, inside the system and to existing systems
+1. outline  – titles, architecture template, wings, rooms (with a room style each) and the
+              planned exhibits of every room
+2. rooms    – every room's exhibits, written in parallel: all text in English and Chinese, the
+              memory scene built from catalogue props, and links inside the system
+3. bridges  – links from the new system to exhibits of the systems already in the palace
 
-Every reply is parsed as JSON and validated; on a validation error the model
-gets the error back and another try.
+Every reply is parsed and validated (schema, text lengths, scene geometry). Problems go back
+to the model for another try.
 """
 from __future__ import annotations
 
 import asyncio
 import json
 import re
+from pathlib import Path
 from typing import Callable
 
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
-from palace.content import ContentStore
+from palace.catalog import ROOM_STYLES, catalog_for_prompt, rooms_for_prompt
+from palace.content import ROOT, ContentStore
 from palace.llm.base import LLMError, Provider, extract_json
 from palace.schema import (
-    HEX_COLOR, LIMITS, SLUG, Architecture, CrossLink, CrossLinks, Exhibit, KnowledgeSystem, Link,
+    HEX_COLOR, LIMITS, SLUG, Architecture, CrossLink, Exhibit, KnowledgeSystem, StyleName, T, Wing,
+    scene_problems, text_problems,
 )
-from palace.symbols import SYMBOLS, TEMPLATES
 
 ATTEMPTS = 3
 PARALLEL_ROOMS = 4
 Log = Callable[[str], None]
 
+TEMPLATES = {
+    "spiral": "a tower climbed by a spiral ramp: for a system that unfolds step by step from one beginning "
+              "(a philosophy, a history, a single long argument)",
+    "city": "a boulevard with one district per wing: for a broad field with parallel subjects",
+    "terraces": "a stepped pyramid, one level per wing: for layers of abstraction built on each other",
+    "avenue": "one long street with a gate per wing: for a process or lifecycle walked from start to end",
+    "radial": "a hub with one spoke per wing: for one core idea with several branches around it",
+}
+
+GUIDE = (ROOT / "docs" / "writing-guide.md").read_text(encoding="utf-8")
+
+SYSTEM = f"""You are the architect and author of a Memory Palace: a walkable 3D world in which every knowledge
+system is a building, every wing a part of it, every room a themed hall, and every exhibit one idea shown
+as a small, vivid 3D scene on a numbered stage. Visitors walk the route, read the cards and remember each
+idea by where it stands and what its scene looks like.
+
+Follow this writing guide exactly:
+
+{GUIDE}
+
+General rules:
+- English is the primary language. Every text field is {{"en": ..., "zh": ...}}: natural Chinese, not a
+  word-for-word translation.
+- Be accurate. Personal topics (an internship, a project, plans) use only the material the user gave;
+  never invent facts about the user.
+- The order is the walking route: put things in the most natural learning or working order.
+- Reply with one JSON object and nothing else."""
+
 
 # ── outline model ────────────────────────────────────────────────────────────
 
+class ExhibitPlan(BaseModel):
+    id: str = Field(pattern=SLUG)
+    title: str = Field(min_length=3, max_length=56)
+    covers: str = Field(min_length=10, max_length=300)
+
+
 class RoomPlan(BaseModel):
     id: str = Field(pattern=SLUG)
-    title: str = Field(min_length=1, max_length=16)
-    summary: str = Field(min_length=4, max_length=60)
-    focus: str = Field(min_length=4, max_length=200)
-    exhibits: int = Field(ge=LIMITS["exhibits_per_room"][0], le=LIMITS["exhibits_per_room"][1])
+    title: T
+    summary: T
+    style: StyleName  # type: ignore[valid-type]
+    exhibits: list[ExhibitPlan]
+
+    @field_validator("exhibits")
+    @classmethod
+    def _count(cls, v):
+        lo, hi = LIMITS["exhibits_per_room"]
+        if not lo <= len(v) <= hi:
+            raise ValueError(f"a room needs {lo}-{hi} exhibits, got {len(v)}")
+        return v
 
 
 class WingPlan(BaseModel):
     id: str = Field(pattern=SLUG)
-    title: str = Field(min_length=1, max_length=16)
-    summary: str = Field(min_length=4, max_length=80)
+    title: T
+    summary: T
     rooms: list[RoomPlan]
 
     @field_validator("rooms")
@@ -49,154 +95,168 @@ class WingPlan(BaseModel):
     def _count(cls, v):
         lo, hi = LIMITS["rooms_per_wing"]
         if not lo <= len(v) <= hi:
-            raise ValueError(f"a wing needs {lo}-{hi} rooms")
+            raise ValueError(f"a wing needs {lo}-{hi} rooms, got {len(v)}")
         return v
 
 
 class Outline(BaseModel):
     id: str = Field(pattern=SLUG)
-    title: str = Field(min_length=1, max_length=20)
-    subtitle: str = Field(min_length=1, max_length=40)
-    description: str = Field(min_length=10, max_length=300)
+    title: T
+    subtitle: T
+    description: T
     color: str = Field(pattern=HEX_COLOR)
     architecture: Architecture
     wings: list[WingPlan]
 
-    @field_validator("wings")
-    @classmethod
-    def _count(cls, v):
+    @model_validator(mode="after")
+    def _check(self) -> "Outline":
         lo, hi = LIMITS["wings"]
-        if not lo <= len(v) <= hi:
-            raise ValueError(f"a system needs {lo}-{hi} wings")
-        total = sum(r.exhibits for w in v for r in w.rooms)
+        if not lo <= len(self.wings) <= hi:
+            raise ValueError(f"a system needs {lo}-{hi} wings, got {len(self.wings)}")
+        ids = [e.id for w in self.wings for r in w.rooms for e in r.exhibits]
+        dup = sorted({i for i in ids if ids.count(i) > 1})
+        if dup:
+            raise ValueError(f"exhibit ids must be unique: {dup}")
         lo, hi = LIMITS["exhibits_total"]
-        if not lo <= total <= hi:
-            raise ValueError(f"the exhibits add up to {total}; keep the total within {lo}-{hi}")
-        return v
+        if not lo <= len(ids) <= hi:
+            raise ValueError(f"the exhibits add up to {len(ids)}; keep the total within {lo}-{hi}")
+        return self
+
+    def exhibit_ids(self) -> list[str]:
+        return [e.id for w in self.wings for r in w.rooms for e in r.exhibits]
+
+
+def outline_problems(o: Outline) -> list[str]:
+    out = o.title.check("system.title") + o.subtitle.check("system.subtitle")
+    out += o.description.check("system.description") + o.architecture.metaphor.check("metaphor")
+    for w in o.wings:
+        out += [f"wing {w.id}: {p}" for p in w.title.check("wing.title") + w.summary.check("wing.summary")]
+        for r in w.rooms:
+            out += [f"room {r.id}: {p}" for p in r.title.check("room.title") + r.summary.check("room.summary")]
+    return out
 
 
 class RoomExhibits(BaseModel):
     exhibits: list[Exhibit]
 
 
-class LinkPlan(BaseModel):
-    links: list[dict] = Field(default_factory=list)
+class Bridges(BaseModel):
     crosslinks: list[dict] = Field(default_factory=list)
 
 
 # ── prompts ──────────────────────────────────────────────────────────────────
 
-SYSTEM = """你是一座“记忆宫殿”的总设计师。这个应用把一个知识体系建成可以在浏览器里漫游的三维建筑：
-每个分区（wing）是建筑的一部分，每个展厅（room）放几件展品（exhibit），每件展品是一个知识点，
-立在展台上，有一个三维符号、一个 emoji、标题，以及一张写着讲解和“记忆画面”的卡片。
-访客只是走一走、看一看，就该记住每个知识点在哪里、讲的是什么。
-
-写作要求：
-- 使用与主题相同的语言；没有特别说明时用简体中文，术语可在括号里附英文。
-- 内容必须准确，按教科书或主流理解；不确定的就不写。个人主题（经历、项目、计划）只能依据用户提供的材料，不能编造事实。
-- 顺序就是参观路线：按最自然的学习或发展顺序排列。
-- 只输出一个 JSON 对象，不要输出别的文字。"""
-
-EXHIBIT_RULES = f"""每件展品的字段：
-- id：小写英文短横线 slug，在整个体系里唯一且有意义
-- title：≤16 字的名词短语
-- summary：≤40 字，一句话点出核心
-- detail：120–380 字的讲解：是什么、为什么重要、一个具体的例子或公式；纯文本，不用 markdown
-- image：30–150 字的记忆画面——夸张、具体、有动作和感官细节，把核心意思编码进画面里，
-  回想起画面就能想起内容；尽量用上展品的符号或 emoji；每件展品的画面都不同，绝不空泛
-- keywords：2–5 个，每个 ≤16 字
-- emoji：一个最能唤起它的 emoji
-- symbol：从下面挑一个最贴切的三维符号名：
-{json.dumps(SYMBOLS, ensure_ascii=False, indent=1)}"""
-
-
 def outline_prompt(topic: str, notes: str, existing: list[KnowledgeSystem]) -> str:
     lo_w, hi_w = LIMITS["wings"]
     lo_r, hi_r = LIMITS["rooms_per_wing"]
     lo_e, hi_e = LIMITS["exhibits_per_room"]
-    taken = ", ".join(f"{s.id}（{s.title}）" for s in existing) or "无"
-    return f"""为下面的主题设计一个新的知识体系的大纲。
+    taken = ", ".join(f"{s.id} ({s.title.en})" for s in existing) or "none"
+    return f"""Design the outline of a new knowledge system for the palace.
 
-主题：{topic}
-用户提供的材料或要求：
-{notes or "（无）"}
+Topic: {topic}
+Material or requests from the user:
+{notes or "(none)"}
 
-宫殿里已有的体系（id 不能重复）：{taken}
+Systems already in the palace (do not reuse their ids): {taken}
 
-建筑模板（architecture.template）从中选一个最贴合这个体系结构的：
-{json.dumps(TEMPLATES, ensure_ascii=False, indent=1)}
+Architecture templates (architecture.template), pick the one whose shape fits the structure of the subject:
+{json.dumps(TEMPLATES, indent=1)}
 
-规模：{lo_w}–{hi_w} 个分区，每个分区 {lo_r}–{hi_r} 个展厅，每个展厅 {lo_e}–{hi_e} 件展品，
-展品总数 40–65 件为宜（主题小就少一些，但总数不少于 {LIMITS["exhibits_total"][0]}）。
+Room styles (room.style). Each room is a themed hall; the theme is itself a memory cue. Pick a style whose
+world fits the room's content (a post office for message passing, a casino for probability). Use each style
+at most once in the system:
+{rooms_for_prompt()}
 
-输出 JSON：
+Size: {lo_w}-{hi_w} wings, {lo_r}-{hi_r} rooms per wing, {lo_e}-{hi_e} exhibits per room; 40-70 exhibits in
+total suits a large subject (never fewer than {LIMITS["exhibits_total"][0]}). Structure the knowledge carefully:
+wings are the major parts in learning order, rooms group closely related ideas, and each exhibit is one idea
+that can be shown as one scene. No duplicates, no filler.
+
+Reply with JSON:
 {{
-  "id": "英文 slug", "title": "≤20 字", "subtitle": "≤40 字", "description": "≤300 字",
-  "color": "#rrggbb（这个体系的主色，饱和度适中）",
-  "architecture": {{"template": "模板名", "metaphor": "≤40 字，描述这座建筑"}},
+  "id": "english-slug",
+  "title": {{"en": "3-40 chars", "zh": "2-16 字"}},
+  "subtitle": {{"en": "8-80 chars", "zh": "4-32 字"}},
+  "description": {{"en": "40-420 chars", "zh": "20-180 字"}},
+  "color": "#rrggbb (the system's colour, medium saturation)",
+  "architecture": {{"template": "...", "metaphor": {{"en": "20-160 chars: the building as an image", "zh": "10-70 字"}}}},
   "wings": [
-    {{"id": "slug", "title": "≤16 字", "summary": "≤80 字",
-      "rooms": [{{"id": "slug", "title": "≤16 字", "summary": "≤60 字",
-                 "focus": "这个展厅要讲哪些知识点，≤200 字", "exhibits": 展品数}}]}}
+    {{"id": "slug", "title": {{"en": "...", "zh": "..."}}, "summary": {{"en": "20-200 chars", "zh": "8-90 字"}},
+      "rooms": [
+        {{"id": "slug", "title": {{"en": "3-40 chars", "zh": "2-16 字"}}, "summary": {{"en": "15-160 chars", "zh": "6-70 字"}},
+          "style": "room style",
+          "exhibits": [{{"id": "slug, unique in the system", "title": "English working title",
+                        "covers": "what this exhibit must explain"}}]}}
+      ]}}
   ]
 }}"""
 
 
-def room_prompt(outline: Outline, wing: WingPlan, room: RoomPlan, notes: str, taken_ids: list[str]) -> str:
-    plan = [{"wing": w.title, "rooms": [r.title for r in w.rooms]} for w in outline.wings]
-    return f"""体系：{outline.title}——{outline.subtitle}
-全体系大纲（帮助你避免和其他展厅重复）：{json.dumps(plan, ensure_ascii=False)}
+def room_prompt(outline: Outline, wing: WingPlan, room: RoomPlan, notes: str) -> str:
+    plan = [{"wing": w.id, "title": w.title.en, "rooms": [{"room": r.id, "title": r.title.en,
+            "exhibits": [{"id": e.id, "title": e.title} for e in r.exhibits]} for r in w.rooms]} for w in outline.wings]
+    style = ROOM_STYLES[room.style]
+    todo = [{"id": e.id, "working_title": e.title, "covers": e.covers} for e in room.exhibits]
+    return f"""System: {outline.title.en} / {outline.title.zh} — {outline.subtitle.en}
+The whole outline (link to these ids; do not repeat what other rooms cover):
+{json.dumps(plan, ensure_ascii=False)}
 
-现在请写：分区「{wing.title}」里的展厅「{room.title}」（{room.summary}）
-这个展厅要讲：{room.focus}
-展品数：正好 {room.exhibits} 件，按参观顺序排列。
-用户材料：{notes or "（无）"}
+Write the exhibits of the room "{room.title.en}" ({room.summary.en}) in the wing "{wing.title.en}".
+The room is a themed hall: {style["en"]} — {style["desc"]}
+Exactly these exhibits, in this order, with these ids:
+{json.dumps(todo, ensure_ascii=False, indent=1)}
 
-{EXHIBIT_RULES}
+Material from the user: {notes or "(none)"}
 
-这些 id 已被其他展厅占用，不要再用：{", ".join(taken_ids) or "无"}
+Props for the scenes (name [width×height×depth in metres] description (variants)):
+{catalog_for_prompt()}
 
-输出 JSON：{{"exhibits": [{{"id": ..., "title": ..., "summary": ..., "detail": ..., "image": ...,
-"keywords": [...], "emoji": ..., "symbol": ..., "links": []}}]}}"""
+Reply with JSON: {{"exhibits": [{{"id", "title", "summary", "explain", "example", "image", "cues", "keywords", "emoji",
+"scene", "links"}}, ...]}} following the writing guide. Links may point to any exhibit id in the outline."""
 
 
-def links_prompt(system: KnowledgeSystem, others: list[KnowledgeSystem]) -> str:
-    mine = [{"id": e.id, "title": e.title, "summary": e.summary} for e in system.exhibits()]
-    theirs = [{"ref": f"{s.id}/{e.id}", "title": e.title} for s in others for e in s.exhibits()]
-    return f"""体系「{system.title}」的展品如下：
+def bridges_prompt(system: KnowledgeSystem, others: list[KnowledgeSystem]) -> str:
+    mine = [{"id": e.id, "title": e.title.en, "summary": e.summary.en} for e in system.exhibits()]
+    theirs = [{"ref": f"{s.id}/{e.id}", "title": e.title.en} for s in others for e in s.exhibits()]
+    return f"""The new system "{system.title.en}" has these exhibits:
 {json.dumps(mine, ensure_ascii=False)}
 
-宫殿里其他体系的展品：
-{json.dumps(theirs, ensure_ascii=False) if theirs else "（无）"}
+Exhibits of the other systems in the palace:
+{json.dumps(theirs, ensure_ascii=False)}
 
-请找出真实、有价值的关系（前提、推出、对比、应用、例子、实现、解决……），不要硬凑：
-- links：本体系内部的关系，每件展品最多 3 条
-- crosslinks：本体系展品与其他体系展品之间的关系，最多 12 条，只选最有启发的
-relation 用 ≤12 字的短词。
+Find up to 12 real, illuminating relations between an exhibit of the new system and an exhibit of another
+system (uses, generalises, is an example of, implements, contrasts with…). Do not force weak ones.
 
-输出 JSON：{{"links": [{{"from": "展品 id", "to": "展品 id", "relation": "..."}}],
-"crosslinks": [{{"from": "本体系展品 id", "to": "其他体系的 ref", "relation": "..."}}]}}"""
+Reply with JSON: {{"crosslinks": [{{"from": "new exhibit id", "to": "system/exhibit ref",
+"relation": {{"en": "2-26 chars", "zh": "1-10 字"}}}}]}}"""
 
 
 # ── calls with validation and retry ──────────────────────────────────────────
 
-async def ask(provider: Provider, prompt: str, model_cls: type[BaseModel], log: Log, what: str,
-              check: Callable[[BaseModel], None] | None = None) -> BaseModel:
+async def ask(provider: Provider, prompt: str, parse: Callable[[dict], tuple[object, list[str]]], log: Log,
+              what: str, max_tokens: int = 16000, soft: bool = False):
+    """Ask, parse and check. parse(data) returns (object, problems); problems trigger another try.
+
+    With soft=True, the last attempt is accepted when it parses, even if problems remain.
+    """
     messages = prompt
-    last_err = ""
+    last = ""
     for attempt in range(1, ATTEMPTS + 1):
-        reply = await provider.complete(SYSTEM, messages)
+        reply = await provider.complete(SYSTEM, messages, max_tokens=max_tokens)
         try:
-            obj = model_cls.model_validate(extract_json(reply))
-            if check:
-                check(obj)
-            return obj
+            obj, problems = parse(extract_json(reply))
         except (ValidationError, ValueError, json.JSONDecodeError) as e:
-            last_err = str(e)[:1500]
-            log(f"  {what}: attempt {attempt} rejected ({last_err.splitlines()[0][:120]})")
-            messages = (f"{prompt}\n\n你上一次的输出没有通过校验，错误如下，请修正后重新输出完整 JSON：\n"
-                        f"{last_err}\n\n你上一次的输出：\n{reply[:6000]}")
-    raise LLMError(f"{what}: the model did not produce valid output after {ATTEMPTS} attempts: {last_err}")
+            obj, problems = None, [str(e)[:3000]]
+        if not problems:
+            return obj
+        last = "\n".join(f"- {p}" for p in problems[:40])
+        log(f"  {what}: attempt {attempt}: {len(problems)} problem(s), first: {problems[0][:140]}")
+        if obj is not None and soft and attempt == ATTEMPTS:
+            log(f"  {what}: accepted with {len(problems)} remaining problem(s)")
+            return obj
+        messages = (f"{prompt}\n\nYour previous reply did not pass the checks. Fix these problems and reply with "
+                    f"the complete JSON again:\n{last}\n\nYour previous reply:\n{reply[:14000]}")
+    raise LLMError(f"{what}: no valid output after {ATTEMPTS} attempts:\n{last}")
 
 
 def _unique_id(base: str, taken: set[str]) -> str:
@@ -207,52 +267,92 @@ def _unique_id(base: str, taken: set[str]) -> str:
     return sid
 
 
+def parse_outline(data: dict):
+    o = Outline.model_validate(data)
+    styles = [r.style for w in o.wings for r in w.rooms]
+    problems = outline_problems(o)
+    repeated = sorted({s for s in styles if styles.count(s) > 1})
+    if repeated and len(styles) <= len(ROOM_STYLES):
+        problems.append(f"room styles used more than once: {repeated}; give every room its own style")
+    return o, problems
+
+
+def parse_room(room: RoomPlan, all_ids: set[str]):
+    def parse(data: dict):
+        res = RoomExhibits.model_validate(data)
+        want = [e.id for e in room.exhibits]
+        got = [e.id for e in res.exhibits]
+        problems = []
+        if got != want:
+            problems.append(f"write exactly the exhibits {want} in this order (got {got})")
+        for e in res.exhibits:
+            for link in e.links:
+                if link.to not in all_ids or link.to == e.id:
+                    problems.append(f"exhibit {e.id}: link to {link.to!r} is not another exhibit id of the outline")
+        wing = Wing.model_validate({"id": "w", "title": {"en": "Wing", "zh": "分区"},
+                                    "summary": {"en": "x" * 20, "zh": "测试摘要八个字"},
+                                    "rooms": [{"id": room.id, "title": room.title, "summary": room.summary,
+                                               "style": room.style, "exhibits": [e.model_dump() for e in res.exhibits]}]})
+        problems += [p for p in text_problems([wing]) if not p.startswith("wing ") and not p.startswith("room ")]
+        problems += scene_problems([wing])
+        return res, problems
+    return parse
+
+
 async def generate_system(topic: str, provider: Provider, store: ContentStore, notes: str = "",
                           log: Log = lambda _: None) -> KnowledgeSystem:
     existing = list(store.load_systems().values())
     log(f"outline: designing '{topic}' with {provider.name}/{provider.model}")
-    outline: Outline = await ask(provider, outline_prompt(topic, notes, existing), Outline, log, "outline")
+    outline: Outline = await ask(provider, outline_prompt(topic, notes, existing), parse_outline, log, "outline",
+                                 soft=True)
     outline.id = _unique_id(outline.id, {s.id for s in existing})
-    log(f"outline: {outline.title} → {outline.architecture.template}, "
-        f"{len(outline.wings)} wings, {sum(len(w.rooms) for w in outline.wings)} rooms")
+    log(f"outline: {outline.title.en} → {outline.architecture.template}, {len(outline.wings)} wings, "
+        f"{sum(len(w.rooms) for w in outline.wings)} rooms, {len(outline.exhibit_ids())} exhibits")
 
-    # rooms in parallel; ids are de-duplicated afterwards
+    all_ids = set(outline.exhibit_ids())
     sem = asyncio.Semaphore(PARALLEL_ROOMS)
     planned = [(w, r) for w in outline.wings for r in w.rooms]
 
     async def one(w: WingPlan, r: RoomPlan) -> list[Exhibit]:
         async with sem:
-            def count(obj: RoomExhibits) -> None:
-                if not LIMITS["exhibits_per_room"][0] <= len(obj.exhibits) <= LIMITS["exhibits_per_room"][1]:
-                    raise ValueError(f"write {r.exhibits} exhibits, not {len(obj.exhibits)}")
-            res: RoomExhibits = await ask(provider, room_prompt(outline, w, r, notes, []), RoomExhibits, log,
-                                          f"room {r.title}", check=count)
-            log(f"room: {w.title} / {r.title} — {len(res.exhibits)} exhibits")
+            res: RoomExhibits = await ask(provider, room_prompt(outline, w, r, notes), parse_room(r, all_ids), log,
+                                          f"room {r.title.en}", max_tokens=24000, soft=True)
+            log(f"room: {w.title.en} / {r.title.en} — {len(res.exhibits)} exhibits")
             return res.exhibits
 
     results = await asyncio.gather(*(one(w, r) for w, r in planned))
-    taken: set[str] = set()
-    rooms_out: dict[str, list[dict]] = {}
-    for (w, r), exhibits in zip(planned, results):
-        items = []
-        for e in exhibits:
-            d = e.model_dump()
-            d["id"] = _unique_id(d["id"], taken)
-            d["links"] = []
-            taken.add(d["id"])
-            items.append(d)
-        rooms_out[r.id] = items
-
+    by_room = {r.id: ex for (w, r), ex in zip(planned, results)}
     data = outline.model_dump(exclude={"wings"})
-    data["wings"] = [{"id": w.id, "title": w.title, "summary": w.summary,
-                      "rooms": [{"id": r.id, "title": r.title, "summary": r.summary, "exhibits": rooms_out[r.id]}
-                                for r in w.rooms]} for w in outline.wings]
+    data["wings"] = [{
+        "id": w.id, "title": w.title.model_dump(), "summary": w.summary.model_dump(),
+        "rooms": [{"id": r.id, "title": r.title.model_dump(), "summary": r.summary.model_dump(), "style": r.style,
+                   "exhibits": [e.model_dump(exclude_none=True) for e in by_room[r.id]]} for r in w.rooms],
+    } for w in outline.wings]
     system = KnowledgeSystem.model_validate(data)
 
-    # links
-    log("links: looking for relations")
-    plan: LinkPlan = await ask(provider, links_prompt(system, existing), LinkPlan, log, "links")
-    system, cross = apply_links(system, plan, existing)
+    cross: list[CrossLink] = []
+    if existing:
+        log("bridges: looking for links to the other systems")
+        others = {f"{s.id}/{e.id}" for s in existing for e in s.exhibits()}
+
+        def parse_bridges(d: dict):
+            b = Bridges.model_validate(d)
+            out, problems = [], []
+            for item in b.crosslinks[:12]:
+                src, dst = item.get("from"), item.get("to")
+                try:
+                    rel = T.model_validate(item.get("relation"))
+                except ValidationError:
+                    problems.append(f"relation of {src} -> {dst} must be {{'en': ..., 'zh': ...}}")
+                    continue
+                if src not in all_ids or dst not in others:
+                    problems.append(f"{src} -> {dst}: unknown exhibit")
+                    continue
+                problems += rel.check("relation")
+                out.append(CrossLink(source=f"{system.id}/{src}", target=dst, relation=rel))
+            return out, problems
+
+        cross = await ask(provider, bridges_prompt(system, existing), parse_bridges, log, "bridges", soft=True)
     store.save_system(system)
     if cross:
         cl = store.load_crosslinks()
@@ -260,24 +360,3 @@ async def generate_system(topic: str, provider: Provider, store: ContentStore, n
         store.save_crosslinks(cl)
     log(f"done: {system.id} with {len(system.exhibits())} exhibits and {len(cross)} cross links")
     return system
-
-
-def apply_links(system: KnowledgeSystem, plan: LinkPlan, others: list[KnowledgeSystem]
-                ) -> tuple[KnowledgeSystem, list[CrossLink]]:
-    """Keep only well-formed links that point at real exhibits; cap three per exhibit."""
-    ids = {e.id for e in system.exhibits()}
-    other_refs = {f"{s.id}/{e.id}" for s in others for e in s.exhibits()}
-    data = system.model_dump()
-    by_id = {e["id"]: e for w in data["wings"] for r in w["rooms"] for e in r["exhibits"]}
-    for item in plan.links:
-        src, dst, rel = item.get("from"), item.get("to"), str(item.get("relation", ""))[:12]
-        if src in ids and dst in ids and src != dst and rel:
-            links = by_id[src]["links"]
-            if len(links) < 3 and all(l["to"] != dst for l in links):
-                links.append(Link(to=dst, relation=rel).model_dump())
-    cross = []
-    for item in plan.crosslinks[:12]:
-        src, dst, rel = item.get("from"), item.get("to"), str(item.get("relation", ""))[:12]
-        if src in ids and dst in other_refs and rel:
-            cross.append(CrossLink(source=f"{system.id}/{src}", target=dst, relation=rel))
-    return KnowledgeSystem.model_validate(data), cross

@@ -1,0 +1,12 @@
+{
+  "name": "memory-palace-web",
+  "private": true,
+  "type": "module",
+  "description": "Browser viewer for the Memory Palace (three.js). Only needed for development tests; the site itself loads three.js from a CDN.",
+  "scripts": {
+    "test": "node tests/js/props.test.mjs"
+  },
+  "devDependencies": {
+    "three": "0.160.0"
+  }
+}

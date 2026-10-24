@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Prop Lab</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: #d9dde0; font: 13px system-ui, sans-serif; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #info { position: fixed; left: 8px; top: 6px; color: #333; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="info"></div>
+<!--
+  Query parameters:
+    group=animals            all props of a group (or names=bird,cat)
+    vary=variant|pose|hat|hold   one cell per value of that parameter
+    params={"color":"#f00"}  extra params (JSON) for every cell
+    bbox=1                   draw the catalogue size as a wireframe box
+    turn=45                  rotate every prop by this many degrees
+    cols=6                   cells per row
+    zoom=1.2                 camera distance factor
+-->
+<script type="module" src="./lab.js"></script>
+</body>
+</html>

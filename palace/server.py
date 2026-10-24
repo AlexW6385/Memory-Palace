@@ -29,7 +29,7 @@ CONTENT = Path(os.environ.get("PALACE_CONTENT", CONTENT_DIR))
 WEB = ROOT / "web"
 WORLD = WEB / "data" / "world.json"
 
-app = FastAPI(title="Memory Palace", version="0.1.0")
+app = FastAPI(title="Memory Palace", version="2.0.0")
 _jobs: dict[str, dict] = {}
 _lock = asyncio.Lock()
 
@@ -44,7 +44,7 @@ class GenerateRequest(BaseModel):
 @app.get("/api/systems")
 def list_systems() -> list[dict]:
     store = ContentStore(CONTENT)
-    return [{"id": s.id, "title": s.title, "template": s.architecture.template, "exhibits": len(s.exhibits())}
+    return [{"id": s.id, "title": s.title.model_dump(), "template": s.architecture.template, "exhibits": len(s.exhibits())}
             for s in store.load_systems().values()]
 
 

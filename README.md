@@ -1,94 +1,119 @@
-# 记忆宫殿 · Memory Palace
+# Memory Palace
 
-> An LLM designs knowledge systems (undergrad math, CS, Hegel, …) and picks an
-> architecture for each; a deterministic layout engine turns them into a walkable
-> 3D world you browse in the browser. You remember things by where they stand.
+[中文说明](README.zh-CN.md)
 
-**在线浏览：<https://alexw6385.github.io/Agent-assisted-Knowledge-Universe/>**（手机、电脑都可以）
+A walkable 3D memory palace in the browser. Each knowledge system is a building; each idea is a small,
+vivid 3D scene standing at a numbered place along the route. You walk the route, read the cards, and
+remember the ideas by where they stand and what their scenes look like.
 
-把一个个知识体系建成一座可以在浏览器里漫游的三维宫殿。LLM 负责“设计”：拆分区、展厅、展品，写讲解和记忆画面，
-并为每个体系挑一种建筑形式；布局引擎负责“施工”：把语义结构确定性地变成坐标、可行走的地面和导览路线。
-访客只需要走一走、看一看。
+**Walk it now: <https://alexw6385.github.io/memory-palace/>** (desktop or phone, English or Chinese)
 
-目前宫殿里有五个体系，共 318 件展品：
+The palace holds five knowledge systems with 332 exhibits, written in English and Chinese:
 
-| 体系 | 建筑 | 结构 |
+| System | Building | Route |
 |---|---|---|
-| 黑格尔哲学体系 | 螺旋上升的塔 | 精神现象学 → 逻辑学 → 自然哲学 → 主观与客观精神 → 绝对精神，沿坡道一路登顶 |
-| 本科数学 | 城市 | 逻辑、分析、线代、抽代、组合、概率六个街区 |
-| 计算机科学基础 | 阶梯金字塔 | 从数字逻辑一层层登上计算理论 |
-| 软件开发 | 长街 | 沿开发流程经过需求、编码、后端架构、数据、测试、运维 |
-| 大模型与 Agent 原理 | 放射状广场 | 以“预测下一个 token”为中心，六条长廊向外 |
+| Hegel's System | a tower climbed by a spiral ramp | Phenomenology → Logic (being, essence, concept) → Nature → Spirit → Absolute Spirit |
+| Undergraduate Mathematics | a city of districts | logic and proof, sets, number theory, combinatorics, calculus, linear algebra, probability |
+| Computer Science Fundamentals | a stepped pyramid | from bits and machines up through OS, networks, compilers and algorithms to computability |
+| Software Development | one long avenue | requirements and design, collaboration, data, services, testing, security, delivery |
+| LLMs and Agents | a hub with spokes | neural networks, the Transformer, training, inference, retrieval, agents, safety |
 
-## 快速开始
+## How it works as a memory palace
+
+The method of loci is the oldest memory technique: put each idea in a fixed place along a route, as a
+vivid, concrete scene. The palace is built around it.
+
+- **Fixed places along a route.** The route is the learning order. Every exhibit has a locus number;
+  every fifth is gold and every tenth carries a star, so you always know where you are.
+- **Rooms with character.** Rooms are themed halls (26 styles: a library, a post office, a casino, a harbour,
+  an observatory…), chosen to fit their content. The room is itself a cue: message queues live in the post
+  office, probability in the casino.
+- **Scenes that *are* the idea.** Each exhibit is a diorama built from about 200 hand-modelled props. Five
+  pigeons squabbling over four cages *is* the pigeonhole principle. The card lists which object stands for what.
+- **Recall walks.** Walk a route with the titles and formulas hidden, say what each scene stands for, then
+  reveal and grade yourself. Practise the ones you missed.
+
+Each card has a one-line summary, the memory scene, the object-to-meaning cues, an explanation, a worked
+example, keywords, and links to related exhibits, including links across systems.
+
+**Controls:** on a desktop, W A S D to walk, drag to look, Shift to run, click an exhibit for its card, `M` for the
+map, `/` to search, `[` `]` to step along the route. On a phone, the joystick walks and dragging looks.
+**Tour** walks a route for you; **Recall** quizzes you on it; **Map** jumps anywhere; **中文 / EN** switches language.
+
+## Run locally
 
 ```bash
 pip install -e ".[dev]"
-python -m palace build          # 布局 → web/data/world.json（仓库里已带一份）
-python -m palace serve          # 打开 http://127.0.0.1:8000
+python -m palace build          # lay out the world → web/data/world.json
+python -m palace serve          # http://127.0.0.1:8000
 ```
 
-只想看看的话，任何静态服务器都行：`python -m http.server -d web`。
+To browse only, any static server works: `python -m http.server -d web`.
 
-浏览和建造是分开的两部分：
-
-- **浏览**只需要 `web/` 下的静态文件（`world.json` 已包含全部内容和布局），所以可以放在 GitHub Pages 这类静态托管上。
-  每次推送到 `master`，`.github/workflows/pages.yml` 会跑测试、重新布局，再把 `web/` 发布出去。
-- **建造**（让 LLM 写新体系）需要 Python 和 API key，在本地用 `palace generate` 或 `palace serve` 完成，
-  提交生成的 `content/` 后推送，线上页面就会更新。静态托管上没有生成接口，页面会自动隐藏「建一个新区域」的表单。
-
-**操作**：手机上左下摇杆走路、拖动屏幕转头、点展品看卡片；电脑上 W A S D 走、拖动鼠标转头、Shift 奔跑。
-「导览」会自动沿路线走过一个体系的全部展品，在每件前停下展示卡片；「目录」可以搜索和跳转；「地图」点哪去哪。
-
-## 让 LLM 建一个新区域
+## Add a knowledge system with an LLM
 
 ```bash
-export ANTHROPIC_API_KEY=...        # 或 OPENAI_API_KEY=...
-python -m palace generate "线性代数"
-python -m palace generate "我的实习经验" --notes "$(cat notes.md)"   # 个人主题只依据你给的材料
+export ANTHROPIC_API_KEY=...      # or OPENAI_API_KEY=...
+python -m palace generate "linear algebra"
+python -m palace generate "my internship" --notes "$(cat notes.md)"   # personal topics use only your notes
 ```
 
-也可以在 `palace serve` 打开的页面里，从「目录」底部输入主题直接建造。两家都支持，用
-`--provider anthropic|openai` 和 `--model` 选择；默认模型可用 `PALACE_ANTHROPIC_MODEL`、`PALACE_OPENAI_MODEL` 覆盖。
+Both Claude and OpenAI models are supported (`--provider anthropic|openai`, `--model ...`; defaults can be set
+with `PALACE_ANTHROPIC_MODEL` and `PALACE_OPENAI_MODEL`). With `palace serve`, the directory panel also has a
+form to build a new wing.
 
-生成分三步：大纲（含建筑模板）→ 各展厅并行写展品 → 找体系内和跨体系的关联。每一步的输出都按 schema 校验，
-不通过就把错误发回模型重写。新体系会占用一块空地，已有体系的位置永远不变。
+Generation runs in three passes, each validated and repaired by the model when a check fails:
 
-## 架构
+1. **Outline:** titles, an architecture template, wings, rooms with a room style each, and the planned exhibits.
+2. **Rooms, in parallel:** every field in both languages, the 3D scene from catalogue props, and links. Scenes
+   are checked geometrically (on the stage, no collisions).
+3. **Bridges:** links to exhibits in the systems already in the palace.
+
+A new system takes a free plot; existing systems never move.
+
+## Architecture
 
 ```
-content/systems/*.json   LLM 写的语义内容（无坐标），schema 见 palace/schema.py
-content/crosslinks.json  跨体系的关联（地图上空的“桥”）
-content/manifest.json    每个体系占哪块地，只增不改
+content/systems/*.json    semantic content, bilingual, no coordinates (schema: palace/schema.py)
+content/crosslinks.json   links between systems (drawn as light bridges in the sky)
+content/manifest.json     which plot each system occupies (append-only)
         │
-palace/templates/        五种建筑：spiral / city / terraces / avenue / radial
-palace/world.py          世界：中央广场 + 3×3 地块，组装场景、地面、碰撞体
-palace/nav.py            可行走规则、栅格烘焙、A* 与拉直，生成导览路线
+palace/catalog/           the prop catalogue (208 props) and the 26 room styles
+palace/scenes.py          how scene items are arranged on a stage; geometric checks
+palace/halls.py           themed through-halls: the building block of every template
+palace/templates.py       five architectures: spiral, city, terraces, avenue, radial
+palace/world.py           the plaza, plots and scenery; exhibits, loci, tours
+palace/nav.py             walkability, baked grid, A* and path smoothing for the tours
         │
-web/data/world.json      渲染图元 + 可行走面 + 展品 + 导览路径
-web/js/                  three.js 浏览端（nav.js 与 nav.py 规则一致）
-palace/server.py         FastAPI：静态页面 + 生成任务 API
+web/data/world.json       render primitives + walkable surfaces + exhibits + tour paths
+web/js/                   three.js viewer: arch.js (architecture), stage.js (exhibit scenes),
+                          props/ (procedural prop models), ui.js, map.js, i18n.js
 ```
 
-几个设计取舍：
+Design choices:
 
-- **LLM 只定语义，坐标由代码算。** 模型擅长组织知识、写记忆画面，不擅长给出不重叠、可走通的坐标。模板根据
-  分区/展厅/展品的数量确定性地布局，同样的内容永远得到同样的宫殿——这正是记忆宫殿需要的。
-- **一套行走规则，两处实现。** 站在当前高度 ±0.6 m 以内最高的那个面上；Python 用它验证每件展品都能从入口走到，
-  浏览器用它做实时移动。坡道、螺旋坡道、阶梯平台都是同一种“面”。
-- **导览路线离线算好。** 在 0.5 m 栅格上跑 A*，再用精确几何把折线拉直，浏览器只需沿折线播放。
+- **The LLM writes meaning; code places it.** Templates turn the counts of wings, rooms and exhibits into
+  coordinates deterministically, so the same content always yields the same palace.
+- **One walking rule, two implementations.** You stand on the highest surface within ±0.6 m of your height.
+  Python uses the rule to prove every exhibit is reachable; the browser uses it to walk. Tests check that both agree.
+- **Props are code, not assets.** Every prop is a small procedural model (`web/js/props/`), merged per material.
+  Exhibit scenes load as you approach and unload behind you.
 
-## 测试
+Docs: [writing guide](docs/writing-guide.md), [props](docs/props.md), [room styles](docs/rooms.md),
+[modelling guide](docs/modeling-guide.md).
+
+## Development
 
 ```bash
-pytest
+pytest -q                                  # schema, layout, navigation, generation, JS/Python parity
+node tests/js/props.test.mjs               # build every prop and check size and budget
+python3 tools/lab_shot.py "group=animals" out.png        # contact sheet of props (needs `npm install`)
+python3 tools/view_shot.py --js "palace.goExhibit('math/pigeonhole', true)" --wait 3000 --shot out.png
 ```
 
-覆盖：schema 校验、每种模板在各种规模下不越界且展台不重叠、所有展品可达、导览路线全程踩在可走面上、
-布局确定且新增体系不挪动旧体系、浏览器与 Python 的行走规则逐点一致（需要 node）、生成流水线（用脚本化的假 LLM）和 API。
+Every push to `master` runs the tests, lays out the world and publishes `web/` to GitHub Pages
+(`.github/workflows/pages.yml`).
 
-## 接下来
+## License
 
-- 个人区域：实习经历、项目、计划与待办。待办仍在普通面板里编辑，世界里只显示状态——进行中的项目是搭着脚手架的楼，
-  完成了就落成。
-- 复习：记录走过的展品，按间隔重复安排“回访路线”，很久没去的展厅慢慢积灰。
+MIT

@@ -1,13 +1,13 @@
 """Assemble every knowledge system into one world and write world.json.
 
-World plan (top view, 220 m grid):
+World plan (top view, 250 m grid):
 
-    NW  N  NE        plots are 200 m squares; the middle cell is the central
+    NW  N  NE        plots are 230 m squares; the middle cell is the central
     W   ·  E         park with the plaza; 20 m streets run between cells.
     SW  S  SE
 
-Each system gets a plot the first time it is built and keeps it forever
-(content/manifest.json), so adding systems never moves existing ones.
+Each system keeps its plot forever (content/manifest.json), so adding a
+system never moves an existing one.
 """
 from __future__ import annotations
 
@@ -17,18 +17,20 @@ import random
 import time
 from pathlib import Path
 
+from palace.catalog import ROOM_STYLES
 from palace.content import ContentStore, Manifest
 from palace.geometry import Frame, look_yaw
+from palace.halls import EYE
 from palace.nav import RADIUS, STEP, Nav, astar, bake, smooth
 from palace.scene import LocalScene, Scene, r2
 from palace.schema import CrossLinks, KnowledgeSystem
-from palace.templates import TEMPLATES
-from palace.templates.common import PLOT_HALF, STONE, LayoutOverflow, Palette, SystemLayout, arch
+from palace.templates import PLOT_HALF, TEMPLATES, LayoutOverflow, Palette
 
-CELL = 220.0
-STREET = 20.0
-WORLD_HALF = 1.5 * CELL + 5
-TITLE = "记忆宫殿"
+CELL = 250.0
+STREET = CELL - 2 * PLOT_HALF
+WORLD_HALF = 1.5 * CELL + 10
+TITLE = {"en": "Memory Palace", "zh": "记忆宫殿"}
+PARK = CELL / 2 - STREET / 2
 
 # plot index -> (grid x, grid z, yaw that turns the plot's entrance toward the street)
 SLOTS = [
@@ -55,10 +57,16 @@ def assign_plots(systems: dict[str, KnowledgeSystem], manifest: Manifest) -> Man
     return Manifest(plots=plots)
 
 
+def present_links(systems: dict[str, KnowledgeSystem], crosslinks: CrossLinks) -> list:
+    """Cross links whose two systems are both in the palace (a removed system takes its bridges with it)."""
+    return [l for l in crosslinks.links
+            if l.source.split("/")[0] in systems and l.target.split("/")[0] in systems]
+
+
 def check_crosslinks(systems: dict[str, KnowledgeSystem], crosslinks: CrossLinks) -> list[str]:
     known = {f"{s.id}/{e.id}" for s in systems.values() for e in s.exhibits()}
     problems = []
-    for link in crosslinks.links:
+    for link in present_links(systems, crosslinks):
         for ref in (link.source, link.target):
             if ref not in known:
                 problems.append(f"unknown exhibit {ref!r}")
@@ -69,83 +77,208 @@ def check_crosslinks(systems: dict[str, KnowledgeSystem], crosslinks: CrossLinks
 
 # ── shared scenery ───────────────────────────────────────────────────────────
 
-def _trees(ls: LocalScene, rng: random.Random, area: tuple[float, float, float, float], count: int,
-           avoid) -> None:
+def _scatter_trees(ls: LocalScene, rng: random.Random, area, count: int, avoid) -> None:
     x0, z0, x1, z1 = area
-    placed = 0
-    tries = 0
-    while placed < count and tries < count * 20:
+    placed, tries = 0, 0
+    while placed < count and tries < count * 30:
         tries += 1
         x, z = rng.uniform(x0, x1), rng.uniform(z0, z1)
         if avoid(x, z):
             continue
-        h = rng.uniform(4.5, 8.0)
-        green = rng.choice(["#6f9a5b", "#5f8c52", "#7ea866", "#58824f"])
-        ls.cyl(x, h * 0.2, z, 0.3, h * 0.4, "#7a5a3f", top=0.22, seg=6)
-        ls.cyl(x, h * 0.62, z, rng.uniform(1.6, 2.4), h * 0.8, green, top=0.0, seg=7)
-        ls.post(x, z, 0.35, 0, h)
+        variant = rng.choice(["round", "round", "pine", "birch", "blossom"])
+        ls.prop("tree", x, z, yaw=rng.uniform(0, 6.28), scale=rng.uniform(2.6, 4.2), variant=variant)
         placed += 1
 
 
-def _central_park(scene: Scene) -> None:
+def _central_park(scene: Scene, systems: list[tuple[int, KnowledgeSystem]]) -> None:
     ls = LocalScene(scene, Frame(), "plaza")
-    half = CELL / 2 - STREET / 2
-    ls.cyl(0, 0.04, 0, 26, 0.08, "#e7dfcf", seg=64)
-    ls.cyl(0, 0.08, 0, 9, 0.1, "#d6cab3", seg=48)
-    ls.cyl(0, 6.0, 0, 1.6, 12.0, STONE, top=0.7, seg=4)
-    ls.post(0, 0, 1.7, 0, 12)
-    ls.sphere(0, 14.2, 0, 1.8, "#f0c75e")
-    ls.sign(0, 18.5, 0, TITLE, sub="在知识之间散步", level="region", color="#c08a3e")
+    ls.disc_floor(0, 0, 34, 0.08, "marble", ["#ece6da", "#ddd3c2"], thick=0.12)
+    ls.disc_floor(0, 0, 12, 0.14, "slabs", ["#d9d0bf", "#cbc1ae"], thick=0.2)
+    # monument
+    ls.cyl(0, 0.6, 0, 3.2, 1.2, "#e9e2d4", seg=8)
+    ls.cyl(0, 7.2, 0, 1.6, 12.0, "#f1ece2", top=0.75, seg=4)
+    ls.circle_collider(0, 0, 3.4, 0, 14)
+    ls.sphere(0, 14.6, 0, 2.0, "#e2b851", mat="metal")
+    ls.lamp(0, 14.6, 0, "#ffe6a8", kind="halo")
+    ls.sign(0, 19.5, 0, TITLE, sub={"en": "Walk among ideas", "zh": "在知识之间散步"}, level="region",
+            color="#b8862f")
+    # reflecting pools in four quadrants
+    for k in range(4):
+        a = math.pi / 4 + k * math.pi / 2
+        px, pz = math.sin(a) * 21, -math.cos(a) * 21
+        ls.water(px, pz, 9.0, 9.0, y=0.12, yaw=a)
+        ls.rect_collider(px, pz, 9.0, 9.0, 0, 0.5, yaw=a)
+    # avenues to the four streets
     for k in range(4):
         a = k * math.pi / 2
-        x1, z1 = math.sin(a) * half, -math.cos(a) * half
-        x0, z0 = math.sin(a) * 26, -math.cos(a) * 26
-        ls.strip(x0, z0, x1, z1, 8.0, "#e2d9c8", y=0.03)
+        x1, z1 = math.sin(a) * PARK, -math.cos(a) * PARK
+        x0, z0 = math.sin(a) * 33, -math.cos(a) * 33
+        ls.strip(x0, z0, x1, z1, 9.0, "#ddd4c3", y=0.04)
+        for d in range(44, int(PARK) - 4, 14):
+            for side in (-1, 1):
+                lx = math.sin(a) * d + math.cos(a) * side * 6.5
+                lz = -math.cos(a) * d + math.sin(a) * side * 6.5
+                ls.prop("lamp_post", lx, lz, scale=1.8)
+    # signposts to every system, at the plaza rim
+    for index, system in systems:
+        gx, gz, _ = SLOTS[index]
+        a = math.atan2(gx, -gz) if (gx or gz) else 0.0
+        sx, sz = math.sin(a) * 30, -math.cos(a) * 30
+        ls.prop("signpost", sx, sz, yaw=math.atan2(-sx, -sz), scale=2.2, text=system.title.model_dump())
+    for k in range(8):
+        a = k * math.pi / 4 + math.pi / 8
+        ls.prop("bench", math.sin(a) * 27, -math.cos(a) * 27, yaw=a + math.pi, scale=1.6)
     # streets between all cells
     span = 1.5 * CELL
     for v in (-CELL / 2, CELL / 2):
-        ls.strip(-span, v, span, v, STREET, "#c9c1b2", y=0.02)
-        ls.strip(v, -span, v, span, STREET, "#c9c1b2", y=0.02)
-    for v in (-1.5 * CELL + STREET / 2, 1.5 * CELL - STREET / 2):
-        ls.strip(-span, v, span, v, STREET, "#c9c1b2", y=0.02)
-        ls.strip(v, -span, v, span, STREET, "#c9c1b2", y=0.02)
+        ls.strip(-span, v, span, v, STREET * 0.8, "#cfc6b6", y=0.03, pat="cobble")
+        ls.strip(v, -span, v, span, STREET * 0.8, "#cfc6b6", y=0.03, pat="cobble")
 
     def avoid(x: float, z: float) -> bool:
-        return math.hypot(x, z) < 32 or abs(x) < 8 or abs(z) < 8
+        return math.hypot(x, z) < 42 or abs(x) < 9 or abs(z) < 9
 
-    _trees(ls, random.Random(7), (-half + 4, -half + 4, half - 4, half - 4), 70, avoid)
+    _scatter_trees(ls, random.Random(7), (-PARK + 4, -PARK + 4, PARK - 4, PARK - 4), 46, avoid)
+
+
+def _occupancy(prims: list[dict], frame: Frame, cell: float = 2.0, margin: float = 3.5):
+    """Cells of a plot (local frame, side 2·PLOT_HALF) covered by anything built there."""
+    n = int(2 * PLOT_HALF // cell) + 1
+    occ = bytearray(n * n)
+
+    def mark(wx: float, wz: float, rx: float, rz: float) -> None:
+        cx, cz = frame.inverse_point(wx, wz)
+        if abs(math.sin(frame.yaw)) > 0.5:
+            rx, rz = rz, rx
+        i0 = max(0, int((cx - rx - margin + PLOT_HALF) // cell))
+        i1 = min(n - 1, int((cx + rx + margin + PLOT_HALF) // cell))
+        j0 = max(0, int((cz - rz - margin + PLOT_HALF) // cell))
+        j1 = min(n - 1, int((cz + rz + margin + PLOT_HALF) // cell))
+        for j in range(j0, j1 + 1):
+            occ[j * n + i0 : j * n + i1 + 1] = b"\x01" * (i1 - i0 + 1)
+
+    def ext(w: float, d: float, r: float) -> tuple[float, float]:
+        c, s = abs(math.cos(r)), abs(math.sin(r))
+        return w / 2 * c + d / 2 * s, w / 2 * s + d / 2 * c
+
+    for p in prims:
+        t = p["t"]
+        if t in ("floor", "path", "water", "roof"):
+            mark(p["p"][0], p["p"][2], *ext(p["w"], p["d"], p.get("r", 0.0)))
+        elif t == "ramp":
+            mark(p["p"][0], p["p"][1], *ext(p["w"], p["d"], p.get("r", 0.0)))
+        elif t == "wall":
+            mark(p["p"][0], p["p"][2], *ext(p["s"][0], p["s"][2], p.get("r", 0.0)))
+        elif t == "disc":
+            mark(p["p"][0], p["p"][2], p["r1"], p["r1"])
+        elif t == "helix":
+            mark(p["c"][0], p["c"][1], p["r1"], p["r1"])
+        elif t == "arch":
+            mark(p["p"][0], p["p"][2], p["w"] / 2 + 1, p["w"] / 2 + 1)
+        elif "p" in p:
+            mark(p["p"][0], p["p"][-1], 1.6, 1.6)
+    return occ, n, cell
+
+
+TREE_VARIANTS = ["round", "round", "round", "pine", "pine", "birch", "blossom"]
+
+
+def _plot_scenery(scene: Scene, index: int, start: int, tag: str) -> None:
+    """Trees along the plot's edges and in groves wherever nothing is built."""
+    f = plot_frame(index)
+    ls = LocalScene(scene, f, tag)
+    occ, n, cell = _occupancy(scene.prims[start:], f)
+    rng = random.Random(1000 + index)
+
+    def free(x: float, z: float) -> bool:
+        i, j = int((x + PLOT_HALF) // cell), int((z + PLOT_HALF) // cell)
+        return 0 <= i < n and 0 <= j < n and not occ[j * n + i]
+
+    def take(x: float, z: float, r: float) -> None:
+        for dz in (-r, 0, r):
+            for dx in (-r, 0, r):
+                i, j = int((x + dx + PLOT_HALF) // cell), int((z + dz + PLOT_HALF) // cell)
+                if 0 <= i < n and 0 <= j < n:
+                    occ[j * n + i] = 1
+
+    def tree(x: float, z: float, big: float = 1.0) -> None:
+        ls.prop("tree", x, z, yaw=rng.uniform(0, 6.28), scale=rng.uniform(2.8, 4.3) * big, variant=rng.choice(TREE_VARIANTS))
+        take(x, z, 2.0)
+
+    edge = PLOT_HALF - 5
+    # edge rows (leave the entrance open)
+    k = -edge
+    while k <= edge:
+        for x, z in ((k, edge), (-edge, k), (edge, k), (k, -edge)):
+            if z == -edge and abs(x) < 16:
+                continue
+            jx, jz = x + rng.uniform(-1.5, 1.5), z + rng.uniform(-1.5, 1.5)
+            if free(jx, jz):
+                tree(jx, jz)
+        k += rng.uniform(7.5, 10.5)
+    # groves, shrubs and boulders in the open
+    for _ in range(22):
+        cx, cz = rng.uniform(-edge + 8, edge - 8), rng.uniform(-edge + 8, edge - 8)
+        if not free(cx, cz):
+            continue
+        for _ in range(rng.randint(3, 8)):
+            x, z = cx + rng.uniform(-9, 9), cz + rng.uniform(-9, 9)
+            if free(x, z):
+                tree(x, z, rng.uniform(0.85, 1.15))
+        for _ in range(rng.randint(1, 4)):
+            x, z = cx + rng.uniform(-11, 11), cz + rng.uniform(-11, 11)
+            if free(x, z):
+                ls.prop("bush", x, z, yaw=rng.uniform(0, 6.28), scale=rng.uniform(2.0, 3.2))
+                take(x, z, 1.0)
+    for _ in range(16):
+        x, z = rng.uniform(-edge, edge), rng.uniform(-edge, edge)
+        if free(x, z):
+            ls.prop("rock", x, z, yaw=rng.uniform(0, 6.28), scale=rng.uniform(2.0, 4.0),
+                    variant=rng.choice(["boulder", "flat", "pile"]))
+            take(x, z, 1.0)
 
 
 def _empty_plot(scene: Scene, index: int) -> None:
     f = plot_frame(index)
     ls = LocalScene(scene, f, f"plot-{index}")
-    h = PLOT_HALF - 4
-    for (x0, z0, x1, z1) in [(-h, -h, -6, -h), (6, -h, h, -h), (h, -h, h, h), (h, h, -h, h), (-h, h, -h, -h)]:
-        ls.strip(x0, z0, x1, z1, 0.3, "#b9ad97", y=0.5)
-    ls.sign(0, 5.0, -PLOT_HALF + 8, "空地 · 待建", sub="新的知识体系会建在这里", level="wing", color="#9a8f7c")
-    _trees(ls, random.Random(100 + index), (-h, -h + 20, h, h), 18, lambda x, z: False)
+    start = len(scene.prims)
+    h = PLOT_HALF - 6
+    for (x0, z0, x1, z1) in [(-h, -h, -8, -h), (8, -h, h, -h), (h, -h, h, h), (h, h, -h, h), (-h, h, -h, -h)]:
+        n = int(math.hypot(x1 - x0, z1 - z0) // 1.0)
+        yaw = math.atan2(x1 - x0, z1 - z0) + math.pi / 2
+        for i in range(0, n, 12):
+            t = i / max(1, n)
+            ls.prop("fence", x0 + (x1 - x0) * t, z0 + (z1 - z0) * t, yaw=yaw, scale=1.6, collide=False)
+    ls.prop("plaque", 0, -PLOT_HALF + 9, scale=3.2,
+            text={"en": "Building site: a new wing", "zh": "空地：新的展区将建在这里"})
+    ls.prop("crate", 6, -PLOT_HALF + 12, scale=2.0)
+    ls.prop("barrel", 8.5, -PLOT_HALF + 11, scale=1.8)
+    _plot_scenery(scene, index, start, f"plot-{index}")
 
 
 def _gate(ls: LocalScene, system: KnowledgeSystem) -> None:
-    arch(ls, 0, -PLOT_HALF + 3.0, 0.0, 9.0, 7.0, 0.0, system.color, post_r=0.6)
-    ls.sign(0, 12.0, -PLOT_HALF + 3.0, system.title, sub=system.subtitle, level="region", color=system.color)
+    ls.arch(0, -PLOT_HALF + 4.0, 0.0, 10.0, 7.5, "classic_column", system.color, post=0.6)
+    ls.sign(0, 10.2, -PLOT_HALF + 4.0, system.title.model_dump(), sub=system.subtitle.model_dump(),
+            level="region", color=system.color)
 
 
 # ── build ────────────────────────────────────────────────────────────────────
 
-def layout_system(system: KnowledgeSystem, ls: LocalScene) -> tuple[SystemLayout, str]:
+def layout_system(system: KnowledgeSystem, ls: LocalScene):
     """Run the system's template; if the content does not fit, fall back to the city."""
-    palette = Palette(system)
     template = system.architecture.template
     sc = ls.scene
     marks = (len(sc.prims), len(sc.surfaces), len(sc.colliders), len(sc.ground_holes))
     try:
-        return TEMPLATES[template](system, ls, palette), template
+        return TEMPLATES[template](system, ls, Palette(system)), template
     except LayoutOverflow:
         if template == "city":
             raise
         del sc.prims[marks[0]:], sc.surfaces[marks[1]:], sc.colliders[marks[2]:], sc.ground_holes[marks[3]:]
-        return TEMPLATES["city"](system, ls, palette), "city"
+        return TEMPLATES["city"](system, ls, Palette(system)), "city"
+
+
+def _t(model) -> dict:
+    return model.model_dump()
 
 
 def build_world(systems: dict[str, KnowledgeSystem], crosslinks: CrossLinks, manifest: Manifest,
@@ -155,8 +288,9 @@ def build_world(systems: dict[str, KnowledgeSystem], crosslinks: CrossLinks, man
         raise ValueError("; ".join(problems))
 
     scene = Scene()
-    _central_park(scene)
-    layouts: dict[str, tuple[int, SystemLayout]] = {}
+    placed = [(i, systems[sid]) for i, sid in sorted(manifest.plots.items())]
+    _central_park(scene, placed)
+    layouts: dict[str, tuple[int, object]] = {}
     used: dict[str, str] = {}
     for index in range(len(SLOTS)):
         sid = manifest.plots.get(index)
@@ -165,9 +299,11 @@ def build_world(systems: dict[str, KnowledgeSystem], crosslinks: CrossLinks, man
             continue
         system = systems[sid]
         ls = LocalScene(scene, plot_frame(index), sid)
+        start = len(scene.prims)
         _gate(ls, system)
         lay, used[sid] = layout_system(system, ls)
         layouts[sid] = (index, lay)
+        _plot_scenery(scene, index, start, sid)
 
     ground = {"k": "rect", "c": [0.0, 0.0], "w": 2 * WORLD_HALF, "d": 2 * WORLD_HALF, "r": 0.0, "y": 0.0,
               "holes": scene.ground_holes}
@@ -180,49 +316,51 @@ def build_world(systems: dict[str, KnowledgeSystem], crosslinks: CrossLinks, man
         system = systems[sid]
         f = plot_frame(index)
 
-        def W(p: tuple[float, float, float]) -> list[float]:
+        def W(p):
             x, z = f.point(p[0], p[2])
             return [r2(x), r2(p[1]), r2(z)]
 
         wings = []
-        order = 0
+        locus = 0
         for wing in system.wings:
             rooms = []
             for room in wing.rooms:
                 refs = []
                 for e in room.exhibits:
+                    locus += 1
                     ref = f"{sid}/{e.id}"
                     pl = lay.exhibits[e.id]
                     pos, view = W(pl.pos), W(pl.view)
                     exhibits[ref] = {
-                        "system": sid, "wing": wing.id, "room": room.id, "order": order,
-                        "title": e.title, "summary": e.summary, "detail": e.detail, "image": e.image,
-                        "keywords": e.keywords, "emoji": e.emoji, "symbol": e.symbol, "color": pl.color,
-                        "pos": pos, "view": view, "yaw": round(look_yaw(view[0], view[2], pos[0], pos[2]), 3),
-                        "links": [{"to": f"{sid}/{l.to}", "rel": l.relation, "dir": "out"} for l in e.links],
+                        "system": sid, "wing": wing.id, "room": room.id, "locus": locus, "style": room.style,
+                        "title": _t(e.title), "summary": _t(e.summary), "explain": _t(e.explain),
+                        "example": _t(e.example), "image": _t(e.image),
+                        "cues": [{"thing": _t(c.thing), "means": _t(c.means)} for c in e.cues],
+                        "keywords": [_t(k) for k in e.keywords], "emoji": e.emoji,
+                        "scene": e.scene.model_dump(exclude_none=True, exclude_defaults=True),
+                        "pos": pos, "yaw": round(f.angle(pl.yaw), 4), "view": view,
+                        "viewYaw": round(look_yaw(view[0], view[2], pos[0], pos[2]), 4),
+                        "links": [{"to": f"{sid}/{l.to}", "rel": _t(l.relation), "dir": "out"} for l in e.links],
                     }
                     refs.append(ref)
-                    order += 1
-                rooms.append({"id": room.id, "title": room.title, "summary": room.summary,
-                              "anchor": W(lay.rooms[room.id]), "exhibits": refs})
-            wings.append({"id": wing.id, "title": wing.title, "summary": wing.summary,
+                rooms.append({"id": room.id, "title": _t(room.title), "summary": _t(room.summary),
+                              "style": room.style, "anchor": W(lay.rooms[room.id]), "exhibits": refs})
+            wings.append({"id": wing.id, "title": _t(wing.title), "summary": _t(wing.summary),
                           "anchor": W(lay.wings[wing.id]), "rooms": rooms})
         sys_out.append({
-            "id": sid, "title": system.title, "subtitle": system.subtitle, "description": system.description,
-            "color": system.color, "template": used[sid],
-            "metaphor": system.architecture.metaphor, "plot": index,
-            "entrance": W(lay.start), "wings": wings,
+            "id": sid, "title": _t(system.title), "subtitle": _t(system.subtitle),
+            "description": _t(system.description), "color": system.color, "template": used[sid],
+            "metaphor": _t(system.architecture.metaphor), "plot": index, "entrance": W(lay.start), "wings": wings,
         })
 
-    # backlinks and cross links
     for ref, ex in list(exhibits.items()):
         for link in list(ex["links"]):
-            if link["dir"] == "out":
+            if link["dir"] == "out" and link["to"] in exhibits:
                 exhibits[link["to"]]["links"].append({"to": ref, "rel": link["rel"], "dir": "in"})
     bridges: dict[tuple[str, str], int] = {}
-    for cl in crosslinks.links:
-        exhibits[cl.source]["links"].append({"to": cl.target, "rel": cl.relation, "dir": "out"})
-        exhibits[cl.target]["links"].append({"to": cl.source, "rel": cl.relation, "dir": "in"})
+    for cl in present_links(systems, crosslinks):
+        exhibits[cl.source]["links"].append({"to": cl.target, "rel": _t(cl.relation), "dir": "out"})
+        exhibits[cl.target]["links"].append({"to": cl.source, "rel": _t(cl.relation), "dir": "in"})
         a, b = sorted((cl.source.split("/")[0], cl.target.split("/")[0]))
         bridges[(a, b)] = bridges.get((a, b), 0) + 1
 
@@ -230,11 +368,14 @@ def build_world(systems: dict[str, KnowledgeSystem], crosslinks: CrossLinks, man
         for so in sys_out:
             so["tour"] = build_tour(nav, so, exhibits)
 
+    styles = {name: {k: ROOM_STYLES[name][k] for k in ("en", "zh", "floor", "light", "stage", "wall")}
+              for name in sorted({e["style"] for e in exhibits.values()})}
     return {
-        "version": 1,
+        "version": 2,
         "title": TITLE,
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "spawn": {"pos": [0.0, 0.0, -28.0], "yaw": 0.0},
+        "spawn": {"pos": [0.0, 0.0, -46.0], "yaw": 0.0},
+        "eye": EYE,
         "cell": CELL,
         "half": WORLD_HALF,
         "plots": [{"index": i, "center": [r2(plot_frame(i).ox), r2(plot_frame(i).oz)],
@@ -242,6 +383,7 @@ def build_world(systems: dict[str, KnowledgeSystem], crosslinks: CrossLinks, man
                   for i in range(len(SLOTS))],
         "systems": sys_out,
         "exhibits": exhibits,
+        "styles": styles,
         "bridges": [{"a": a, "b": b, "n": n} for (a, b), n in sorted(bridges.items())],
         "nav": {"step": STEP, "radius": RADIUS, "surfaces": surfaces, "colliders": scene.colliders},
         "prims": scene.prims,

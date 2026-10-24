@@ -1,7 +1,7 @@
 [project]
 name = "memory-palace"
-version = "0.1.0"
-description = "Knowledge systems laid out by an LLM as a walkable 3D memory palace"
+version = "2.0.0"
+description = "Knowledge systems laid out as a walkable, bilingual 3D memory palace"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -25,6 +25,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["palace*"]
+
+[tool.setuptools.package-data]
+palace = ["catalog/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

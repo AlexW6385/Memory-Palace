@@ -10,13 +10,16 @@ from pydantic import ValidationError
 
 def cmd_validate(args: argparse.Namespace) -> int:
     from palace.content import ContentStore, load_system_file
+    from palace.schema import scene_problems, text_problems
 
     ok = True
     if args.files:
         for f in args.files:
             try:
                 s = load_system_file(Path(f))
-                print(f"OK  {f}: {s.title} — {len(s.wings)} wings, {len(s.exhibits())} exhibits")
+                print(f"OK  {f}: {s.title.en} — {len(s.wings)} wings, {len(s.exhibits())} exhibits")
+                for problem in text_problems(s) + scene_problems(s):
+                    print(f"    warning: {problem}")
             except (ValidationError, ValueError) as e:
                 ok = False
                 print(f"ERR {f}:\n{e}")
@@ -30,7 +33,9 @@ def cmd_validate(args: argparse.Namespace) -> int:
         print(f"ERR {e}")
         return 1
     for s in systems.values():
-        print(f"OK  {s.id}: {s.title} — {len(s.wings)} wings, {len(s.exhibits())} exhibits")
+        print(f"OK  {s.id}: {s.title.en} — {len(s.wings)} wings, {len(s.exhibits())} exhibits")
+        for problem in text_problems(s) + scene_problems(s):
+            print(f"    warning: {problem}")
     from palace.world import check_crosslinks
 
     problems = check_crosslinks(systems, crosslinks)
@@ -92,7 +97,7 @@ def main(argv: list[str] | None = None) -> int:
     b.set_defaults(func=cmd_build)
 
     g = sub.add_parser("generate", help="have an LLM design a new knowledge system")
-    g.add_argument("topic", help="e.g. '线性代数' or '我的实习经验'")
+    g.add_argument("topic", help="e.g. 'linear algebra' or 'my internship at Geotab'")
     g.add_argument("--notes", default="", help="extra material or wishes for the LLM")
     g.add_argument("--provider", choices=["anthropic", "openai"], default=None)
     g.add_argument("--model", default=None)

@@ -1,16 +1,16 @@
 import * as THREE from "three";
 import { Nav } from "./nav.js";
-import { Labels, FONTS } from "./labels.js";
-import { buildStatic, buildExhibits, buildBridges, buildSky } from "./world.js";
+import { createRenderer, createLights } from "./look.js";
+import { World } from "./world.js";
+import { Stages } from "./stage.js";
 import { UI } from "./ui.js";
+import { t, tr, getLang, onLang } from "./i18n.js";
 
-const EYE = 1.65;
-const WALK = 6.5;
-const RUN = 14;
-const SYMBOL_RANGE = 75;
+const WALK = 4.6;
+const RUN = 11;
 const $ = (id) => document.getElementById(id);
 
-// ── persistence (best effort) ─────────────────────────────────────────────
+// ── persistence (best effort) ────────────────────────────────────────────────
 const store = {
   get(key, fallback) {
     try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
@@ -20,285 +20,375 @@ const store = {
   },
 };
 
-async function loadWorld() {
-  const res = await fetch("data/world.json");
-  if (!res.ok) throw new Error(`world.json: HTTP ${res.status}`);
-  return res.json();
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function readTheme() {
+  return {
+    skyTop: cssVar("--sky-top"), skyHorizon: cssVar("--sky-horizon"), skyBottom: cssVar("--sky-bottom"),
+    grass: cssVar("--grass"), fog: cssVar("--fog"), sun: cssVar("--sun"),
+    sunI: parseFloat(cssVar("--sun-i")) || 2.2, hemiI: parseFloat(cssVar("--hemi-i")) || 1.0,
+    exposure: parseFloat(cssVar("--exposure")) || 1.0, night: cssVar("--night") === "1",
+  };
 }
 
 async function fontsReady() {
   if (!document.fonts) return;
   const loads = [
-    document.fonts.load(`700 40px ${FONTS.display}`, "记忆宫殿展厅"),
-    document.fonts.load(`600 40px ${FONTS.body}`, "展品名称"),
+    document.fonts.load('400 40px "Marcellus"', "Memory Palace"),
+    document.fonts.load('600 40px "IBM Plex Sans"', "Locus 12"),
+    document.fonts.load('400 40px "Noto Serif SC"', "记忆宫殿展厅"),
   ];
   await Promise.race([Promise.allSettled(loads), new Promise((r) => setTimeout(r, 2500))]);
 }
 
-function cssVar(name) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
-
 async function main() {
-  const msg = $("loading-msg");
-  const world = await loadWorld();
-  msg.textContent = "正在建造展馆…";
-  await new Promise((r) => requestAnimationFrame(r));
+  const setProgress = (f, msg) => {
+    $("progress-bar").style.width = `${Math.round(f * 100)}%`;
+    if (msg) $("loading-msg").textContent = msg;
+  };
+  setProgress(0.05, t("loading"));
+  const res = await fetch("data/world.json");
+  if (!res.ok) throw new Error(`world.json: HTTP ${res.status}`);
+  const data = await res.json();
+  setProgress(0.2, t("loadingBuild"));
+  await fontsReady();
 
-  // ── renderer & scene ────────────────────────────────────────────────────
+  // ── renderer, scene, lights ────────────────────────────────────────────────
   const canvas = $("view");
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
   const coarse = matchMedia("(pointer: coarse)").matches;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, coarse ? 1.6 : 2));
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  const renderer = createRenderer(canvas, { mobile: coarse });
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(68, 1, 0.1, 2000);
+  const camera = new THREE.PerspectiveCamera(66, 1, 0.1, 2400);
   camera.rotation.order = "YXZ";
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x8a9a78, 1.2);
-  const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-  sun.position.set(-120, 220, 90);
-  scene.add(hemi, sun);
-  scene.fog = new THREE.Fog(0xe2e3dc, 90, 620);
-  const sky = buildSky(scene);
-  const skyMesh = scene.children[scene.children.length - 1];
+  const lights = createLights(scene, renderer, { shadowSize: coarse ? 1024 : 2048, shadowRange: coarse ? 30 : 40 });
+  scene.fog = new THREE.Fog(0xe2e3dc, 70, 330);
 
-  const labels = new Labels(scene);
-  const { ground } = buildStatic(world, scene, labels);
-  const exhibits = buildExhibits(world, scene, labels);
-  const byRef = new Map(exhibits.map((e) => [e.ref, e]));
-  buildBridges(world, scene);
-  const nav = new Nav(world.nav);
+  const world = new World(data, scene);
+  await world.build((f) => setProgress(0.2 + f * 0.7));
+  const stages = new Stages(data, scene);
+  const nav = new Nav(data.nav);
 
   function applyTheme() {
-    sky.top.value.set(cssVar("--sky-top"));
-    sky.horizon.value.set(cssVar("--sky-horizon"));
-    sky.bottom.value.set(cssVar("--sky-bottom"));
-    scene.fog.color.set(cssVar("--fog"));
-    ground.material.color.set(cssVar("--grass"));
-    sun.color.set(cssVar("--sun"));
-    sun.intensity = parseFloat(cssVar("--sun-i")) || 1.6;
-    hemi.intensity = parseFloat(cssVar("--hemi-i")) || 1.2;
-    hemi.color.set(cssVar("--sky-horizon")).lerp(new THREE.Color("#ffffff"), 0.5);
-    hemi.groundColor.set(cssVar("--grass"));
+    const th = readTheme();
+    document.documentElement.dataset.night = th.night ? "1" : "0";
+    scene.fog.color.set(th.fog);
+    lights.sun.color.set(th.sun);
+    lights.sun.intensity = th.sunI;
+    lights.hemi.intensity = th.hemiI;
+    lights.hemi.color.set(th.skyHorizon).lerp(new THREE.Color("#ffffff"), 0.45);
+    // warm bounce light from below keeps ceilings and undersides from going murky
+    lights.hemi.groundColor.set(th.grass).lerp(new THREE.Color(th.night ? "#6b6152" : "#d9ccb2"), 0.65);
+    renderer.toneMappingExposure = th.exposure;
+    world.setTheme(th);
   }
   applyTheme();
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
-  new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "class"] });
+  new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
-  // ── visitor ─────────────────────────────────────────────────────────────
-  const player = { x: world.spawn.pos[0], y: world.spawn.pos[1], z: world.spawn.pos[2], yaw: world.spawn.yaw, pitch: -0.02 };
+  // ── the visitor ────────────────────────────────────────────────────────────
+  const player = { x: data.spawn.pos[0], y: data.spawn.pos[1], z: data.spawn.pos[2], yaw: data.spawn.yaw, pitch: -0.04 };
   const saved = store.get("palace.pos", null);
   if (saved && nav.stand(saved.x, saved.z, saved.y) !== null) Object.assign(player, saved);
-  let eyeY = player.y + EYE;
+  let eyeY = player.y + data.eye;
   const visited = new Set(store.get("palace.visited", []));
+  stages.setVisited(visited);
+  const recallLog = store.get("palace.recall", {});
 
-  // ── location ────────────────────────────────────────────────────────────
-  const sysById = Object.fromEntries(world.systems.map((s) => [s.id, s]));
+  // ── location ───────────────────────────────────────────────────────────────
+  const sysById = Object.fromEntries(data.systems.map((s) => [s.id, s]));
   let here = { system: null, room: null };
+  let lastRoom = null;
   function locate() {
-    let sys = null;
-    for (const p of world.plots) {
-      if (Math.abs(player.x - p.center[0]) <= p.half + 6 && Math.abs(player.z - p.center[1]) <= p.half + 6) {
-        sys = p.system ? sysById[p.system] : null;
-        if (!p.system) { ui.setWhere("空地", "新的知识体系会建在这里"); here = { system: null, room: null }; return; }
-      }
+    let plot = null;
+    for (const p of data.plots) {
+      if (Math.abs(player.x - p.center[0]) <= p.half + 6 && Math.abs(player.z - p.center[1]) <= p.half + 6) plot = p;
     }
-    if (!sys) { ui.setWhere("中央广场", "点「导览」开始，或沿大路走向各个体系"); here = { system: null, room: null }; return; }
-    let best = null, bestD = 18;
+    if (!plot) {
+      ui.setWhere(t("plaza"), t("plazaSub"));
+      here = { system: null, room: null };
+      lastRoom = null;
+      return;
+    }
+    if (!plot.system) {
+      ui.setWhere(t("emptyPlot"), t("emptyPlotSub"));
+      here = { system: null, room: null };
+      return;
+    }
+    const sys = sysById[plot.system];
+    let best = null, bestD = 16;
     for (const w of sys.wings) for (const r of w.rooms) for (const ref of r.exhibits) {
-      const e = world.exhibits[ref];
-      const d = Math.hypot(e.pos[0] - player.x, e.pos[2] - player.z) + Math.abs(e.pos[1] - player.y) * 3;
+      const e = data.exhibits[ref];
+      const d = Math.hypot(e.view[0] - player.x, e.view[2] - player.z) + Math.abs(e.pos[1] - player.y) * 3;
       if (d < bestD) { bestD = d; best = { w, r }; }
     }
     here = { system: sys.id, room: best ? best.r : null };
-    ui.setWhere(sys.title, best ? `${best.w.title} · ${best.r.title}` : sys.metaphor);
+    ui.setWhere(tr(sys.title), best ? t("inRoom", { wing: tr(best.w.title), room: tr(best.r.title) }) : tr(sys.subtitle), sys.color);
+    if (best && best.r !== lastRoom) {
+      lastRoom = best.r;
+      const st = data.styles[best.r.style];
+      if (!route || route.kind !== "recall") {
+        ui.toast(`<span class="toast-kicker">${t("enterRoom", { style: tr(st) })}</span><span class="toast-title">${tr(best.r.title)}</span>`);
+      }
+    }
   }
 
-  // ── camera motion helpers ───────────────────────────────────────────────
-  let glide = null; // {from, to, t, dur, done}
+  // ── camera motion helpers ──────────────────────────────────────────────────
+  let glide = null;
   const fadeEl = $("fade");
-  function wrapAngle(a) { return Math.atan2(Math.sin(a), Math.cos(a)); }
+  const wrapAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
-  function goTo(x, y, z, yaw, { fade = null, done = null } = {}) {
-    const far = fade ?? Math.hypot(x - player.x, z - player.z) > 45;
+  function goTo(x, y, z, yaw, { fade = null, done = null, pitch = -0.13 } = {}) {
+    const far = fade ?? (Math.hypot(x - player.x, z - player.z) > 30 || Math.abs(y - player.y) > 2);
     if (far) {
       fadeEl.classList.add("on");
       setTimeout(() => {
-        Object.assign(player, { x, y, z, yaw, pitch: -0.05 });
-        eyeY = y + EYE;
+        Object.assign(player, { x, y, z, yaw, pitch });
+        eyeY = y + data.eye;
         glide = null;
-        fadeEl.classList.remove("on");
+        setTimeout(() => fadeEl.classList.remove("on"), 60);
         done && done();
-      }, 240);
+      }, 260);
       return;
     }
     glide = {
-      from: { ...player }, to: { x, y, z, yaw: player.yaw + wrapAngle(yaw - player.yaw), pitch: -0.05 },
-      t: 0, dur: Math.min(1.4, 0.4 + Math.hypot(x - player.x, z - player.z) / 18), done,
+      from: { ...player }, to: { x, y, z, yaw: player.yaw + wrapAngle(yaw - player.yaw), pitch },
+      t: 0, dur: Math.min(1.5, 0.45 + Math.hypot(x - player.x, z - player.z) / 16), done,
     };
   }
 
+  function viewOf(ref) {
+    const ex = data.exhibits[ref];
+    return { x: ex.view[0], y: ex.view[1], z: ex.view[2], yaw: ex.viewYaw };
+  }
+
   function goExhibit(ref, open = false) {
-    const ex = world.exhibits[ref];
-    tour.stop();
+    endRoute(true);
     ui.closeOverlays();
-    goTo(ex.view[0], ex.view[1], ex.view[2], ex.yaw, { done: () => open && openCard(ref) });
+    stages.prepare(ref);
+    const v = viewOf(ref);
+    goTo(v.x, v.y, v.z, v.yaw, { done: () => open && openCard(ref) });
   }
 
-  // a thin gilt ring on the pedestal marks exhibits already seen
-  const ringGeo = new THREE.TorusGeometry(0.47, 0.035, 6, 32);
-  const ringMat = new THREE.MeshLambertMaterial({ color: 0xd4a548, emissive: 0x3a2a08 });
-  function markVisited(ref) {
-    const e = byRef.get(ref);
-    if (!e || e.ring) return;
-    e.ring = new THREE.Mesh(ringGeo, ringMat);
-    e.ring.rotation.x = Math.PI / 2;
-    e.ring.position.set(e.ex.pos[0], e.ex.pos[1] + 1.02, e.ex.pos[2]);
-    scene.add(e.ring);
+  function openCard(ref, opts = {}) {
+    if (!opts.mode || opts.mode === "view") {
+      visited.add(ref);
+      stages.markVisited(ref);
+      store.set("palace.visited", [...visited]);
+    }
+    stages.setCurrent(ref);
+    ui.showCard(ref, { touring: route?.kind === "tour", paused: route?.paused, ...opts });
   }
 
-  function openCard(ref) {
-    visited.add(ref);
-    markVisited(ref);
-    store.set("palace.visited", [...visited]);
-    ui.showCard(ref, { touring: tour.active, paused: tour.paused });
-  }
+  // ── routes: guided tour and recall walk ───────────────────────────────────
+  // route = { kind: "tour"|"recall", system, refs, index, phase, paused, ... }
+  let route = null;
 
-  // ── guided tour ─────────────────────────────────────────────────────────
-  const tour = {
-    active: false, paused: false, sys: null, idx: 0, phase: "idle", dist: 0, cum: null, dwell: 0,
-    start(sysId, from = 0) {
-      const s = sysById[sysId];
-      this.sys = s;
-      const path = s.tour.path;
-      this.cum = [0];
-      for (let i = 1; i < path.length; i++) {
-        this.cum.push(this.cum[i - 1] + Math.hypot(path[i][0] - path[i - 1][0], path[i][2] - path[i - 1][2]));
-      }
-      this.active = true;
-      this.paused = false;
-      this.idx = from;
-      ui.hideCard();
-      ui.closeOverlays();
-      if (from === 0) {
-        const [x, y, z] = path[0];
-        this.dist = 0;
-        this.phase = "wait";
-        const look = Math.atan2(-(path[1][0] - x), -(path[1][2] - z));
-        goTo(x, y, z, look, { fade: Math.hypot(x - player.x, z - player.z) > 4, done: () => { this.phase = "walk"; } });
-      } else {
-        this.arrive();
-      }
-      ui.hint(`导览：${s.title}。随时点「暂停」停下细看`, 4500);
-    },
-    stop() {
-      if (!this.active) return;
-      this.active = false;
-      this.phase = "idle";
-      $("tour-pause").hidden = true;
-    },
-    next(dir) {
-      const stops = this.sys.tour.stops;
-      const k = this.idx + dir;
-      if (k < 0) return;
-      if (k >= stops.length) { this.stop(); ui.hint(`「${this.sys.title}」导览结束`); return; }
-      this.idx = k;
-      if (dir > 0 && this.phase === "dwell") { this.phase = "walk"; ui.hideCard(); return; }
-      this.arrive();
-    },
-    arrive() {
-      const ref = this.sys.tour.stops[this.idx].ref;
-      const ex = world.exhibits[ref];
-      this.dist = this.cum[this.sys.tour.stops[this.idx].at];
-      this.phase = "wait";
-      goTo(ex.view[0], ex.view[1], ex.view[2], ex.yaw, { done: () => this.beginDwell() });
-    },
-    beginDwell() {
-      const ref = this.sys.tour.stops[this.idx].ref;
-      const ex = world.exhibits[ref];
-      this.phase = "dwell";
-      this.dwell = Math.min(22, Math.max(10, (ex.summary.length + ex.detail.length + ex.image.length) / 16));
-      openCard(ref);
-    },
-    update(dt) {
-      if (!this.active || this.paused || this.phase === "wait") return;
-      if (this.phase === "dwell") {
-        this.dwell -= dt;
-        if (this.dwell <= 0) this.next(1);
-        return;
-      }
-      // walk along the path toward the current stop
-      const path = this.sys.tour.stops.length ? this.sys.tour.path : null;
-      const target = this.cum[this.sys.tour.stops[this.idx].at];
-      const remaining = target - this.dist;
-      const speed = Math.min(12, Math.max(3.2, remaining * 0.7));
-      this.dist = Math.min(target, this.dist + speed * dt);
-      const p = pointAt(path, this.cum, this.dist);
-      const ahead = pointAt(path, this.cum, Math.min(target, this.dist + 3));
-      const h = nav.stand(p[0], p[2], player.y);
-      Object.assign(player, { x: p[0], z: p[2], y: h ?? p[1] });
-      if (Math.hypot(ahead[0] - p[0], ahead[2] - p[2]) > 0.3) {
-        const want = Math.atan2(-(ahead[0] - p[0]), -(ahead[2] - p[2]));
-        player.yaw += wrapAngle(want - player.yaw) * Math.min(1, dt * 3.5);
-      }
-      player.pitch += (-0.04 - player.pitch) * Math.min(1, dt * 2);
-      if (this.dist >= target - 1e-3) {
-        const ex = world.exhibits[this.sys.tour.stops[this.idx].ref];
-        this.phase = "wait";
-        goTo(ex.view[0], ex.view[1], ex.view[2], ex.yaw, { done: () => this.beginDwell() });
-      }
-    },
-  };
+  function pathFor(sys) {
+    const path = sys.tour.path;
+    const cum = [0];
+    for (let i = 1; i < path.length; i++) cum.push(cum[i - 1] + Math.hypot(path[i][0] - path[i - 1][0], path[i][2] - path[i - 1][2], path[i][1] - path[i - 1][1]));
+    return { path, cum, stopAt: Object.fromEntries(sys.tour.stops.map((s) => [s.ref, s.at])) };
+  }
 
   function pointAt(path, cum, d) {
     let i = 1;
     while (i < cum.length - 1 && cum[i] < d) i++;
     const a = path[i - 1], b = path[i];
     const seg = cum[i] - cum[i - 1] || 1;
-    const t = Math.min(1, Math.max(0, (d - cum[i - 1]) / seg));
-    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+    const k = Math.min(1, Math.max(0, (d - cum[i - 1]) / seg));
+    return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
   }
 
-  // ── UI ──────────────────────────────────────────────────────────────────
-  const ui = new UI(world, {
-    closeCard() { tour.stop(); ui.hideCard(); },
+  function startRoute(kind, sysId, wingId = null) {
+    endRoute(true);
+    const sys = sysById[sysId];
+    let refs = sys.wings.flatMap((w) => (wingId && w.id !== wingId ? [] : w.rooms.flatMap((r) => r.exhibits)));
+    if (kind === "recall" && wingId === "missed") refs = (recallLog[sysId]?.missed || []).filter((r) => data.exhibits[r]);
+    if (!refs.length) return;
+    const p = pathFor(sys);
+    route = { kind, system: sysId, refs, index: 0, phase: "wait", paused: false, dist: 0, ...p, ok: 0, graded: 0, missed: [],
+      total: refs.length, scopeTitle: wingId && wingId !== "missed" ? sys.wings.find((w) => w.id === wingId).title : null };
+    if (kind === "recall") stages.setRecall(true, new Set());
+    ui.hideCard();
+    ui.closeOverlays();
+    ui.setRoute(route);
+    const first = refs[0];
+    const firstAt = p.stopAt[first] ?? 0;
+    route.dist = kind === "tour" && !wingId ? 0 : p.cum[firstAt];
+    if (kind === "tour" && !wingId) {
+      const [x, y, z] = p.path[0];
+      const look = Math.atan2(-(p.path[1][0] - x), -(p.path[1][2] - z));
+      goTo(x, y, z, look, { fade: true, done: () => { if (route) route.phase = "walk"; } });
+    } else {
+      arrive();
+    }
+    ui.hint(kind === "tour" ? t("tourHint", { name: tr(sys.title) }) : t("recallThink"), 4500);
+  }
+
+  function endRoute(silent = false) {
+    if (!route) return;
+    const r = route;
+    route = null;
+    if (r.kind === "recall") {
+      stages.setRecall(false);
+      recallLog[r.system] = { missed: r.missed, when: Date.now() };
+      store.set("palace.recall", recallLog);
+      if (!silent && r.graded) ui.hint(t("recallDone", { ok: r.ok, n: r.graded }), 6000);
+    }
+    ui.setRoute(null);
+    if (ui.card && ui.card.mode !== "view") ui.hideCard();
+  }
+
+  function arrive() {
+    const ref = route.refs[route.index];
+    route.phase = "wait";
+    route.dist = route.cum[route.stopAt[ref]] ?? route.dist;
+    stages.prepare(ref);
+    const v = viewOf(ref);
+    goTo(v.x, v.y, v.z, v.yaw, { done: () => dwell() });
+  }
+
+  function dwell() {
+    if (!route) return;
+    const ref = route.refs[route.index];
+    route.phase = "dwell";
+    if (route.kind === "tour") {
+      const ex = data.exhibits[ref];
+      const words = (tr(ex.summary) + tr(ex.image)).length;
+      route.dwell = Math.min(26, Math.max(12, words / (getLang() === "zh" ? 7 : 18)));
+      openCard(ref);
+    } else {
+      openCard(ref, { mode: "ask" });
+    }
+    ui.setRoute(route);
+  }
+
+  function nextStop(dir) {
+    if (!route) return;
+    const k = route.index + dir;
+    if (k < 0) return;
+    if (k >= route.refs.length) {
+      const sys = sysById[route.system];
+      if (route.kind === "tour") ui.hint(t("tourEnd", { name: tr(sys.title) }), 5000);
+      endRoute();
+      return;
+    }
+    route.index = k;
+    const ref = route.refs[k];
+    const consecutive = dir > 0 && route.kind === "tour" && route.stopAt[ref] !== undefined;
+    if (consecutive && route.phase === "dwell") {
+      route.phase = "walk";
+      ui.hideCard();
+    } else arrive();
+    ui.setRoute(route);
+  }
+
+  function updateRoute(dt) {
+    if (!route || route.paused || route.phase === "wait") return;
+    if (route.phase === "dwell") {
+      if (route.kind === "tour" && ui.card && !ui.card.hover) {
+        route.dwell -= dt;
+        if (route.dwell <= 0) nextStop(1);
+      }
+      return;
+    }
+    const ref = route.refs[route.index];
+    const target = route.cum[route.stopAt[ref]];
+    const remaining = target - route.dist;
+    const speed = Math.min(9, Math.max(2.6, remaining * 0.6));
+    route.dist = Math.min(target, route.dist + speed * dt);
+    const p = pointAt(route.path, route.cum, route.dist);
+    const ahead = pointAt(route.path, route.cum, Math.min(target, route.dist + 3));
+    const h = nav.stand(p[0], p[2], player.y);
+    Object.assign(player, { x: p[0], z: p[2], y: h ?? p[1] });
+    if (Math.hypot(ahead[0] - p[0], ahead[2] - p[2]) > 0.3) {
+      const want = Math.atan2(-(ahead[0] - p[0]), -(ahead[2] - p[2]));
+      player.yaw += wrapAngle(want - player.yaw) * Math.min(1, dt * 3);
+    }
+    player.pitch += (-0.06 - player.pitch) * Math.min(1, dt * 2);
+    if (route.dist >= target - 1e-3) {
+      route.phase = "wait";
+      const v = viewOf(ref);
+      goTo(v.x, v.y, v.z, v.yaw, { done: () => dwell() });
+    }
+  }
+
+  // ── UI ─────────────────────────────────────────────────────────────────────
+  const ui = new UI(data, {
+    closeCard() {
+      if (route && route.kind === "recall") endRoute();
+      else if (route) endRoute(true);
+      stages.setCurrent(null);
+      ui.hideCard();
+    },
     step(dir) {
-      if (tour.active) return tour.next(dir);
+      if (route) return nextStop(dir);
       if (!ui.current) return;
-      const s = ui.roomOf[ui.current].s;
+      const s = ui.where[ui.current].s;
       const list = ui.order[s.id];
       const k = list.indexOf(ui.current) + dir;
       if (k >= 0 && k < list.length) goExhibit(list[k], true);
     },
     togglePause() {
-      tour.paused = !tour.paused;
-      $("tour-pause").textContent = tour.paused ? "继续" : "暂停";
+      if (!route) return;
+      route.paused = !route.paused;
+      ui.setRoute(route);
+      if (ui.card) { ui.card.paused = route.paused; ui.renderCard(); }
     },
+    reveal() {
+      if (!route || route.kind !== "recall") return;
+      const ref = route.refs[route.index];
+      stages.reveal(ref);
+      ui.card.mode = "shown";
+      ui.renderCard();
+    },
+    grade(ok) {
+      if (!route || route.kind !== "recall") return;
+      const ref = route.refs[route.index];
+      route.graded += 1;
+      if (ok) route.ok += 1; else route.missed.push(ref);
+      visited.add(ref);
+      stages.markVisited(ref);
+      store.set("palace.visited", [...visited]);
+      ui.setRoute(route);
+      nextStop(1);
+    },
+    endRoute() { endRoute(); },
     goExhibit,
-    goSystem(id) {
-      tour.stop();
-      ui.hideCard();
-      const [x, y, z] = sysById[id].entrance;
-      const path = sysById[id].tour.path;
-      const look = Math.atan2(-(path[1][0] - x), -(path[1][2] - z));
-      goTo(x, y, z, look, { fade: true });
-    },
     goPoint(x, z) {
-      tour.stop();
+      endRoute(true);
       ui.hideCard();
-      goTo(x, 0, z, Math.atan2(x, z), { fade: true });
+      const hs = nav.heights(x, z).slice().sort((a, b) => a - b);
+      for (const y of hs) {
+        if (nav.stand(x, z, y) !== null) return goTo(x, y, z, player.yaw, { fade: true });
+      }
+      ui.hint("✕", 1200);
     },
-    startTour(id) { tour.start(id); },
+    startTour(id) { startRoute("tour", id); },
+    missed: (id) => (recallLog[id]?.missed || []).filter((r) => data.exhibits[r]).length,
+    startRecall(id, wing = null) { startRoute("recall", id, wing); },
     visited: () => visited,
     hereRoom: () => here.room,
     hereSystem: () => here.system,
     player: () => player,
+    relocate: () => { lastRoom = here.room; locate(); },
+  });
+  // hovering the card pauses the tour clock
+  $("card").addEventListener("pointerenter", () => { if (ui.card) ui.card.hover = true; });
+  $("card").addEventListener("pointerleave", () => { if (ui.card) ui.card.hover = false; });
+
+  onLang((lang) => {
+    world.setLang(lang);
+    stages.setLang(lang);
+    ui.onLang();
   });
 
-  // ── input ───────────────────────────────────────────────────────────────
+  // ── input ──────────────────────────────────────────────────────────────────
   const keys = new Set();
   addEventListener("keydown", (e) => {
-    if (e.target.tagName === "INPUT") return;
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
     keys.add(e.code);
   });
   addEventListener("keyup", (e) => keys.delete(e.code));
@@ -340,7 +430,7 @@ async function main() {
     look.lx = e.clientX;
     look.ly = e.clientY;
     look.moved += Math.abs(dx) + Math.abs(dy);
-    const k = coarse ? 0.0055 : 0.0042;
+    const k = coarse ? 0.0055 : 0.004;
     player.yaw -= dx * k;
     player.pitch = Math.max(-1.2, Math.min(1.0, player.pitch - dy * k));
     if (look.moved > 6) userMoved("look");
@@ -373,49 +463,52 @@ async function main() {
     const r = canvas.getBoundingClientRect();
     const ndc = new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
-    const near = exhibits.filter((e) => e.sym.visible).map((e) => e.hit);
-    const hit = raycaster.intersectObjects(near, false)[0];
-    if (hit && hit.distance < 40) {
+    const hit = raycaster.intersectObjects(stages.hits, false)[0];
+    if (hit && hit.distance < 32) {
       const ref = hit.object.userData.ref;
-      if (tour.active) tour.stop();
-      openCard(ref);
+      if (route && route.kind === "recall") return;
+      endRoute(true);
+      const v = viewOf(ref);
+      if (Math.hypot(v.x - player.x, v.z - player.z) > 1.5) goTo(v.x, v.y, v.z, v.yaw, { done: () => openCard(ref) });
+      else openCard(ref);
     }
   }
 
   let hinted = false;
   function userMoved(kind) {
     if (!hinted) { hinted = true; setTimeout(() => $("hint").classList.add("fade-out"), 1500); }
-    if (kind === "walk" && tour.active) { tour.stop(); ui.hint("已退出导览，自由行走"); }
+    if (kind === "walk" && route && route.kind === "tour" && route.phase !== "dwell") {
+      endRoute(true);
+      ui.hint(t("tourLeft"));
+    }
     if (kind === "walk") glide = null;
   }
 
-  // ── frame loop ──────────────────────────────────────────────────────────
+  // ── frame loop ─────────────────────────────────────────────────────────────
   function resize() {
     const w = canvas.clientWidth, h = canvas.clientHeight;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    camera.fov = w < h ? 80 : 66; // portrait phones need a taller view to fit an exhibit and its label
+    camera.fov = w < h ? 78 : 64;
     camera.updateProjectionMatrix();
-    if (!$("map").hidden) ui.drawMap();
+    world.setViewport(h * renderer.getPixelRatio(), camera.fov);
   }
   addEventListener("resize", resize);
   resize();
 
-  // keep the scene's focus point in the part of the screen the card leaves free
+  // keep the focus point in the part of the screen the card leaves free
   const cardEl = $("card");
-  const hudEl = document.querySelector(".hud-top");
+  const topEl = document.querySelector(".topbar");
   const offset = { x: 0, y: 0 };
   function updateViewOffset(dt) {
     let tx = 0, ty = 0;
     if (!cardEl.hidden) {
-      if (innerWidth >= 900) tx = (cardEl.offsetWidth + 16) / 2;
+      if (innerWidth >= 900) tx = (cardEl.offsetWidth + 24) / 2;
       else {
-        // center the exhibit between the top bar and the card, a little below middle
-        // so the label above the symbol stays in view
         const h = canvas.clientHeight;
-        const top = hudEl.getBoundingClientRect().bottom - canvas.getBoundingClientRect().top;
+        const top = topEl.getBoundingClientRect().bottom;
         const bottom = h - cardEl.offsetHeight;
-        ty = Math.max(0, h / 2 - ((top + bottom) / 2 + 0.06 * h));
+        ty = Math.max(0, h / 2 - ((top + bottom) / 2 + 0.04 * h));
       }
     }
     const k = Math.min(1, dt * 6);
@@ -427,22 +520,19 @@ async function main() {
   }
 
   let last = performance.now();
-  let lodT = 0, locT = 0, saveT = 0;
-  const camPos = new THREE.Vector3();
+  let locT = 0, saveT = 0;
 
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-
-    // manual movement
     let fwd = 0, side = 0;
     if (!ui.anyOverlay()) {
       if (keys.has("KeyW") || keys.has("ArrowUp")) fwd += 1;
       if (keys.has("KeyS") || keys.has("ArrowDown")) fwd -= 1;
       if (keys.has("KeyA")) side -= 1;
       if (keys.has("KeyD")) side += 1;
-      if (keys.has("ArrowLeft")) player.yaw += dt * 1.9;
-      if (keys.has("ArrowRight")) player.yaw -= dt * 1.9;
+      if (keys.has("ArrowLeft") || keys.has("KeyQ")) player.yaw += dt * 1.8;
+      if (keys.has("ArrowRight") || keys.has("KeyE")) player.yaw -= dt * 1.8;
       fwd -= joy.y;
       side += joy.x;
     }
@@ -456,61 +546,55 @@ async function main() {
       const vx = (-s * fwd + c * side) / n, vz = (-c * fwd - s * side) / n;
       nav.move(player, player.x + vx * speed * dt, player.z + vz * speed * dt);
     }
-
     if (glide) {
       glide.t += dt / glide.dur;
-      const t = Math.min(1, glide.t), e = t * t * (3 - 2 * t);
+      const k = Math.min(1, glide.t), e = k * k * (3 - 2 * k);
       const f = glide.from, to = glide.to;
       player.x = f.x + (to.x - f.x) * e;
       player.z = f.z + (to.z - f.z) * e;
       player.y = f.y + (to.y - f.y) * e;
       player.yaw = f.yaw + (to.yaw - f.yaw) * e;
       player.pitch = f.pitch + (to.pitch - f.pitch) * e;
-      if (t >= 1) { const d = glide.done; glide = null; d && d(); }
+      if (k >= 1) { const d = glide.done; glide = null; d && d(); }
     }
-    tour.update(dt);
+    updateRoute(dt);
     updateViewOffset(dt);
 
-    eyeY += (player.y + EYE - eyeY) * Math.min(1, dt * 10);
+    eyeY += (player.y + data.eye - eyeY) * Math.min(1, dt * 10);
     camera.position.set(player.x, eyeY, player.z);
     camera.rotation.set(player.pitch, player.yaw, 0);
-    skyMesh.position.copy(camera.position);
-    camPos.copy(camera.position);
+    lights.follow(player.x - Math.sin(player.yaw) * 12, player.y, player.z - Math.cos(player.yaw) * 12);
+    world.update(dt, camera);
+    stages.update(dt, camera.position);
 
-    // level of detail
-    lodT -= dt;
-    if (lodT <= 0) {
-      lodT = 0.25;
-      for (const e of exhibits) e.sym.visible = e.pos.distanceTo(camPos) < SYMBOL_RANGE;
-      labels.update(camPos);
-    }
-    for (const e of exhibits) if (e.sym.visible) e.sym.rotation.y += dt * 0.45;
     locT -= dt;
-    if (locT <= 0) { locT = 0.5; locate(); }
+    if (locT <= 0) { locT = 0.4; locate(); }
     saveT -= dt;
-    if (saveT <= 0) { saveT = 3; store.set("palace.pos", { x: player.x, y: player.y, z: player.z, yaw: player.yaw, pitch: player.pitch }); }
-
+    if (saveT <= 0) {
+      saveT = 3;
+      store.set("palace.pos", { x: player.x, y: player.y, z: player.z, yaw: player.yaw, pitch: player.pitch });
+    }
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
 
-  for (const ref of visited) markVisited(ref);
-  msg.textContent = "正在点亮展品…";
-  await fontsReady();
-  labels.enabled = true;
+  setProgress(0.95, t("loadingLight"));
+  stages.update(0, new THREE.Vector3(player.x, player.y, player.z));
   locate();
-  requestAnimationFrame((t) => { last = t; frame(t); });
+  requestAnimationFrame((tm) => { last = tm; frame(tm); });
+  setProgress(1);
   $("loading").classList.add("done");
-  setTimeout(() => $("loading").hidden = true, 700);
-  ui.hint(coarse
-    ? "左下摇杆走动 · 拖动屏幕转头 · 点展品看详情"
-    : "W A S D 走动 · 拖动转头 · 点击展品看详情 · Shift 奔跑", 7000);
+  setTimeout(() => { $("loading").hidden = true; }, 700);
+  if (ui.shouldWelcome() && !new URLSearchParams(location.search).has("nowelcome")) ui.showWelcome();
+  else ui.hint(coarse ? t("hintTouch") : t("hintDesktop"), 7000);
 
-  // debugging / automation hook
-  window.palace = { world, player, tour, ui, goExhibit, camera, renderer, nav, byRef };
+  // automation hook (tests and screenshots)
+  window.palace = { data, player, ui, stages, world, nav, camera, renderer, goExhibit, startRoute, endRoute,
+    get route() { return route; }, openCard };
+  window.READY = true;
 }
 
 main().catch((err) => {
   console.error(err);
-  $("loading-msg").textContent = "加载失败：" + err.message;
+  $("loading-msg").textContent = t("loadFailed", { msg: err.message });
 });

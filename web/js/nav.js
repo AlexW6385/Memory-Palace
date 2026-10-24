@@ -60,8 +60,13 @@ export class Nav {
     this.cols = new Map();
     for (const s of surfaces) this.#insert(this.surf, s, aabb(s));
     for (const c of colliders) {
-      const r = c.r + radius;
-      this.#insert(this.cols, c, [c.c[0] - r, c.c[1] - r, c.c[0] + r, c.c[1] + r]);
+      if (c.k === "rect") {
+        const b = aabb(c);
+        this.#insert(this.cols, c, [b[0] - radius, b[1] - radius, b[2] + radius, b[3] + radius]);
+      } else {
+        const r = c.r + radius;
+        this.#insert(this.cols, c, [c.c[0] - r, c.c[1] - r, c.c[0] + r, c.c[1] + r]);
+      }
     }
     this.buf = [];
   }
@@ -92,7 +97,10 @@ export class Nav {
     if (!list) return false;
     for (const c of list) {
       if (c.y1 <= y + 0.1 || c.y0 >= y + 1.8) continue;
-      if (Math.hypot(x - c.c[0], z - c.c[1]) < c.r + this.radius) return true;
+      if (c.k === "rect") {
+        const [lx, lz] = local(c, x, z);
+        if (Math.abs(lx) < c.w / 2 + this.radius && Math.abs(lz) < c.d / 2 + this.radius) return true;
+      } else if (Math.hypot(x - c.c[0], z - c.c[1]) < c.r + this.radius) return true;
     }
     return false;
   }

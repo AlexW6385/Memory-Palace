@@ -76,7 +76,19 @@ def surface_heights(surf: dict, x: float, z: float) -> list[float]:
 def collider_hits(col: dict, x: float, z: float, y: float, radius: float = RADIUS) -> bool:
     if col["y1"] <= y + 0.1 or col["y0"] >= y + BODY:
         return False
+    if col["k"] == "rect":
+        lx, lz = _local(col, x, z)
+        return abs(lx) < col["w"] / 2 + radius and abs(lz) < col["d"] / 2 + radius
     return math.hypot(x - col["c"][0], z - col["c"][1]) < col["r"] + radius
+
+
+def _collider_box(col: dict, pad: float) -> tuple[float, float, float, float]:
+    if col["k"] == "rect":
+        x0, z0, x1, z1 = _aabb(col)
+        return x0 - pad, z0 - pad, x1 + pad, z1 + pad
+    r = col["r"] + pad
+    x, z = col["c"]
+    return x - r, z - r, x + r, z + r
 
 
 class Nav:
@@ -92,9 +104,7 @@ class Nav:
         for s in surfaces:
             self._insert(self._surf_buckets, s, _aabb(s))
         for c in colliders:
-            r = c["r"] + RADIUS
-            x, z = c["c"]
-            self._insert(self._col_buckets, c, (x - r, z - r, x + r, z + r))
+            self._insert(self._col_buckets, c, _collider_box(c, RADIUS))
 
     def _insert(self, buckets, item, box) -> None:
         b = self.BUCKET
@@ -246,14 +256,19 @@ def bake(nav: Nav, bounds: tuple[float, float, float, float], step: float = 0.5)
     keep = np.ones(idx.size, dtype=bool)
     px, pz = Xf[idx], Zf[idx]
     for col in nav.colliders:
-        cx, cz = col["c"]
-        reach = col["r"] + RADIUS + step / 2  # inflated: the grid only samples cell centers
-        if cx + reach < x0 or cx - reach > x1 or cz + reach < z0 or cz - reach > z1:
+        pad = RADIUS + step / 2  # inflated: the grid only samples cell centres
+        bx0, bz0, bx1, bz1 = _collider_box(col, pad)
+        if bx1 < x0 or bx0 > x1 or bz1 < z0 or bz0 > z1:
             continue
-        near = (np.abs(px - cx) < reach) & (np.abs(pz - cz) < reach)
+        near = (px > bx0) & (px < bx1) & (pz > bz0) & (pz < bz1)
         if not near.any():
             continue
-        hit = near & (np.hypot(px - cx, pz - cz) < reach) & (col["y1"] > hs + 0.1) & (col["y0"] < hs + BODY)
+        if col["k"] == "rect":
+            lx, lz = _local_np(col, px, pz)
+            inside = (np.abs(lx) < col["w"] / 2 + pad) & (np.abs(lz) < col["d"] / 2 + pad)
+        else:
+            inside = np.hypot(px - col["c"][0], pz - col["c"][1]) < col["r"] + pad
+        hit = near & inside & (col["y1"] > hs + 0.1) & (col["y0"] < hs + BODY)
         keep &= ~hit
     idx, hs = idx[keep], hs[keep]
 

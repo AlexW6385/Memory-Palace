@@ -1,13 +1,15 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en" data-lang="en">
 <head>
-<title>记忆宫殿</title>
+<title>Memory Palace</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A walkable 3D memory palace: knowledge systems laid out as buildings, each idea a vivid scene at a numbered place.">
 <meta name="claude:viewport-fit-sides" content="cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M8 54h48M12 54V28M24 54V28M40 54V28M52 54V28M6 28h52L32 10z' fill='none' stroke='%23a8741f' stroke-width='5' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Marcellus&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@500;700&display=swap">
 <link rel="stylesheet" href="css/style.css">
 <script type="importmap">
 { "imports": {
@@ -18,79 +20,98 @@
 </head>
 <body>
 <div id="app">
-  <canvas id="view" aria-label="记忆宫殿三维场景"></canvas>
+  <canvas id="view" tabindex="0" aria-label="Memory Palace 3D view"></canvas>
 
   <div id="loading" class="loading">
-    <div class="loading-mark" aria-hidden="true"></div>
-    <p class="loading-title">记忆宫殿</p>
-    <p id="loading-msg" class="loading-msg">正在铺设道路…</p>
+    <div class="loading-inner">
+      <svg class="loading-mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M8 54h48M12 54V28M24 54V28M40 54V28M52 54V28M6 28h52L32 10z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+      <h1 class="loading-title" data-t="title">Memory Palace</h1>
+      <p class="loading-tag" data-t="tagline"></p>
+      <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+      <p id="loading-msg" class="loading-msg"></p>
+    </div>
   </div>
 
-  <header class="hud-top">
-    <button id="where" class="where" type="button" aria-label="当前位置，打开目录">
-      <span id="where-sys" class="where-sys">中央广场</span>
-      <span id="where-room" class="where-room">从这里走向各个知识体系</span>
+  <header class="topbar">
+    <button id="where" class="where" type="button" data-t-label="directory">
+      <span class="where-mark" aria-hidden="true"></span>
+      <span class="where-text"><span id="where-sys" class="where-sys"></span><span id="where-room" class="where-room"></span></span>
     </button>
-    <nav class="tools" aria-label="工具">
-      <button id="btn-dir" class="tool" type="button">目录</button>
-      <button id="btn-map" class="tool" type="button">地图</button>
-      <button id="btn-tour" class="tool tool-accent" type="button">导览</button>
+    <nav class="tools" aria-label="Tools">
+      <button id="btn-dir" class="tool" type="button" aria-pressed="false" data-t-label="directory"><span class="tool-label" data-t="directory"></span></button>
+      <button id="btn-map" class="tool" type="button" aria-pressed="false" data-t-label="map"><span class="tool-label" data-t="map"></span></button>
+      <button id="btn-tour" class="tool tool-accent" type="button" aria-pressed="false" data-t-label="tour"><span class="tool-label" data-t="tour"></span></button>
+      <button id="btn-recall" class="tool" type="button" aria-pressed="false" data-t-label="recall"><span class="tool-label" data-t="recall"></span></button>
+      <button id="btn-lang" class="tool tool-lang" type="button"><span class="tool-label"></span></button>
+      <button id="btn-help" class="tool tool-icon" type="button" data-t-label="help"></button>
     </nav>
   </header>
 
-  <div id="tourmenu" class="popover" hidden>
-    <p class="popover-title">选择一条导览路线</p>
-    <ul id="tour-list" class="tour-list"></ul>
-  </div>
-
-  <div id="joy" class="joy" hidden aria-hidden="true"><div class="joy-knob"></div></div>
+  <div id="toast" class="toast" hidden aria-live="polite"></div>
   <p id="hint" class="hint" hidden></p>
+  <div id="joy" class="joy" hidden aria-hidden="true"><div class="joy-knob"></div></div>
 
   <aside id="card" class="card" hidden aria-live="polite">
     <div class="card-grip" aria-hidden="true"></div>
-    <button id="card-close" class="icon-btn card-close" type="button" aria-label="关闭">×</button>
-    <div class="card-scroll">
-      <p id="card-crumb" class="crumb"></p>
-      <h2 class="card-title"><span id="card-emoji" class="card-emoji"></span><span id="card-name"></span></h2>
-      <p id="card-summary" class="card-summary"></p>
-      <p id="card-detail" class="card-detail"></p>
-      <section class="card-image">
-        <h3 class="label">记忆画面</h3>
-        <p id="card-image"></p>
-      </section>
-      <ul id="card-kw" class="chips"></ul>
-      <section id="card-links-wrap" class="card-links">
-        <h3 class="label">关联</h3>
-        <ul id="card-links"></ul>
-      </section>
-    </div>
-    <footer class="card-foot">
-      <button id="card-prev" class="foot-btn" type="button">上一件</button>
-      <span id="card-pos" class="card-pos"></span>
-      <button id="tour-pause" class="foot-btn" type="button" hidden>暂停</button>
-      <button id="card-next" class="foot-btn foot-primary" type="button">下一件</button>
-    </footer>
+    <button id="card-close" class="icon-btn card-close" type="button" data-t-label="close"></button>
+    <div class="card-scroll"></div>
+    <footer class="card-foot"></footer>
   </aside>
 
-  <aside id="dir" class="drawer" hidden aria-label="目录">
+  <div id="routebar" class="routebar" hidden></div>
+
+  <aside id="dir" class="drawer" hidden>
     <div class="drawer-head">
-      <input id="search" class="search" type="search" placeholder="搜索展品、关键词…" autocomplete="off">
-      <button id="dir-close" class="icon-btn" type="button" aria-label="关闭目录">×</button>
+      <label class="search-wrap"><span class="search-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span>
+        <input id="search" class="search" type="search" data-t-ph="search" autocomplete="off"></label>
+      <button id="dir-close" class="icon-btn" type="button" data-t-label="close"></button>
     </div>
     <div id="dir-body" class="drawer-body"></div>
     <form id="gen" class="gen" hidden>
-      <p class="gen-title">让 AI 建一个新区域</p>
-      <input id="gen-topic" class="search" type="text" placeholder="主题，例如：线性代数、我的实习经验" required>
-      <textarea id="gen-notes" class="search gen-notes" rows="3" placeholder="可选：贴上你的笔记、经历或要求"></textarea>
-      <button id="gen-go" class="foot-btn foot-primary" type="submit">开始建造</button>
+      <p class="gen-title" data-t="build"></p>
+      <input id="gen-topic" class="search" type="text" data-t-ph="buildTopic" required>
+      <textarea id="gen-notes" class="search gen-notes" rows="3" data-t-ph="buildNotes"></textarea>
+      <button id="gen-go" class="btn btn-primary" type="submit" data-t="buildGo"></button>
       <pre id="gen-log" class="gen-log" hidden></pre>
     </form>
   </aside>
 
   <div id="map" class="mapview" hidden>
-    <canvas id="map-canvas" aria-label="世界地图"></canvas>
-    <p class="map-tip">点一个区域即可前往</p>
-    <button id="map-close" class="icon-btn map-close" type="button" aria-label="关闭地图">×</button>
+    <canvas id="map-canvas" aria-label="Map"></canvas>
+    <p class="map-tip" data-t="mapTip"></p>
+    <div class="map-ctl">
+      <button id="map-in" class="icon-btn" type="button" aria-label="Zoom in"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button id="map-out" class="icon-btn" type="button" aria-label="Zoom out"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+      <button id="map-here" class="icon-btn" type="button" aria-label="Where am I"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7"/></svg></button>
+    </div>
+    <button id="map-close" class="icon-btn map-close" type="button" data-t-label="close"></button>
+  </div>
+
+  <div id="chooser" class="popover" hidden>
+    <div class="popover-head">
+      <p id="chooser-title" class="popover-title"></p>
+      <button id="chooser-close" class="icon-btn" type="button" data-t-label="close"></button>
+    </div>
+    <p id="chooser-intro" class="popover-intro" hidden></p>
+    <ul id="chooser-list" class="choices"></ul>
+  </div>
+
+  <div id="welcome" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-labelledby="welcome-title">
+      <svg class="modal-mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M8 54h48M12 54V28M24 54V28M40 54V28M52 54V28M6 28h52L32 10z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+      <h2 id="welcome-title" class="modal-title" data-t="welcomeTitle"></h2>
+      <p class="modal-body" data-t="welcomeBody"></p>
+      <ol class="how">
+        <li><span class="how-n">1</span><span data-t="welcomeHow1"></span></li>
+        <li><span class="how-n">2</span><span data-t="welcomeHow2"></span></li>
+        <li><span class="how-n gold">5</span><span data-t="welcomeHow3"></span></li>
+        <li><span class="how-n">?</span><span data-t="welcomeHow4"></span></li>
+      </ol>
+      <div class="modal-actions">
+        <button id="welcome-go" class="btn btn-primary" type="button" data-t="welcomeGo"></button>
+        <button id="welcome-walk" class="btn btn-ghost" type="button" data-t="welcomeWalk"></button>
+      </div>
+    </div>
   </div>
 
   <div id="fade" class="fade" aria-hidden="true"></div>
