@@ -5,7 +5,7 @@
 A walkable 3D city for the method of loci. It gives you places — rooms full of distinct objects along
 clear routes — and nothing else. What you hang on them lives in your head.
 
-**Walk it: <https://alexw6385.github.io/memory-palace/>** (desktop or phone, English or Chinese)
+**Walk it: <https://alexw6385.github.io/Memory-Palace/>** (desktop or phone, English or Chinese)
 
 ## The method
 
