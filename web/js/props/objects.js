@@ -774,7 +774,7 @@ export default {
   // A flag on a pole: cloth waving towards its free end, sewn round the pole; text is an emblem on the cloth
   // in color2 (a star without text). color = cloth. p.held drops the little foot.
   flag(b, p) {
-    const cloth = p.color || C.red, emblem = p.color2 || C.yellow;
+    const cloth = p.color || C.red, emblem = p.color2 || C.white;
     const xp = -0.155, poleR = 0.011, top = 1.14;
     if (!p.held) {
       b.lathe(smoothOpen([[0, 0], [0.032, 0], [0.033, 0.008], [0.026, 0.02], [0.016, 0.03], [0, 0.031]], 10),
@@ -790,7 +790,7 @@ export default {
     warpSlab(b, rrect2(L, Hc, 0.006, L / 2, -Hc / 2), [], 0.005, (x, y, z) => {
       const u = Math.max(0, x / L);
       return [x0 + x, yTop + y + sag(u), z + wave(u)];
-    }, { color: cloth, bevel: 0.0015, maxEdge: 0.018 });
+    }, { color: cloth, bevel: 0.0015, maxEdge: 0.024 });
     b.cyl(poleR + 0.0045, poleR + 0.0045, Hc + 0.004, { at: [xp, yTop - Hc / 2, 0], color: shade(cloth, -0.06), seg: 12 });
     // emblem on the best-fitting plane over the middle of the cloth
     const uc = 0.47, half = 0.2;
