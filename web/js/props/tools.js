@@ -246,10 +246,10 @@ const TOOLS = {
         b.box(0.17, 0.026, 0.18, { at: [0.385, t + 0.013, 0], color: shade(col, -0.18), r: 0.01 });
         // T-handle
         const hx = 0.255, hy = t + 0.11;
-        b.rod([hx, t, 0], [hx, hy, 0], 0.013, { color: C.yellow, seg: 10 });
-        b.cyl(0.014, 0.014, 0.13, { at: [hx, hy, 0], rot: ZA, color: C.yellow, kind: "gloss", seg: 12 });
-        b.sphere(0.018, { at: [hx, hy, 0.068], color: C.yellow, kind: "gloss", seg: 10 });
-        b.sphere(0.018, { at: [hx, hy, -0.068], color: C.yellow, kind: "gloss", seg: 10 });
+        b.rod([hx, t, 0], [hx, hy, 0], 0.016, { color: C.yellow, kind: "gloss", seg: 10 });
+        b.cyl(0.016, 0.016, 0.13, { at: [hx, hy, 0], rot: ZA, color: C.yellow, kind: "gloss", seg: 12 });
+        b.sphere(0.021, { at: [hx, hy, 0.068], color: C.yellow, kind: "gloss", seg: 10 });
+        b.sphere(0.021, { at: [hx, hy, -0.068], color: C.yellow, kind: "gloss", seg: 10 });
       });
     });
   },
@@ -974,33 +974,33 @@ const TOOLS = {
     const wood = p.color || C.lightWood;
     const dark = shade(wood, -0.16), leg = shade(wood, -0.07);
     const ty = 0.55, T = 0.06;
-    b.box(1.1, T, 0.5, { at: [0, ty - T / 2, 0.02], color: wood, r: 0.012 });
+    b.box(1.1, T, 0.5, { at: [0, ty - T / 2, 0.02], color: wood, r: 0.012, seg: 1 });
     for (const z of [-0.14, -0.04, 0.06, 0.16]) b.box(1.08, 0.002, 0.003, { at: [0, ty + 0.0005, z], color: shade(wood, -0.1), r: 0 });
     for (const x of [-0.49, 0.49]) for (const z of [-0.18, 0.2]) b.box(0.065, ty - T, 0.065, { at: [x, (ty - T) / 2, z], color: leg, r: 0.01, seg: 1 });
     for (const z of [-0.18, 0.2]) b.box(0.92, 0.05, 0.03, { at: [0, 0.12, z], color: leg, r: 0.008, seg: 1 });
-    b.box(0.96, 0.025, 0.4, { at: [0, 0.155, 0.01], color: dark, r: 0.006 });
+    b.box(0.96, 0.025, 0.4, { at: [0, 0.155, 0.01], color: dark, r: 0.006, seg: 1 });
     // toolbox on the shelf
     const red = { color: "#d23f35", kind: "gloss" };
-    b.box(0.3, 0.11, 0.16, { at: [-0.2, 0.168 + 0.055, 0.03], ...red, r: 0.012 });
-    b.box(0.302, 0.012, 0.162, { at: [-0.2, 0.168 + 0.085, 0.03], color: "#a8302a", kind: "gloss", r: 0.004 });
+    b.box(0.3, 0.11, 0.16, { at: [-0.2, 0.168 + 0.055, 0.03], ...red, r: 0.012, seg: 1 });
+    b.box(0.302, 0.012, 0.162, { at: [-0.2, 0.168 + 0.085, 0.03], color: "#a8302a", kind: "gloss", r: 0.004, seg: 1 });
     b.torus(0.04, 0.006, { at: [-0.2, 0.168 + 0.11, 0.03], arc: PI, ...metal(C.silver), seg: 14, tubeSeg: 6 });
-    b.box(0.03, 0.02, 0.006, { at: [-0.2, 0.168 + 0.07, 0.112], ...metal(C.silver), r: 0.003 });
-    b.box(0.12, 0.08, 0.1, { at: [0.25, 0.208, 0.02], color: "#b88c58", r: 0.006 });
+    b.box(0.03, 0.02, 0.006, { at: [-0.2, 0.168 + 0.07, 0.112], ...metal(C.silver), r: 0.003, seg: 1 });
+    b.box(0.12, 0.08, 0.1, { at: [0.25, 0.208, 0.02], color: "#b88c58", r: 0.006, seg: 1 });
     // vice on the front right corner
     const vice = metal("#5b7896");
-    b.box(0.12, 0.05, 0.1, { at: [0.38, ty + 0.025, 0.17], ...vice, r: 0.01 });
-    b.box(0.13, 0.05, 0.03, { at: [0.38, ty + 0.06, 0.15], ...vice, r: 0.008 });
-    b.box(0.13, 0.05, 0.03, { at: [0.38, ty + 0.06, 0.225], ...vice, r: 0.008 });
+    b.box(0.12, 0.05, 0.1, { at: [0.38, ty + 0.025, 0.17], ...vice, r: 0.01, seg: 1 });
+    b.box(0.13, 0.05, 0.03, { at: [0.38, ty + 0.06, 0.15], ...vice, r: 0.008, seg: 1 });
+    b.box(0.13, 0.05, 0.03, { at: [0.38, ty + 0.06, 0.225], ...vice, r: 0.008, seg: 1 });
     b.cyl(0.008, 0.008, 0.08, { at: [0.38, ty + 0.045, 0.27], rot: ZA, ...metal(C.silver), seg: 8 });
     b.cyl(0.006, 0.006, 0.12, { at: [0.38, ty + 0.045, 0.31], rot: [0, 0, PI / 2], ...metal(C.silver), seg: 8 });
     for (const sx of [-1, 1]) b.sphere(0.011, { at: [0.38 + sx * 0.06, ty + 0.045, 0.31], ...metal(C.silver), seg: 8 });
     // a plank offcut and a pencil on the top
-    b.box(0.28, 0.03, 0.09, { at: [-0.2, ty + 0.015, 0.06], rot: [0, 0.2, 0], color: "#e3c79a", r: 0.004 });
+    b.box(0.28, 0.03, 0.09, { at: [-0.2, ty + 0.015, 0.06], rot: [0, 0.2, 0], color: "#e3c79a", r: 0.004, seg: 1 });
     b.rod([0.05, ty + 0.007, 0.12], [0.2, ty + 0.007, 0.08], 0.007, { color: C.yellow, seg: 6 });
     // pegboard with hanging tools
     const pz = -0.215, py0 = ty + 0.02, py1 = 0.85;
     for (const x of [-0.52, 0.52]) b.box(0.04, py1 - ty + 0.01, 0.04, { at: [x, (py1 + ty) / 2, pz - 0.01], color: leg, r: 0.008, seg: 1 });
-    b.box(1.0, py1 - py0, 0.018, { at: [0, (py0 + py1) / 2, pz], color: "#c7a171", r: 0.006 });
+    b.box(1.0, py1 - py0, 0.018, { at: [0, (py0 + py1) / 2, pz], color: "#c7a171", r: 0.006, seg: 1 });
     for (let i = 0; i < 11; i++) for (let j = 0; j < 3; j++) {
       b.cyl(0.0045, 0.0045, 0.002, { at: [-0.43 + i * 0.086, py0 + 0.05 + j * 0.1, pz + 0.009], rot: ZA, color: "#7d6040", seg: 5, open: true });
     }

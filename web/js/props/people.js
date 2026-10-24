@@ -111,17 +111,17 @@ const POSES = {
   },
   walk: {
     sp: [4, -6, 0], nk: [-3, 5, 0],
-    ra: { f: -20, a: 9, e: 14 }, la: { f: 24, a: 8, e: 32 },
-    rl: { f: 12, k: 5 }, ll: { f: -9, k: 24, tip: 16 },
+    ra: { f: -22, a: 9, e: 16 }, la: { f: 20, a: 8, e: 34 },
+    rl: { f: 11, k: 4 }, ll: { f: -8, k: 24, tip: 16 },
   },
   run: {
-    sp: [12, -8, 0], nk: [-10, 6, 0], mouth: "open",
-    ra: { f: -28, a: 14, e: 90 }, la: { f: 40, a: 10, e: 100 },
-    rl: { f: 48, k: 88 }, ll: { f: 4, a: 8, t: -35, k: 92, tip: 30 }, skirt: "short",
+    sp: [10, -8, 0], nk: [-10, 6, 0], mouth: "open",
+    ra: { f: -34, a: 16, e: 95 }, la: { f: 30, a: 12, e: 100 },
+    rl: { f: 42, k: 86 }, ll: { f: 4, a: 8, t: -50, k: 94, tip: 30 }, skirt: "short",
   },
   point: {
     nk: [-6, -12, 0],
-    ra: { f: 122, a: 20, e: 6, hand: "point" },
+    ra: { f: 128, a: 36, e: 6, hand: "point" },
     la: { to: [0.135, -0.04, -0.01], pole: [1, -0.1, -0.6], hand: "fist" },
     rl: { a: 4 }, ll: { f: 4, a: 3, k: 4 }, hold: "along",
   },
@@ -149,7 +149,7 @@ const POSES = {
   kneel: {
     sp: [4, 0, 0], skirt: "short",
     ra: { to: [-0.07, -0.06, 0.17], pole: [-1, -0.4, -0.2], hand: "fist" }, la: { f: 2, a: 10, e: 14 },
-    rl: { f: 60, a: 6, k: 92 }, ll: { f: 5, a: 12, t: -45, k: 96, tip: 55 },
+    rl: { f: 55, a: 6, k: 90 }, ll: { f: 5, a: 12, t: -55, k: 96, tip: 55 },
   },
   lift: {
     nk: [-12, 0, 0], two: "lift", rl: { a: 9, k: 4 }, ll: { a: 9, k: 4 },
@@ -158,20 +158,20 @@ const POSES = {
     sp: [-4, 0, 0], two: "carry", rl: { a: 3 }, ll: { f: 4, a: 3, k: 6 },
   },
   push: {
-    sp: [10, 0, 0], nk: [-10, 0, 0], skirt: "short", brow: -1, mouth: "flat",
+    sp: [14, 0, 0], nk: [-14, 0, 0], skirt: "short", brow: -1, mouth: "flat",
     ra: { to: [-0.1, 0.2, 0.15], pole: [-1, -1, -0.5], hand: "open", palm: [0, 0, 1], fing: [0, 1, 0] },
     la: { to: [0.1, 0.2, 0.15], pole: [1, -1, -0.5], hand: "open", palm: [0, 0, 1], fing: [0, 1, 0] },
     rl: { f: 16, k: 26 }, ll: { f: -13, k: 4, tip: 20 },
   },
   pull: {
-    sp: [-8, 6, 0], nk: [10, 0, 0], skirt: "short", brow: -1, mouth: "flat", rope: true,
-    ra: { to: [-0.035, 0.06, 0.13], pole: [-1, -0.6, -0.4], hand: "fist" },
-    la: { to: [0.03, 0.07, 0.19], pole: [1, -0.6, -0.4], hand: "fist" },
-    rl: { f: 16, k: 2 }, ll: { f: -4, k: 24 },
+    rz: 7, sp: [-10, 24, 5], nk: [4, 10, -4], skirt: "short", brow: -1, mouth: "flat", rope: true,
+    ra: { to: [-0.02, 0.05, 0.12], pole: [-1, -0.6, -0.4], hand: "fist" },
+    la: { to: [0.05, 0.06, 0.2], pole: [1, -0.6, -0.4], hand: "fist" },
+    rl: { f: -8, a: 4, k: 22 }, ll: { f: 16, a: 16, k: 2 },
   },
   throw: {
     ry: 24, sp: [-6, 20, 0], nk: [0, -24, 0], skirt: "short", ball: true,
-    ra: { f: -30, a: 82, t: 90, e: 115 }, la: { f: 75, a: 6, e: 18, hand: "point" },
+    ra: { f: -48, a: 96, t: 90, e: 100 }, la: { f: 80, a: 10, e: 14, hand: "point" },
     rl: { f: -14, k: 12 }, ll: { f: 16, a: 4, k: 8 },
   },
   lie: {
@@ -180,7 +180,7 @@ const POSES = {
     rl: { a: 4, an: -12 }, ll: { a: 4, an: -12 },
   },
   bow: {
-    sp: [32, 0, 0], nk: [10, 0, 0],
+    sp: [27, 0, 0], nk: [12, 0, 0],
     ra: { to: [0.02, 0.06, 0.1], pole: [-1, -0.6, 0.2], hand: "fist" },
     la: { f: -14, a: 12, e: 20 },
     rl: { f: -5 }, ll: { f: -5 },
@@ -190,20 +190,20 @@ const POSES = {
   },
   shrug: {
     nk: [0, 0, 11], sh: 0.025, brow: 1, mouth: "flat",
-    ra: { to: [-0.19, 0.05, 0.12], pole: [-0.3, -1, -0.6], hand: "open", palm: [0, 1, 0], fing: [-0.6, 0, 1] },
-    la: { to: [0.19, 0.05, 0.12], pole: [0.3, -1, -0.6], hand: "open", palm: [0, 1, 0], fing: [0.6, 0, 1] },
+    ra: { to: [-0.17, 0.06, 0.12], pole: [-0.3, -1, -0.6], hand: "open", palm: [0, 1, 0], fing: [-0.6, 0, 1] },
+    la: { to: [0.17, 0.06, 0.12], pole: [0.3, -1, -0.6], hand: "open", palm: [0, 1, 0], fing: [0.6, 0, 1] },
     rl: { a: 4 }, ll: { f: 5, a: 3, k: 6 },
   },
   fight: {
-    ry: -14, sp: [8, 14, 0], nk: [6, -12, 0], brow: -1, mouth: "flat",
-    ra: { to: [-0.07, 0.24, 0.09], pole: [-0.5, -1, -0.2], hand: "fist" },
-    la: { to: [0.06, 0.25, 0.15], pole: [0.6, -1, -0.1], hand: "fist" },
-    rl: { f: -9, a: 9, k: 18 }, ll: { f: 13, a: 7, k: 22 },
+    ry: -14, sp: [5, 14, 0], nk: [6, -12, 0], brow: -1, mouth: "flat",
+    ra: { to: [-0.07, 0.24, 0.08], pole: [-0.5, -1, -0.2], hand: "fist" },
+    la: { to: [0.06, 0.25, 0.13], pole: [0.6, -1, -0.1], hand: "fist" },
+    rl: { f: -7, a: 10, k: 18 }, ll: { f: 10, a: 8, k: 22 },
   },
   fall: {
-    rx: -10, rz: 8, sp: [-8, 0, 5], nk: [-18, 0, 8], mouth: "open", brow: 1, skirt: "short",
-    ra: { f: -25, a: 150, e: 40, hand: "open" }, la: { f: -15, a: 140, e: 50, hand: "open" },
-    rl: { f: 30, a: 10, k: 25 }, ll: { f: -4, a: 5, k: 6 },
+    rx: -8, rz: 9, sp: [-8, 0, 4], nk: [-20, 0, 6], mouth: "open", brow: 1, skirt: "short",
+    ra: { f: -20, a: 100, e: 40, hand: "open" }, la: { f: -25, a: 160, e: 30, hand: "open" },
+    rl: { f: -2, a: 4, k: 4 }, ll: { f: 30, a: 18, k: 22 },
   },
 };
 
@@ -242,10 +242,9 @@ function openBook(b, w, h, cover) {
 function barbell(b, w) {
   b.rod([-w / 2, 0, 0], [w / 2, 0, 0], 0.011, { color: C.steel, kind: "metal", seg: 10 });
   b.mirrorX(() => {
-    for (const [x, r] of [[w / 2 - 0.1, 0.085], [w / 2 - 0.065, 0.065]]) {
-      b.cyl(r, r, 0.03, { at: [x, 0, 0], rot: [0, 0, PI / 2], color: x < w / 2 - 0.08 ? C.charcoal : C.red, seg: 18 });
-    }
-    b.cyl(0.022, 0.022, 0.02, { at: [w / 2 - 0.125, 0, 0], rot: [0, 0, PI / 2], color: C.steel, kind: "metal", seg: 10 });
+    b.cyl(0.085, 0.085, 0.032, { at: [w / 2 - 0.07, 0, 0], rot: [0, 0, PI / 2], color: C.charcoal, seg: 18 });
+    b.cyl(0.066, 0.066, 0.026, { at: [w / 2 - 0.04, 0, 0], rot: [0, 0, PI / 2], color: C.red, seg: 18 });
+    b.cyl(0.022, 0.022, 0.02, { at: [w / 2 - 0.096, 0, 0], rot: [0, 0, PI / 2], color: C.steel, kind: "metal", seg: 10 });
   });
 }
 
@@ -256,8 +255,8 @@ function twoHand(kind, hold, D) {
   const chest = 0.124 * 0.64 * k;
   let w, h, d, lie = false, item = hold;
   if (kind === "read" && (!hold || hold === "book")) { w = 0.27 * k; h = 0.19 * k; d = 0.03; item = "@book"; }
-  else if (!hold && kind === "lift") { w = 0.62 * k; h = 0.17 * k; d = 0.17 * k; item = "@barbell"; }
-  else if (!hold) { w = h = d = 0.23 * k; item = "crate"; }
+  else if (!hold && kind === "lift") { w = 0.5 * k; h = 0.17 * k; d = 0.17 * k; item = "@barbell"; }
+  else if (!hold) { w = h = d = 0.17 * k; item = "crate"; }
   else {
     ({ w, h, d } = heldSize(hold));
     if (kind !== "read" && h > 1.7 * w) { lie = true; [w, h] = [h, w]; }
@@ -272,7 +271,7 @@ function twoHand(kind, hold, D) {
     const hy = D.shoulderY + reach * 0.96 + r * 0.6;
     if (item === "@barbell") {
       c = V3(0, hy + 0.004, 0.03);
-      hands = (s) => side(s, s * 0.16 * k, hy, 0.03, [0, 0, 1], [0, 1, 0.1], "fist", [s, -0.3, -0.5]);
+      hands = (s) => side(s, s * 0.105 * k, hy, 0.03, [0, 0, 1], [0, 1, 0.1], "fist", [s, -0.3, -0.5]);
     } else {
       c = V3(0, hy + h * 0.2, 0.03);
       hands = (s) => side(s, s * (w / 2 + r * 0.36), hy, 0.03, [-s, 0, 0], [0, 1, 0.15], "open", [s, -0.3, -0.5]);
@@ -431,7 +430,7 @@ function person(b, cfg) {
   const sh = P.sh || 0;
   b.group({ at: [0, cfg.y, cfg.z], rot: toRot(qP) }, () => {
     // hips
-    b.sphere(0.1 * D.tw, { at: [0, 0.024 * D.th, -0.004], scale: [1.08, 0.74, 0.8], color: col.bottoms, seg: sg(14), kind: k });
+    b.sphere(0.1 * D.tw, { at: [0, 0.024 * D.th, -0.004], scale: [1.08, 0.64, 0.8], color: col.bottoms, seg: sg(14), kind: k });
     for (const s of [-1, 1]) {
       const L = legSolve((s < 0 ? P.rl : P.ll) || {}, s, qP);
       b.group({ at: [s * D.hipX, 0, 0], rot: toRot(L.qh) }, () => {
@@ -499,7 +498,7 @@ function person(b, cfg) {
       for (const s of [-1, 1]) {
         const A = armSolve((s < 0 ? P.ra : P.la) || {}, s, D, sh);
         b.group({ at: [s * D.shoulderX, D.shoulderY + sh, 0], rot: toRot(A.q) }, () => {
-          b.sphere(D.uArmR * 1.18, { color: col.shirt, seg: sg(10), kind: k });
+          b.sphere(D.uArmR * 1.07, { color: col.shirt, seg: sg(10), kind: k });
           b.capsule(D.uArmR, D.uArmL, { at: [0, -D.uArmL / 2, 0], color: child ? col.skin : col.shirt, seg: sg(10),
             capSeg, kind: k });
           if (child) {
@@ -594,17 +593,20 @@ function buildFigure(b, p, opts = {}) {
   if (P.rope) rope(b, frames, D);
 }
 
-/** The rope of the pull pose: through both fists, trailing behind and running forward to the ground. */
+/** The rope of the pull pose: through both fists, taut down to a peg in the ground, a loose tail behind. */
 function rope(b, frames, D) {
   const c = (M) => V3(0, -D.handR * 0.8, 0.004).applyMatrix4(M);
   const back = c(frames.handR), front = c(frames.handL);
   const dir = front.clone().sub(back).normalize();
-  const tail = back.clone().addScaledVector(dir, -0.07);
-  const end = front.clone().addScaledVector(dir, 0.06);
-  const pts = [[tail.x - 0.01, tail.y - 0.12, tail.z - 0.02], [tail.x, tail.y, tail.z], [back.x, back.y, back.z],
-    [front.x, front.y, front.z], [end.x, end.y, end.z], [end.x, Math.max(0.01, end.y * 0.35), end.z + 0.06],
-    [end.x, 0.012, end.z + 0.09]];
-  b.tube(pts, 0.011, { color: "#c9a46a", radial: 6, seg: 40 });
+  const flat = V3(dir.x, 0, dir.z).normalize();
+  const tail = back.clone().addScaledVector(dir, -0.05);
+  const peg = V3(front.x + flat.x * 0.15, 0, front.z + flat.z * 0.15);
+  const o = { color: "#c9a46a", radial: 6 };
+  b.tube([[tail.x - 0.01, tail.y - 0.16, tail.z - 0.02], [tail.x, tail.y - 0.05, tail.z], [back.x, back.y, back.z]],
+    0.011, { ...o, seg: 12 });
+  b.tube([[back.x, back.y, back.z], [front.x, front.y, front.z], [peg.x, 0.05, peg.z]], 0.011, { ...o, curve: "line", seg: 2 });
+  b.cyl(0.016, 0.012, 0.07, { at: [peg.x, 0.035, peg.z], color: C.darkWood, seg: 8 });
+  b.torus(0.02, 0.008, { at: [peg.x, 0.05, peg.z], rot: [PI / 2, 0, 0], color: "#c9a46a", seg: 10, tubeSeg: 4 });
 }
 
 // ── hats (built in the head frame: origin at the head centre, R = head radius) ───────────────────────

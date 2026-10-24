@@ -6,6 +6,7 @@
 // stones; roofs carry overlapping tile courses; vehicles face +z and have round, friendly lamps.
 // `color` always tints the main body (stone, walls, paint, hull, canvas).
 import * as THREE from "three";
+import { mergeVertices } from "three/addons/utils/BufferGeometryUtils.js";
 import { C, shade, mix, rng } from "./kit.js";
 
 const PI = Math.PI;
@@ -258,11 +259,13 @@ function towerStones(b, R, o) {
 }
 
 /** Merlons round a circular parapet: n of them at radius r, bottom at y. */
-function merlonRing(b, r, y, n, h, w, d, color, phase = 0) {
+function merlonRing(b, r, y, n, h, w, d, color, plain = false) {
   for (let k = 0; k < n; k++) {
-    const a = ((k + 0.5) / n) * TAU + phase;
-    b.group({ at: [Math.sin(a) * r, y + h / 2, Math.cos(a) * r], rot: [0, a, 0] }, () =>
-      block(b, w, h, d, { color, bevel: Math.min(0.006, w * 0.12) }));
+    const a = ((k + 0.5) / n) * TAU;
+    b.group({ at: [Math.sin(a) * r, y + h / 2, Math.cos(a) * r], rot: [0, a, 0] }, () => {
+      if (plain) b.box(w, h, d, { color, r: 0 });
+      else block(b, w, h, d, { color, bevel: Math.min(0.006, w * 0.12) });
+    });
   }
 }
 
@@ -272,8 +275,9 @@ function merlonRow(b, x0, x1, y, z, o) {
   const n = Math.max(1, Math.round((L + mw) / (2 * mw)));
   const w = L / (2 * n - 1);
   for (let k = 0; k < n; k++) {
-    block(b, w, o.h, o.d, { at: [x0 + (2 * k + 0.5) * w, y + o.h / 2, z], color: o.color,
-      bevel: Math.min(0.006, w * 0.12) });
+    const at = [x0 + (2 * k + 0.5) * w, y + o.h / 2, z];
+    if (o.plain) b.box(w, o.h, o.d, { at, color: o.color, r: 0 });
+    else block(b, w, o.h, o.d, { at, color: o.color, bevel: Math.min(0.006, w * 0.12) });
   }
 }
 
@@ -388,12 +392,14 @@ function roundTower(b, R, o) {
   b.lathe([[r1 - 0.01, h - 0.01], [rp - 0.004, h - 0.002], [rp, h + 0.004], [rp, h + ph - 0.005], [rp - 0.005, h + ph],
     [rp - pw, h + ph], [rp - pw, h + 0.03], [0, h + 0.03]], { color: stone, seg });
   const nm = o.merlons ?? 8;
-  merlonRing(b, rp - pw / 2, h + ph - 0.004, nm, o.mh ?? 0.068, ((TAU * (rp - pw / 2)) / nm) * 0.55, pw + 0.006, stone);
+  merlonRing(b, rp - pw / 2, h + ph - 0.004, nm, o.mh ?? 0.068, ((TAU * (rp - pw / 2)) / nm) * 0.55, pw + 0.006, stone,
+    o.plain);
   if (o.roof) {
     const rr = rp - pw - 0.002, yb = h + 0.025, yt = o.top;
     const pts = [[0, yb], [rr, yb]];
-    for (let i = 1; i <= 8; i++) {
-      const t = i / 8;
+    const nr = o.roofSeg ?? 8;
+    for (let i = 1; i <= nr; i++) {
+      const t = i / nr;
       pts.push([rr * Math.pow(1 - t, 1.25), lerp(yb, yt, t)]);
     }
     b.lathe(pts, { color: o.roof, seg });
@@ -406,9 +412,9 @@ function roundTower(b, R, o) {
 function curtain(b, R, len, h, t, stone) {
   block(b, len, h, t, { at: [0, h / 2, 0], color: stone, bevel: 0.008 });
   block(b, len, 0.04, t + 0.018, { at: [0, 0.02, 0], color: shade(stone, -0.1), bevel: 0.006 });
-  merlonRow(b, -len / 2, len / 2, h - 0.002, t / 2 - 0.016, { w: 0.05, h: 0.055, d: 0.032, color: stone });
+  merlonRow(b, -len / 2, len / 2, h - 0.002, t / 2 - 0.016, { w: 0.05, h: 0.055, d: 0.032, color: stone, plain: true });
   b.group({ at: [0, 0, t / 2] }, () => wallStones(b, R, { x0: -len / 2 + 0.03, x1: len / 2 - 0.03, y0: 0.05,
-    y1: h - 0.02, color: stone, fill: 0.18 }));
+    y1: h - 0.02, color: stone, fill: 0.13 }));
 }
 
 // ── vehicles ─────────────────────────────────────────────────────────────────
@@ -534,6 +540,32 @@ function fruitCrate(b, fruit, R) {
 /** A scalloped hem tab: a half disc hanging below y = 0. */
 const scallop = (r) => arcPts(0, 0, r, 0, -PI, 10);
 
+/** A clipped hedge W × H × D (centred): rounded edges and a softly lumpy, smooth-shaded surface. */
+function hedgeGeo(R, W, H, D, o = {}) {
+  const r = o.r ?? 0.013, amp = o.amp ?? 0.0055, step = o.step ?? 0.038;
+  const g = new THREE.BoxGeometry(W, H, D, Math.max(2, Math.round(W / step)), 2, Math.max(1, Math.round(D / step)));
+  g.deleteAttribute("uv");
+  g.deleteAttribute("normal");
+  const waves = Array.from({ length: 4 }, () =>
+    [new THREE.Vector3(R() - 0.5, R() - 0.5, R() - 0.5).normalize(), R() * TAU, 55 + R() * 45]);
+  const h = [W / 2 - r, H / 2 - r, D / 2 - r];
+  const pos = g.attributes.position, pt = new THREE.Vector3(), q = new THREE.Vector3(), n = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    pt.fromBufferAttribute(pos, i);
+    q.set(clamp(pt.x, -h[0], h[0]), clamp(pt.y, -h[1], h[1]), clamp(pt.z, -h[2], h[2]));
+    n.copy(pt).sub(q);
+    if (n.lengthSq() < 1e-12) n.set(0, 1, 0);
+    else n.normalize();
+    let d = 0;
+    for (const [w, ph, f] of waves) d += Math.sin(pt.dot(w) * f + ph);
+    pt.copy(q).addScaledVector(n, r + (amp * d) / 2);
+    pos.setXYZ(i, pt.x, pt.y, pt.z);
+  }
+  const m = mergeVertices(g, 1e-6);
+  m.computeVertexNormals();
+  return m;
+}
+
 // ── builders ─────────────────────────────────────────────────────────────────
 export default {
   // A gable-fronted cottage: tiled roof (color2) over cream walls (color), arched door, shuttered windows with
@@ -581,7 +613,7 @@ export default {
   tower(b, p) {
     const stone = p.color || STONE;
     roundTower(b, randomFor(b, p, 1), {
-      r0: 0.19, r1: 0.172, h: 1.0, stone, roof: SLATE, top: 1.32, flag: FLAG,
+      r0: 0.198, r1: 0.18, h: 1.0, stone, roof: SLATE, top: 1.32, flag: FLAG, over: 0.05, pw: 0.042,
       openings: [
         { kind: "door", a: 0, y: 0.17, w: 0.13, h: 0.21 },
         { kind: "slit", a: 0, y: 0.53, w: 0.024, h: 0.1 },
@@ -608,7 +640,7 @@ export default {
     // keep
     const kz = -0.07, kh = 0.66;
     block(b, 0.38, kh, 0.3, { at: [0, kh / 2, kz], color: stone, bevel: 0.01 });
-    merlonBox(b, 0, kz, 0.38, 0.3, kh - 0.002, { w: 0.05, h: 0.06, d: 0.034, color: stone });
+    merlonBox(b, 0, kz, 0.38, 0.3, kh - 0.002, { w: 0.05, h: 0.06, d: 0.034, color: stone, plain: true });
     b.group({ at: [0, 0, kz + 0.15] }, () => {
       wallStones(b, R, { x0: -0.17, x1: 0.17, y0: 0.42, y1: kh - 0.02, color: stone, fill: 0.22,
         keep: (x) => Math.abs(Math.abs(x) - 0.085) > 0.06 });
@@ -621,7 +653,7 @@ export default {
     // gatehouse
     const gz = TZ + 0.005, gd = 0.2, gh = 0.5, zf = gz + gd / 2;
     block(b, 0.34, gh, gd, { at: [0, gh / 2, gz], color: stone, bevel: 0.01 });
-    merlonBox(b, 0, gz, 0.34, gd, gh - 0.002, { w: 0.05, h: 0.06, d: 0.034, color: stone });
+    merlonBox(b, 0, gz, 0.34, gd, gh - 0.002, { w: 0.05, h: 0.06, d: 0.034, color: stone, plain: true });
     b.extrude(archOutline(0.2, 0.3), 0.012, { at: [0, -0.002, zf + 0.002], color: dark, bevel: 0.003 });
     b.extrude(archOutline(0.15, 0.265), 0.012, { at: [0, 0, zf + 0.008], color: C.darkWood, bevel: 0.003 });
     b.box(0.004, 0.25, 0.004, { at: [0, 0.125, zf + 0.0155], color: shade(C.darkWood, -0.25), r: 0 });
@@ -640,8 +672,9 @@ export default {
     for (const [x, z] of [[-TX, TZ], [TX, TZ], [-TX, -TZ], [TX, -TZ]]) {
       const out = Math.atan2(x, z);
       b.group({ at: [x, 0, z] }, () => roundTower(b, R, {
-        r0: 0.122, r1: 0.11, h: 0.62, stone, roof: SLATE, top: 0.96, seg: 16, corbels: 0, merlons: 6,
-        ph: 0.06, mh: 0.055, fill: 0.14, over: 0.04, pw: 0.035, flag: z < 0 ? FLAG : null, pole: 0.07,
+        r0: 0.122, r1: 0.11, h: 0.62, stone, roof: SLATE, top: 0.96, seg: 14, corbels: 0, merlons: 6,
+        ph: 0.06, mh: 0.055, fill: 0.1, over: 0.04, pw: 0.035, flag: z < 0 ? FLAG : null, pole: 0.07, plain: true,
+        roofSeg: 6,
         openings: z > 0
           ? [{ kind: "slit", a: 0, y: 0.42, w: 0.02, h: 0.08 }, { kind: "slit", a: out + Math.sign(x) * 0.6, y: 0.26, w: 0.02, h: 0.08 }]
           : [{ kind: "slit", a: out, y: 0.42, w: 0.02, h: 0.08 }],
@@ -1156,11 +1189,11 @@ export default {
     for (let k = 0; k < 7; k++) {
       const a = (k / 7) * TAU + 0.45 + R() * 0.3;
       if (angDist(a, 0) < 0.55) continue;
-      const rr = 0.15 + R() * 0.02, s = 0.036 + R() * 0.016;
-      b.ico(s, { at: [Math.sin(a) * rr, s * 0.45, Math.cos(a) * rr], scale: [1.25, 0.8, 1], rot: [R(), R() * TAU, R()],
+      const rr = 0.168 + R() * 0.018, s = 0.038 + R() * 0.016;
+      b.ico(s, { at: [Math.sin(a) * rr, s * 0.7, Math.cos(a) * rr], scale: [1.25, 0.8, 1], rot: [R(), R() * TAU, R()],
         color: shade("#9c968c", (R() - 0.5) * 0.12), detail: 0 });
     }
-    b.lathe([[0, 0], [0.18, 0], [0.18, 0.055], [0.172, 0.068], [0, 0.068]], { color: shade(STONE, -0.12), seg: 24 });
+    b.lathe([[0, 0], [0.19, 0], [0.19, 0.05], [0.18, 0.066], [0, 0.066]], { color: shade(STONE, -0.12), seg: 24 });
     const y0 = 0.065, y1 = 1.0, r0 = 0.15, r1 = 0.1;
     const rAt = (y) => lerp(r0, r1, (y - y0) / (y1 - y0));
     const nb = 6, bh = (y1 - y0) / nb;
@@ -1192,7 +1225,7 @@ export default {
     // lantern room
     b.cyl(0.085, 0.09, 0.035, { at: [0, yg + 0.0175, 0], color: stripe, seg: 20 });
     const yl = yg + 0.035, hl = 0.12;
-    b.cyl(0.076, 0.076, hl, { at: [0, yl + hl / 2, 0], color: LAMP, kind: "glow", seg: 16 });
+    b.cyl(0.076, 0.076, hl, { at: [0, yl + hl / 2, 0], color: "#ffc63f", kind: "glow", seg: 16 });
     for (let k = 0; k < 6; k++) {
       const a = (k / 6) * TAU + PI / 6;
       b.rod([Math.sin(a) * 0.078, yl, Math.cos(a) * 0.078], [Math.sin(a) * 0.078, yl + hl, Math.cos(a) * 0.078], 0.0045,
@@ -1287,7 +1320,7 @@ export default {
     });
     block(b, 0.43, 0.034, 0.046, { at: [0, 0.535, 0], color: shade(wood, -0.05), bevel: 0.006 });
     b.group({ rot: [0, PI / 2, 0] }, () =>
-      gableRoof(b, { yr: 0.6, run: 0.21, a: Math.atan2(0.12, 0.21), len: 0.5, t: 0.024, color: "#8f5a3c", courses: 3 }));
+      gableRoof(b, { yr: 0.605, run: 0.19, a: Math.atan2(0.125, 0.19), len: 0.47, t: 0.024, color: "#8f5a3c", courses: 3 }));
     // windlass with rope, crank, and the bucket
     b.cyl(0.026, 0.026, 0.33, { at: [0, 0.42, 0], rot: [0, 0, PI / 2], color: C.lightWood, seg: 12 });
     for (const x of [-0.045, -0.015, 0.015, 0.045]) {
@@ -1360,7 +1393,7 @@ export default {
     b.extrude(inner, 0.008, { ...glow(main), bevel: 0.0015, curveSeg: 1 });
     for (const d of [[0.6, 0.8], [-0.6, 0.8]]) {
       const nrm = [-d[1], d[0]];
-      for (let c = -0.9; c <= 0.9; c += 0.075) {
+      for (let c = -0.9; c <= 0.9; c += 0.088) {
         const p0 = [nrm[0] * c, 0.62 + nrm[1] * c];
         const seg = clipToConvex(inner, p0, d);
         if (!seg || seg[1] - seg[0] < 0.01) continue;
@@ -1380,7 +1413,7 @@ export default {
       b.box(0.04, 0.007, 0.026, { at: [rc[0] + Math.cos(ang) * 0.133, rc[1] + Math.sin(ang) * 0.133, 0], rot: [0, 0, ang],
         color: lead, r: 0 });
       b.group({ at: [rc[0] + Math.cos(ang) * 0.064, rc[1] + Math.sin(ang) * 0.064, 0], rot: [0, 0, ang] }, () => {
-        b.extrude(circleShape(1), 0.024, { scale: [0.044, 0.022, 1], ...glow(k % 2 ? J.purple : J.red), bevel: 0, curveSeg: 8 });
+        b.extrude(circleShape(1), 0.024, { scale: [0.05, 0.029, 1], ...glow(k % 2 ? J.purple : J.red), bevel: 0, curveSeg: 8 });
       });
     }
     b.extrude(circleShape(0.026), 0.028, { at: [rc[0], rc[1], 0], ...glow(J.green), bevel: 0.002, curveSeg: 10 });
@@ -1407,36 +1440,36 @@ export default {
 
   // A wrought-iron fire bowl on a scrolled tripod with a ring brace, heaped coals and a layered fire.
   brazier(b, p) {
-    const iron = "#3b3632";
+    const iron = "#3d3530";
     const R = randomFor(b, p, 8);
+    // three scrolled legs that pinch in at a ring brace and cradle the bowl, curling over its rim
     for (let k = 0; k < 3; k++) {
       const a = PI / 3 + (k * TAU) / 3;
       const P = (r, y) => [Math.sin(a) * r, y, Math.cos(a) * r];
-      b.tube([P(0.07, 0.43), P(0.115, 0.33), P(0.148, 0.19), P(0.16, 0.07), P(0.172, 0.02), P(0.192, 0.016), P(0.2, 0.036),
-        P(0.188, 0.046)], 0.011, { color: iron, seg: 36, radial: 6 });
+      b.tube([P(0.178, 0.565), P(0.2, 0.548), P(0.198, 0.5), P(0.168, 0.4), P(0.11, 0.3), P(0.098, 0.22), P(0.13, 0.11),
+        P(0.168, 0.04), P(0.196, 0.014), P(0.214, 0.03), P(0.203, 0.047)], 0.0105, { color: iron, seg: 48, radial: 6 });
+      b.sphere(0.014, { at: P(0.178, 0.565), color: iron, seg: 8 });
     }
-    b.torus(0.148, 0.008, { at: [0, 0.19, 0], rot: [PI / 2, 0, 0], color: iron, seg: 30, tubeSeg: 5 });
-    const bowl = [[0, 0.4], [0.05, 0.402], [0.1, 0.415], [0.14, 0.44], [0.165, 0.47], [0.178, 0.5]];
+    b.torus(0.099, 0.009, { at: [0, 0.235, 0], rot: [PI / 2, 0, 0], color: iron, seg: 24, tubeSeg: 5 });
+    const bowl = [[0, 0.33], [0.06, 0.334], [0.11, 0.352], [0.148, 0.385], [0.168, 0.42], [0.176, 0.455]];
     b.lathe(bowl, { color: iron, seg: 24 });
-    b.lathe(bowl.slice().reverse().map(([r, y]) => [Math.max(0, r - 0.012), y + 0.004]), { color: shade(iron, -0.1), seg: 24 });
-    b.torus(0.174, 0.011, { at: [0, 0.5, 0], rot: [PI / 2, 0, 0], color: shade(iron, 0.08), seg: 32, tubeSeg: 6 });
-    for (let k = 0; k < 12; k++) {
-      const a = (k / 12) * TAU;
-      b.sphere(0.006, { at: [Math.sin(a) * 0.158, 0.455, Math.cos(a) * 0.158], color: shade(iron, 0.12), seg: 6 });
-    }
-    // coals and embers
+    b.lathe(bowl.slice().reverse().map(([r, y]) => [Math.max(0, r - 0.012), y + 0.004]), { color: shade(iron, -0.08),
+      seg: 24 });
+    b.torus(0.174, 0.011, { at: [0, 0.455, 0], rot: [PI / 2, 0, 0], color: shade(iron, 0.06), seg: 32, tubeSeg: 6 });
+    b.torus(0.158, 0.006, { at: [0, 0.405, 0], rot: [PI / 2, 0, 0], color: shade(iron, 0.06), seg: 28, tubeSeg: 4 });
+    // coals and embers heaped in the bowl
     for (let k = 0; k < 14; k++) {
-      const a = R() * TAU, r = Math.sqrt(R()) * 0.12;
-      const s = 0.022 + R() * 0.014, glowing = k % 3 === 0;
-      b.ico(s, { at: [Math.sin(a) * r, 0.468 + (0.12 - r) * 0.2 + R() * 0.008, Math.cos(a) * r], rot: [R(), R(), R()],
+      const a = R() * TAU, r = Math.sqrt(R()) * 0.13;
+      const s = 0.024 + R() * 0.014, glowing = k % 3 === 0;
+      b.ico(s, { at: [Math.sin(a) * r, 0.418 + (0.13 - r) * 0.22 + R() * 0.008, Math.cos(a) * r], rot: [R(), R(), R()],
         color: glowing ? "#ff6a24" : shade("#2e2826", (R() - 0.5) * 0.1), kind: glowing ? "glow" : "matte", detail: 0,
         light: false });
     }
     // fire
-    fire(b, [0, 0.47, 0], 0.235, 0.078, { light: true });
-    fire(b, [0.065, 0.47, 0.02], 0.15, 0.05, { rot: [0.05, 0, -0.22] });
-    fire(b, [-0.06, 0.47, 0.03], 0.16, 0.05, { rot: [0.05, 0, 0.2] });
-    fire(b, [0.0, 0.47, -0.06], 0.17, 0.05, { rot: [-0.2, 0, 0.05] });
+    fire(b, [0, 0.43, 0], 0.27, 0.088, { light: true });
+    fire(b, [0.07, 0.43, 0.025], 0.175, 0.056, { rot: [0.05, 0, -0.22] });
+    fire(b, [-0.068, 0.43, 0.03], 0.185, 0.056, { rot: [0.05, 0, 0.2] });
+    fire(b, [0.0, 0.43, -0.07], 0.2, 0.056, { rot: [-0.2, 0, 0.05] });
   },
 
   // A small square hedge maze carved from the seed: gravel paths, an entrance at the front marked with two
@@ -1471,7 +1504,7 @@ export default {
     horz[N][c0] = false; // the entrance at the front
     const X = (i) => -S / 2 + i * cell, Z = (j) => -S / 2 + j * cell;
     const hedgeBox = (x, z, w, d, low) =>
-      b.box(w, hh - low, d, { at: [x, yb + (hh - low) / 2, z], color: shade(hedge, (R() - 0.5) * 0.05), r: 0.016, seg: 1 });
+      b.geo(hedgeGeo(R, w, hh - low, d), { at: [x, yb + (hh - low) / 2 - 0.003, z], color: shade(hedge, (R() - 0.5) * 0.05) });
     for (let j = 0; j <= N; j++) {
       for (let i = 0; i < N;) {
         if (!horz[j][i]) {

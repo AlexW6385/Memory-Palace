@@ -226,17 +226,79 @@ function creaseNormals(g, angle = 0.7) {
   return g;
 }
 
+/** Closed outline resampled so that no edge is longer than maxLen. */
+function resample2(pts, maxLen) {
+  const out = [];
+  for (let i = 0; i < pts.length; i++) {
+    const P = pts[i], Q = pts[(i + 1) % pts.length];
+    const n = Math.max(1, Math.ceil(Math.hypot(Q[0] - P[0], Q[1] - P[1]) / maxLen));
+    for (let k = 0; k < n; k++) out.push([P[0] + ((Q[0] - P[0]) * k) / n, P[1] + ((Q[1] - P[1]) * k) / n]);
+  }
+  return out;
+}
+
 /**
- * Extrude an outline (with holes) by depth, centred on z = 0, subdivide it and move every vertex through
- * warp(x, y, z) → [x, y, z]: waving cloth, curved shields, masks. o: { bevel, maxEdge, crease, curveSeg }
+ * A slab cut from an outline with holes: flat caps at z = ±depth/2 joined by walls with rounded edges (radius
+ * bevel, seg steps), all divided evenly (edges ≤ maxEdge, walls and caps sharing their boundary points) so that
+ * it can be bent smoothly without cracks. Returns a non-indexed BufferGeometry.
+ */
+function slabGeo(outline, holes, depth, bevel, maxEdge, seg = 2) {
+  const orient = (pts, ccw) => ((area2(pts) > 0) === ccw ? pts : pts.slice().reverse());
+  const outer = orient(resample2(outline, maxEdge * 0.75), true);
+  const hs = holes.map((h) => orient(resample2(h, maxEdge * 0.75), false));
+  const bev = Math.min(bevel, depth / 2 - 1e-5);
+  // a contour moved into the material by d (the outer one inwards, holes outwards)
+  const into = (c, hole, d) => (d > 0 ? inset2(c, hole ? -d : d) : c);
+  const cap = [];
+  const capO = into(outer, false, bev), capH = hs.map((h) => into(h, true, bev));
+  const v2 = ([x, y]) => new THREE.Vector2(x, y);
+  const faces = THREE.ShapeUtils.triangulateShape(capO.map(v2), capH.map((h) => h.map(v2)));
+  const all = [...capO, ...capH.flat()];
+  for (const [ia, ib, ic] of faces) {
+    const A = all[ia];
+    let B = all[ib], Cc = all[ic];
+    if ((B[0] - A[0]) * (Cc[1] - A[1]) - (Cc[0] - A[0]) * (B[1] - A[1]) < 0) [B, Cc] = [Cc, B];
+    const z = depth / 2;
+    cap.push(A[0], A[1], z, B[0], B[1], z, Cc[0], Cc[1], z, A[0], A[1], -z, Cc[0], Cc[1], -z, B[0], B[1], -z);
+  }
+  const capGeo = new THREE.BufferGeometry();
+  capGeo.setAttribute("position", new THREE.Float32BufferAttribute(cap, 3));
+  const pos = Array.from(tessellate(capGeo, maxEdge).attributes.position.array);
+  // walls: rows round the edge from the front cap to the back cap
+  const rows = [];
+  if (bev > 0) {
+    for (let j = 0; j <= seg; j++) {
+      const a = (j / seg) * (PI / 2);
+      rows.push([bev * (1 - Math.sin(a)), depth / 2 - bev + bev * Math.cos(a)]);
+    }
+    for (let j = 0; j <= seg; j++) {
+      const a = PI / 2 + (j / seg) * (PI / 2);
+      rows.push([bev * (1 - Math.sin(a)), -depth / 2 + bev + bev * Math.cos(a)]);
+    }
+  } else rows.push([0, depth / 2], [0, -depth / 2]);
+  for (const [c, hole] of [[outer, false], ...hs.map((h) => [h, true])]) {
+    const ring = rows.map(([d, z]) => into(c, hole, d).map(([x, y]) => [x, y, z]));
+    const n = c.length;
+    for (let j = 0; j < ring.length - 1; j++) {
+      for (let i = 0; i < n; i++) {
+        const a = ring[j][i], b1 = ring[j][(i + 1) % n], c1 = ring[j + 1][i], d1 = ring[j + 1][(i + 1) % n];
+        pos.push(...a, ...c1, ...b1, ...b1, ...c1, ...d1);
+      }
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  return g;
+}
+
+/**
+ * A slab (see slabGeo) whose every vertex is moved through warp(x, y, z) → [x, y, z]: waving cloth, curved
+ * shields, masks. o: { bevel, bevelSeg, maxEdge, crease } plus the usual primitive options.
  */
 function warpSlab(b, outline, holes, depth, warp, o = {}) {
-  const { bevel: bv, maxEdge, crease, curveSeg, bevelSeg, ...rest } = o;
+  const { bevel: bv, maxEdge, crease, bevelSeg, ...rest } = o;
   const bevel = bv ?? Math.min(0.006, depth * 0.3);
-  const g0 = new THREE.ExtrudeGeometry(shape2(outline, holes), { depth, bevelEnabled: bevel > 0, bevelThickness: bevel,
-    bevelSize: bevel, bevelSegments: bevelSeg ?? 2, curveSegments: curveSeg ?? 8 });
-  g0.translate(0, 0, -depth / 2);
-  const g = tessellate(g0, maxEdge ?? 0.02);
+  const g = slabGeo(outline, holes, depth, bevel, maxEdge ?? 0.02, bevelSeg ?? 2);
   const pos = g.attributes.position;
   for (let i = 0; i < pos.count; i++) {
     const w = warp(pos.getX(i), pos.getY(i), pos.getZ(i));
@@ -542,37 +604,33 @@ export default {
   // A sealed envelope standing upright: the closed flap with its creases, a red wax seal and the address
   // written below (text = address; without text, three pencil lines).
   envelope(b, p) {
-    const paper = p.color || "#f2e6cb";
+    const paper = p.color || "#f3e7cc";
     const W = 0.272, H = 0.184, T = 0.017, fz = T / 2;
     b.box(W, H, T, { at: [0, H / 2, 0], color: paper, r: 0.006 });
-    const tip = 0.088, hw = W / 2 - 0.006, top = H - 0.004;
-    b.extrude([[hw, top], [-hw, top], [-0.016, tip + 0.011], [0, tip], [0.016, tip + 0.011]], 0.002,
-      { at: [0, 0, fz + 0.001], color: shade(paper, -0.035), bevel: 0.0008 });
-    for (const s of [-1, 1]) {
-      const a = [s * hw, top], c = [s * 0.012, tip + 0.008];
-      const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
-      b.box(len, 0.0026, 0.0012, { at: [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2, fz + 0.0028],
-        rot: [0, 0, Math.atan2(c[1] - a[1], c[0] - a[0])], color: shade(paper, -0.2), r: 0 });
-    }
+    // the closed flap: a triangle from the top corners to a rounded tip, its edges outlined by a shadow line
+    const tip = 0.1, hw = W / 2 - 0.005, top = H - 0.004;
+    const flap = [[hw, top], [-hw, top], [-0.016, tip + 0.009], [0, tip], [0.016, tip + 0.009]];
+    b.extrude(inset2(flap, -0.0022), 0.0012, { at: [0, 0, fz + 0.0006], color: shade(paper, -0.22), bevel: 0 });
+    b.extrude(flap, 0.002, { at: [0, 0, fz + 0.0016], color: shade(paper, -0.05), bevel: 0.0007 });
     // wax seal with a dribbled rim and a stamped star
     const wax = C.crimson;
-    b.group({ at: [0, tip + 0.004, fz + 0.003] }, () => {
-      b.cyl(0.02, 0.021, 0.005, { rot: [PI / 2, 0, 0], at: [0, 0, 0.0025], color: wax, kind: "gloss", seg: 20 });
+    b.group({ at: [0, tip + 0.003, fz + 0.0035] }, () => {
+      b.cyl(0.018, 0.019, 0.005, { rot: [PI / 2, 0, 0], at: [0, 0, 0.0025], color: wax, kind: "gloss", seg: 20 });
       for (let i = 0; i < 7; i++) {
         const a = (i / 7) * TAU + 0.3;
-        b.sphere(0.0062, { at: [Math.cos(a) * 0.0195, Math.sin(a) * 0.0195, 0.002], scale: [1, 1, 0.55], color: wax,
+        b.sphere(0.0058, { at: [Math.cos(a) * 0.0176, Math.sin(a) * 0.0176, 0.002], scale: [1, 1, 0.55], color: wax,
           kind: "gloss", seg: 8 });
       }
-      b.torus(0.0125, 0.0017, { at: [0, 0, 0.0052], color: shade(wax, -0.08), kind: "gloss", seg: 20, tubeSeg: 5 });
-      b.extrude(star2(0.0075, 0.0032), 0.0015, { at: [0, 0, 0.0055], color: shade(wax, -0.08), kind: "gloss",
+      b.torus(0.0112, 0.0016, { at: [0, 0, 0.0052], color: shade(wax, -0.08), kind: "gloss", seg: 20, tubeSeg: 5 });
+      b.extrude(star2(0.0068, 0.0029), 0.0015, { at: [0, 0, 0.0055], color: shade(wax, -0.08), kind: "gloss",
         bevel: 0.0005 });
     });
     const str = textOf(b, p);
     if (str) {
-      b.text(str, { at: [0, 0.042, fz + 0.003], w: 0.215, h: 0.05, fg: "#2b3a66", font: "chalk" });
+      b.text(str, { at: [0, 0.046, fz + 0.003], w: 0.236, h: 0.068, fg: "#24366b", font: "chalk" });
     } else {
-      for (const [w, y] of [[0.13, 0.054], [0.11, 0.04], [0.085, 0.026]]) {
-        b.box(w, 0.0045, 0.0012, { at: [-0.065 + w / 2, y, fz + 0.0006], color: shade(paper, -0.3), r: 0 });
+      for (const [w, y] of [[0.13, 0.062], [0.11, 0.045], [0.085, 0.028]]) {
+        b.box(w, 0.0048, 0.0012, { at: [-0.065 + w / 2, y, fz + 0.0006], color: "#8d8a84", r: 0 });
       }
     }
   },
@@ -585,20 +643,20 @@ export default {
     b.box(W, H, D, { at: [0, yc, 0], color: kraft, r });
     // paper seam along the top
     b.box(W - 0.02, 0.002, 0.05, { at: [0, lift + H + 0.0005, 0], color: shade(kraft, -0.04), r: 0 });
-    const twine = "#f1e5c6", tr = 0.0038, xs = -0.088;
+    const twine = "#ead7ab", tr = 0.0044, xs = -0.088;
     const loopYZ = rrect2(D + tr, H + tr, r + tr, 0, 0, 3).map(([z, y]) => [xs, yc + y, z]);
     b.tube(loopYZ, tr, { closed: true, color: twine, radial: 6, seg: 80 });
     const loopXY = rrect2(W + tr, H + tr, r + tr, 0, 0, 3).map(([x, y]) => [x, yc + y, 0]);
     b.tube(loopXY, tr, { closed: true, color: twine, radial: 6, seg: 80 });
-    // bow on top where the strings cross
+    // bow on top where the strings cross: two loops, two tails and a knot
     b.group({ at: [xs, lift + H + tr, 0] }, () => {
       for (const s of [-1, 1]) {
-        b.torus(0.026, 0.0052, { at: [s * 0.027, 0.013, 0], rot: [0, s * 0.35, s * 0.32], scale: [1, 0.62, 1],
-          color: twine, seg: 20, tubeSeg: 6 });
-        b.tube([[0, 0.004, 0], [s * 0.016, 0.003, 0.025], [s * 0.026, 0.001, 0.05]], 0.0042, { color: twine, radial: 5,
-          seg: 10 });
+        b.torus(0.03, 0.0068, { at: [s * 0.031, 0.016, 0], rot: [0, s * 0.3, s * 0.3], scale: [1, 0.66, 1],
+          color: twine, seg: 22, tubeSeg: 7 });
+        b.tube([[0, 0.004, 0], [s * 0.018, 0.003, 0.028], [s * 0.03, 0.001, 0.056]], 0.0052, { color: twine, radial: 6,
+          seg: 12 });
       }
-      b.sphere(0.0105, { at: [0, 0.008, 0], scale: [1, 0.85, 0.9], color: shade(twine, -0.04), seg: 10 });
+      b.sphere(0.0125, { at: [0, 0.01, 0], scale: [1, 0.85, 0.9], color: shade(twine, -0.05), seg: 12 });
     });
     // shipping label with a red header band
     const str = textOf(b, p);
