@@ -2697,12 +2697,12 @@
         "zh": "解码器中的词元只能关注自己和前面的词元，后文被遮住；这也让所有位置能并行训练。"
        },
        "explain": {
-        "en": "A language model must predict token t + 1 from tokens 1…t, so during training it must not peek at the answer. The causal mask enforces this: before the softmax, every score whose key comes after its query is set to −∞, so its weight becomes exactly 0. In the n × n score table this blanks out everything above the diagonal. The payoff is efficiency: one forward pass over a training sequence of n tokens yields n predictions, each made with exactly the context it would have during generation, so all n losses are computed in parallel instead of in n separate passes. Encoder models such as BERT use no causal mask and see both sides; they are trained to fill in blanks rather than to continue text.",
-        "zh": "语言模型要根据第 1…t 个词元预测第 t+1 个，训练时就不能偷看答案。因果掩码保证这一点：softmax 之前，凡是键位于查询之后的分数都设为 −∞，权重于是恰好为 0。在 n × n 的得分表里，就是把对角线以上的部分全部涂掉。好处是效率：对 n 个词元的训练序列做一次前向传播，就得到 n 个预测，每个预测用的上下文都与生成时完全一致，n 个损失并行算出，不必跑 n 遍。BERT 这类编码器不用因果掩码，两边都看得见，训练目标是完形填空而不是续写。"
+        "en": "A language model must predict token t + 1 from tokens 1…t, so during training it must not peek at the answer. The causal mask enforces this: before the softmax, every score whose key comes after its query is set to −∞, so its weight becomes exactly 0. In the n × n score table this blanks out everything above the diagonal. The payoff is efficiency: one forward pass over a training sequence of n tokens yields n − 1 predictions, each made with exactly the context it would have during generation, so all n − 1 losses are computed in parallel instead of in separate passes. Encoder models such as BERT use no causal mask and see both sides; they are trained to fill in blanks rather than to continue text.",
+        "zh": "语言模型要根据第 1…t 个词元预测第 t+1 个，训练时就不能偷看答案。因果掩码保证这一点：softmax 之前，凡是键位于查询之后的分数都设为 −∞，权重于是恰好为 0。在 n × n 的得分表里，就是把对角线以上的部分全部涂掉。好处是效率：对 n 个词元的训练序列做一次前向传播，就得到 n−1 个预测，每个预测用的上下文都与生成时完全一致，这些损失并行算出，不必一遍遍分开跑。BERT 这类编码器不用因果掩码，两边都看得见，训练目标是完形填空而不是续写。"
        },
        "example": {
-        "en": "For 'the cat sat', the mask allows: 'the' sees the; 'cat' sees the, cat; 'sat' sees the, cat, sat. As a 0/1 table: [1 0 0; 1 1 0; 1 1 1]. If 'cat' scores (2, 1, 5) against the three keys, the 5 for 'sat' becomes −∞, and softmax gives weights (0.73, 0.27, 0). One pass over this sequence trains three predictions: the → cat, the cat → sat, the cat sat → whatever comes next.",
-        "zh": "对“the cat sat”，每个词只看自己和前文，写成 0/1 表即 [1 0 0; 1 1 0; 1 1 1]。若 cat 对三个键的分数是 (2, 1, 5)，属于 sat 的 5 被换成 −∞，softmax 得权重 (0.73, 0.27, 0)。这个序列一次前向就训练三个预测：the → cat，the cat → sat，the cat sat → 下一个词元。"
+        "en": "For 'the cat sat', the mask allows: 'the' sees the; 'cat' sees the, cat; 'sat' sees the, cat, sat. As a 0/1 table: [1 0 0; 1 1 0; 1 1 1]. If 'cat' scores (2, 1, 5) against the three keys, the 5 for 'sat' becomes −∞, and softmax gives weights (0.73, 0.27, 0). One pass over 'the cat sat on' trains three predictions at once: the → cat, the cat → sat, the cat sat → on.",
+        "zh": "对“the cat sat”，每个词只看自己和前文，写成 0/1 表即 [1 0 0; 1 1 0; 1 1 1]。若 cat 对三个键的分数是 (2, 1, 5)，属于 sat 的 5 被换成 −∞，softmax 得权重 (0.73, 0.27, 0)。对“the cat sat on”做一次前向，就同时训练三个预测：the → cat，the cat → sat，the cat sat → on。"
        },
        "image": {
         "en": "Actors stand in a row in speaking order, each turned to the left, looking only at those who have already spoken. The right half of the stage is hidden by a heavy red curtain: the lines still to come. The last visible actor wonders what comes next but cannot peek. At the front, a board shows the rule: ones on and below the diagonal, zeros above.",
@@ -7187,8 +7187,8 @@
         "zh": "上下文学习指模型在提示里看到任务描述或几个输入–输出示例（少样本）后就能完成任务，无需任何梯度更新。GPT-3（Brown 等，2020）表明这种能力随规模显著增强。所谓“学习”只存在于对提示计算出的激活里，提示一撤就消失。效果取决于示例的格式、挑选甚至顺序，而标签对错的影响往往比想象中小。其机制仍有争议，假说包括复制模式的归纳头、对任务的隐式贝叶斯推断，以及注意力层模拟几步梯度下降。它是少样本提示和引导基座模型的基础。"
        },
        "example": {
-        "en": "GPT-3's classic prompt: 'sea otter => loutre de mer, peppermint => menthe poivrée, plush giraffe => girafe peluche, cheese =>'. The model continues 'fromage': it inferred 'translate English to French' from three examples. Start a fresh prompt without the examples and the model has no memory of the task, because nothing was written into its weights.",
-        "zh": "GPT-3 的经典提示：“sea otter => loutre de mer, peppermint => menthe poivrée, plush giraffe => girafe peluche, cheese =>”。模型接着写出“fromage”：它从三个例子里推断出“英译法”。换一个不带示例的新提示，模型对这个任务毫无记忆，因为权重里什么也没写进去。"
+        "en": "GPT-3's classic prompt: 'Translate English to French: sea otter => loutre de mer, peppermint => menthe poivrée, plush giraffe => girafe peluche, cheese =>'. The model continues 'fromage': a one-line task description plus three examples were enough, with no gradient step. Start a fresh prompt without the examples and the model has no memory of the task, because nothing was written into its weights.",
+        "zh": "GPT-3 的经典提示：“Translate English to French: sea otter => loutre de mer, peppermint => menthe poivrée, cheese =>”。模型接着写出“fromage”：一句任务说明加几个例子就够了，无需梯度更新。换一个不带示例的新提示，模型对这个任务毫无记忆，因为权重里什么也没写进去。"
        },
        "image": {
         "en": "On the study carpet stand three wooden blocks, each marked 'x→y', with a fourth block marked '?' at the end of the row. A robot studies the three examples and turns to the fourth, ready to answer in the same pattern. In the corner its brain sits on a dish with a padlock clamped on top: nothing inside changes. Behind the blocks a scholar in a gown points at the examples.",

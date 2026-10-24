@@ -213,7 +213,7 @@ const TOOLS = {
   pulley(b, p) {
     const wood = p.color || C.wood;
     const dark = shade(wood, -0.12);
-    const iron = metal("#4a4f57");
+    const iron = metal("#5d636b");
     b.box(0.4, 0.04, 0.3, { at: [0, 0.02, 0], color: dark, r: 0.012 });
     const top = 0.975;
     b.mirrorX(() => {
@@ -225,7 +225,7 @@ const TOOLS = {
     const wy = 0.8, R = 0.066;
     b.torus(0.016, 0.0045, { at: [0, top - 0.058, 0], rot: [0, PI / 2, 0], ...iron, seg: 14, tubeSeg: 6 });
     for (const z of [-0.026, 0.026]) {
-      b.box(0.02, top - 0.07 - wy, 0.006, { at: [0, (top - 0.07 + wy) / 2, z], ...iron, r: 0.002, seg: 1 });
+      b.box(0.016, top - 0.07 - wy, 0.006, { at: [0, (top - 0.07 + wy) / 2, z], ...metal("#9aa3ad"), r: 0.002, seg: 1 });
     }
     b.box(0.03, 0.012, 0.06, { at: [0, top - 0.07, 0], ...iron, r: 0.004 });
     // sheave: grooved red wheel with spokes
@@ -249,7 +249,7 @@ const TOOLS = {
     const wb = 0.008;
     b.extrude(roundPoly([[-0.058, 0], [0.058, 0], [0.04, 0.088], [-0.04, 0.088]], 0.012),
       0.07 - 2 * wb, { at: [-rr, wTop - 0.11, 0], ...iron, bevel: wb });
-    b.text("kg", { at: [-rr, wTop - 0.068, 0.0365], w: 0.06, h: 0.036, fg: "#d8dde3", font: "body" });
+    b.text("kg", { at: [-rr, wTop - 0.066, 0.0375], w: 0.07, h: 0.045, fg: "#eef1f4", font: "body" });
     // pull handle on the free end
     b.cyl(0.014, 0.014, 0.085, { at: [rr, hEnd - 0.004, 0], rot: ZA, color: C.lightWood, kind: "gloss", seg: 12 });
   },
@@ -279,7 +279,7 @@ const TOOLS = {
 
   // A combination spanner standing upright: open jaw at the top, ring end at the bottom.
   wrench(b, p) {
-    const col = p.color || "#c4cad2";
+    const col = p.color || "#dde2e8";
     const o = metal(col);
     const bev = 0.005, T = 0.032 - 2 * bev;
     // open-ended jaw, tilted 15 degrees
@@ -299,9 +299,8 @@ const TOOLS = {
     b.extrude(jaw.map(rot), T, { at: [0, jy, 0], ...o, bevel: bev });
     // ring end with a twelve-point socket
     const R2 = 0.038, ry = R2 + bev;
-    const star = [];
-    for (let i = 0; i < 24; i++) star.push(polar(i % 2 ? 0.02 : 0.0235, (i / 24) * TAU + PI / 12));
-    b.extrude(shape(circle(R2, 36), [star.reverse()]), T, { at: [0, ry, 0], ...o, bevel: bev });
+    const hex = roundPoly(circle(0.0215 + bev, 6).map(([x, y]) => [y, x]), 0.003, 2).reverse();
+    b.extrude(shape(circle(R2, 36), [hex]), T, { at: [0, ry, 0], ...o, bevel: bev });
     // handle: a tapered bar with a recessed panel
     const hy0 = ry + R2 - 0.012, hy1 = jy - R + 0.012;
     b.extrude(roundPoly([[-0.0165, hy0], [0.0165, hy0], [0.0145, hy1], [-0.0145, hy1]], 0.004), T * 0.8,
@@ -314,7 +313,7 @@ const TOOLS = {
   scissors(b, p) {
     const col = p.color || C.red;
     const steel = metal("#c9d0d8");
-    const py = 0.146, open = 0.2;
+    const py = 0.132, open = 0.2;
     const blade = roundPoly([[0.011, -0.016], [0.0135, 0.05], [0.009, 0.15], [0.0015, 0.2], [-0.0055, 0.16],
       [-0.006, 0.0], [-0.004, -0.016]], [0.004, 0.03, 0.03, 0.002, 0.03, 0.01, 0.004], 4);
     const loopC = [0.034, -0.1];

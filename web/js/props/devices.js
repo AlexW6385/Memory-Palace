@@ -699,6 +699,12 @@ export default {
       b.box(0.004, 0.014, 0.004, { at: [BW / 2 - 0.055 + Math.cos(a) * 0.024, top + 0.007, bz - 0.004 + Math.sin(a) * 0.024], rot: [0, -a, 0], color: "#4a4e56", r: 0 });
     }
     led(b, [-BW / 2 + 0.03, BH - 0.012, bz + BD / 2 + 0.0255], LED.amber, 0.004);
+    // a small screen and buttons on the back
+    b.group({ at: [0.02, BH / 2 + 0.004, bz - BD / 2 - 0.001], rot: [0, PI, 0] }, () => {
+      slab(b, 0.12, 0.07, 0.004, 0.008, { color: BEZEL, kind: "gloss", bevel: 0.001 });
+      slab(b, 0.104, 0.056, 0.002, 0.005, { at: [0, 0, 0.002], color: "#3d7fb8", ...GLOW, bevel: 0 });
+      for (let i = 0; i < 3; i++) dot(b, [0.09, 0.022 - i * 0.022, 0.0], 0.007, 0.006, { color: "#55595f" });
+    });
     // strap lugs
     b.mirrorX(() => b.torus(0.009, 0.0025, { at: [BW / 2 + 0.004, BH + 0.01, bz], rot: [0, PI / 2, 0], ...chrome, seg: 12, tubeSeg: 4 }));
     // lens
@@ -883,9 +889,9 @@ export default {
         }
       }
     });
-    b.box(ww, wh, 0.004, { at: [wcx, wcy, front + cd], color: "#d8eef8", kind: "glass", r: 0 });
-    for (const [dx, len] of [[-0.06, 0.2], [0.0, 0.12]]) {
-      b.box(0.012, len, 0.002, { at: [wcx + dx, wcy + 0.12, front + cd + 0.003], rot: [0, 0, -0.55], color: "#ffffff", ...GLOW, r: 0 });
+    // the glass is only hinted by a few highlights, so the goods behind it keep their colours
+    for (const [dx, dy, len] of [[-0.07, 0.15, 0.2], [-0.01, 0.17, 0.12], [0.05, -0.2, 0.08]]) {
+      b.box(0.011, len, 0.002, { at: [wcx + dx, wcy + dy, front + cd + 0.002], rot: [0, 0, -0.55], color: "#ffffff", ...GLOW, r: 0 });
     }
     const fr = 0.016, frc = { color: "#3a3f48", r: 0.004, seg: 1 };
     b.box(ww + 2 * fr, fr, cd + 0.004, { at: [wcx, wy1 + fr / 2, front + cd / 2], ...frc });

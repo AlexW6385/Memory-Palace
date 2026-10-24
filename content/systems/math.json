@@ -4645,7 +4645,7 @@
          },
          "means": {
           "en": "unordered choice: each 3-set is one basket, 60/3! = 10",
-          "zh": "无序选取：每个 3 元组只算一篮，60/3!=10"
+          "zh": "无序选取：每个 3 元子集只算一篮，60/3!=10"
          }
         }
        ],
@@ -6415,8 +6415,8 @@
         "zh": "欧拉回路经过每条边恰好一次，存在当且仅当图连通且度数全为偶数；哈密顿圈经过每个顶点恰好一次。"
        },
        "explain": {
-        "en": "An Euler circuit is a closed walk that uses every edge exactly once. Euler (1736) showed that a connected graph has one if and only if every vertex has even degree: each visit to a vertex uses two of its edges, and conversely, when all degrees are even, cycles can be spliced together until every edge is used (Hierholzer's algorithm, linear time). A connected graph has an open Euler trail exactly when it has two odd vertices, which are its ends. A Hamilton cycle visits every vertex exactly once instead. It sounds similar but is far harder: deciding whether one exists is NP-complete, and there is no simple degree test (Dirac's condition, n ≥ 3 and every degree ≥ n/2, is sufficient but not necessary).",
-        "zh": "欧拉回路是经过每条边恰好一次的闭合路线。欧拉（1736）证明：连通图有欧拉回路当且仅当每个顶点的度都是偶数——每次经过一个顶点都要用掉它的两条边；反过来，度数全为偶数时，可以把若干个圈拼接起来直到用完所有边（Hierholzer 算法，线性时间）。连通图恰有两个奇度顶点时，有不闭合的欧拉路径，两端正是这两个顶点。哈密顿圈则要求经过每个顶点恰好一次。听起来相似，难度却天差地别：判定它是否存在是 NP 完全问题，也没有简单的度数判据（狄拉克条件“n≥3 且每个顶点度≥n/2”是充分而非必要条件）。"
+        "en": "An Euler circuit is a closed walk that uses every edge exactly once. Euler (1736) showed that if a graph has one, every vertex has even degree, since each visit to a vertex uses two of its edges. The converse, that a connected graph with all degrees even has one, was proved by Hierholzer (published 1873): cycles can be spliced together until every edge is used, in linear time. A connected graph has an open Euler trail exactly when it has two odd vertices, which are its ends. A Hamilton cycle visits every vertex exactly once instead. It sounds similar but is far harder: deciding whether one exists is NP-complete, and there is no simple degree test (Dirac's condition, n ≥ 3 and every degree ≥ n/2, is sufficient but not necessary).",
+        "zh": "欧拉回路是经过每条边恰好一次的闭合路线。欧拉（1736）证明：有欧拉回路的图，每个顶点的度都是偶数——每次经过一个顶点都要用掉它的两条边。反过来，度数全为偶数的连通图一定有欧拉回路，这由 Hierholzer 证明（1873 年发表）：可以把若干个圈拼接起来直到用完所有边，线性时间即可完成。连通图恰有两个奇度顶点时，有不闭合的欧拉路径，两端正是这两个顶点。哈密顿圈则要求经过每个顶点恰好一次。听起来相似，难度却天差地别：判定它是否存在是 NP 完全问题，也没有简单的度数判据（狄拉克条件“n≥3 且每个顶点度≥n/2”是充分而非必要条件）。"
        },
        "example": {
         "en": "Königsberg had four land masses joined by seven bridges, with degrees 5, 3, 3 and 3. All four are odd, so no walk crosses every bridge exactly once, closed or not. A Hamilton cycle is easy, though: north bank, big island, south bank, east island, back to the north bank. The complete graph Kₙ (n ≥ 3) always has a Hamilton cycle, and has an Euler circuit exactly when n is odd.",
@@ -7441,8 +7441,8 @@
         "zh": "闭区间 [a,b] 上的连续函数取遍 f(a) 与 f(b) 之间的每一个值；变号必有零点。"
        },
        "explain": {
-        "en": "If f is continuous on [a, b] and y lies between f(a) and f(b), then f(c) = y for some c in [a, b]. In particular, if f(a) < 0 < f(b), then f has a root in (a, b). The proof takes c = sup{x ∈ [a, b] : f(x) < y} and needs completeness; over ℚ the theorem fails, since x² − 2 changes sign on [1, 2] but has no rational root. Bisection turns it into an algorithm: test the sign at the midpoint and keep the half on which the sign changes; after k steps the root is trapped in an interval of length (b − a)/2ᵏ. Its companion, the extreme value theorem, says that a continuous function on a closed bounded interval attains a maximum and a minimum.",
-        "zh": "若 f 在 [a,b] 上连续，y 介于 f(a) 与 f(b) 之间，则存在 c∈[a,b] 使 f(c)=y。特别地，若 f(a)<0<f(b)，则 f 在 (a,b) 内有零点。证明取 c=sup{x∈[a,b] : f(x)<y}，要用到完备性；在 ℚ 上定理不成立：x²−2 在 [1,2] 上变号，却没有有理根。二分法把它变成算法：看中点的符号，保留变号的那一半；k 步之后，根被锁定在长为 (b−a)/2ᵏ 的区间里。它的姊妹定理是最值定理：有界闭区间上的连续函数必取到最大值与最小值。"
+        "en": "If f is continuous on [a, b] and y lies between f(a) and f(b), then f(c) = y for some c in [a, b]. In particular, if f(a) < 0 < f(b), then f has a root in (a, b). When f(a) < y < f(b), the proof takes c = sup{x ∈ [a, b] : f(x) < y} and needs completeness; over ℚ the theorem fails, since x² − 2 changes sign on [1, 2] but has no rational root. Bisection turns it into an algorithm: test the sign at the midpoint and keep the half on which the sign changes; after k steps the root is trapped in an interval of length (b − a)/2ᵏ. Its companion, the extreme value theorem, says that a continuous function on a closed bounded interval attains a maximum and a minimum.",
+        "zh": "若 f 在 [a,b] 上连续，y 介于 f(a) 与 f(b) 之间，则存在 c∈[a,b] 使 f(c)=y。特别地，若 f(a)<0<f(b)，则 f 在 (a,b) 内有零点。当 f(a)<y<f(b) 时，证明取 c=sup{x∈[a,b] : f(x)<y}，要用到完备性；在 ℚ 上定理不成立：x²−2 在 [1,2] 上变号，却没有有理根。二分法把它变成算法：看中点的符号，保留变号的那一半；k 步之后，根被锁定在长为 (b−a)/2ᵏ 的区间里。它的姊妹定理是最值定理：有界闭区间上的连续函数必取到最大值与最小值。"
        },
        "example": {
         "en": "f(x) = x³ − x − 1 has f(1) = −1 and f(2) = 5, so it has a root in (1, 2). Bisection: f(1.5) = 0.875 > 0, so the root is in (1, 1.5); f(1.25) ≈ −0.297 < 0, so it is in (1.25, 1.5); continuing gives the root ≈ 1.3247. The same argument shows that every real polynomial of odd degree has a real root.",
