@@ -524,7 +524,7 @@ function landGeo(poly, holes, R, lon0) {
   }
   const g0 = new THREE.BufferGeometry();
   g0.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-  const g = tessellate(g0, 5);
+  const g = tessellate(g0, 6.5);
   const P = g.attributes.position;
   const nrm = new Float32Array(P.count * 3);
   for (let i = 0; i < P.count; i++) {
@@ -699,7 +699,7 @@ export default {
         { ...brass, seg: 6 });
     }
     b.group({ at: [0, yc, 0], rot: [0, 0, -tilt] }, () => {
-      b.geo(new THREE.SphereGeometry(R, 40, 26), { color: "#3f8fd2", kind: "gloss" });
+      b.geo(new THREE.SphereGeometry(R, 36, 24), { color: "#3f8fd2", kind: "gloss" });
       for (const [name, poly] of Object.entries(LAND)) {
         b.geo(landGeo(poly, LAND_HOLES[name] || [], R * 1.003, lon0), { color: LAND_TONE[name] || "#73b35a",
           kind: "gloss" });
@@ -958,15 +958,15 @@ export default {
       b.box(0.07, 0.004, 0.022, { at: [0, 0.0452, 0.0], color: "#2a1f17", r: 0 });
     }
     // body (front face at z = 0.015), quartered face on it, raised rim and rivets on top
-    warpSlab(b, outline, [], 0.022, bend, { color: C.darkWood, bevel: 0.004, maxEdge: 0.03 });
+    warpSlab(b, outline, [], 0.022, bend, { color: C.darkWood, bevel: 0.004, maxEdge: 0.04 });
     const yq = 0.245;
     const quarters = [[c1, -1, 1], [c2, 1, 1], [c2, -1, -1], [c1, 1, -1]];
     for (const [col, sx, sy] of quarters) {
       const q = clip2(clip2(inset2(outline, 0.004), sx, 0, 0), 0, sy, -sy * yq);
-      warpSlab(b, q, [], 0.003, (x, y, z) => bend(x, y, z + 0.0165), { color: col, kind: "gloss", bevel: 0, maxEdge: 0.03 });
+      warpSlab(b, q, [], 0.003, (x, y, z) => bend(x, y, z + 0.0165), { color: col, kind: "gloss", bevel: 0, maxEdge: 0.04 });
     }
     warpSlab(b, outline, [inset2(outline, 0.024)], 0.008, (x, y, z) => bend(x, y, z + 0.021),
-      { color: C.silver, kind: "metal", bevel: 0.002, maxEdge: 0.025 });
+      { color: C.silver, kind: "metal", bevel: 0.002, maxEdge: 0.035 });
     for (const [x, y] of [[0, Hs - 0.012], [-w + 0.012, Hs - 0.012], [w - 0.012, Hs - 0.012], [-w + 0.012, 0.33],
       [w - 0.012, 0.33], [0, 0.028]]) {
       const P = bend(x, y, 0.027);
