@@ -29,6 +29,13 @@ function randomFor(b, p, salt = 0) {
   return p.seed != null ? rng(p.seed * 31 + 7 + salt) : b.rng;
 }
 
+/** True for colours dark enough that details on them should be lighter, not darker. */
+function isDark(c) {
+  const hsl = {};
+  new THREE.Color(c).getHSL(hsl);
+  return hsl.l < 0.32;
+}
+
 /** The string p.text stands for in the builder's language ("" when there is none). */
 function textOf(b, t) {
   if (t == null) return "";
@@ -76,9 +83,14 @@ function ring(b, rIn, rOut, y0, y1, o = {}) {
   return b.lathe([[rIn, y0], [rOut, y0], [rOut, y1], [rIn, y1], [rIn, y0]], { seg: 24, ...o });
 }
 
-/** A round status LED facing +z at `at`. */
+/** A round status LED: a flat glowing disc facing +z at `at` (just in front of its panel). */
 function led(b, at, color, r = 0.0045) {
-  b.cyl(r, r, 0.004, { at, rot: [PI / 2, 0, 0], color, ...GLOW, seg: 8 });
+  b.geo(new THREE.CircleGeometry(r, 8), { at: [at[0], at[1], at[2] + 0.0015], color, ...GLOW });
+}
+
+/** A flat disc facing +z for screen graphics. */
+function spot(b, at, r, color) {
+  b.geo(new THREE.CircleGeometry(r, 12), { at, color, ...GLOW });
 }
 
 /** A small disc facing +z (buttons, lenses, dials) centred at `at`, t thick. */
@@ -98,8 +110,7 @@ function screen(b, x, y, w, h, o = {}) {
     const bh = Math.min(h * 0.13, 0.032), m = bh * 0.22;
     const by = y + h / 2 - m - bh / 2;
     slab(b, w - 2 * m, bh, 0.001, bh * 0.3, { at: [x, by, 0.0006], color: o.bar || SCREEN_BAR, ...GLOW, bevel: 0 });
-    WINDOW_DOTS.forEach((c, i) => b.cyl(bh * 0.2, bh * 0.2, 0.001, { at: [x - w / 2 + m + bh * (0.6 + i * 0.55), by, 0.0014],
-      rot: [PI / 2, 0, 0], color: c, ...GLOW, seg: 10 }));
+    WINDOW_DOTS.forEach((c, i) => spot(b, [x - w / 2 + m + bh * (0.6 + i * 0.55), by, 0.0016], bh * 0.2, c));
     cy = y - (bh + m) / 2;
     ch = h - bh - m;
   }
@@ -155,7 +166,7 @@ function wallPicture(b, kind, w, h, r) {
       const pts = [];
       for (let i = 0; i <= 6; i++) pts.push([-w * 0.4 + (w * 0.8 * i) / 6, -h * 0.3 + h * (0.08 + 0.1 * i + 0.22 * r()), Z1]);
       for (let i = 0; i < pts.length - 1; i++) b.rod(pts[i], pts[i + 1], 0.004, { ...g("#7cffb2"), seg: 5 });
-      for (const pt of pts) dot(b, pt, 0.008, 0.002, g("#e8fff2"));
+      for (const pt of pts) spot(b, [pt[0], pt[1], Z1 + 0.0012], 0.008, "#e8fff2");
       break;
     }
     case "pie": {
@@ -177,7 +188,7 @@ function wallPicture(b, kind, w, h, r) {
       b.box(R * 2, 0.002, 0.001, { at: [0, 0, Z1], ...g("#3aa86a"), r: 0 });
       b.box(0.002, R * 2, 0.001, { at: [0, 0, Z1], ...g("#3aa86a"), r: 0 });
       sector(b, R, 0.6, 0.7, { at: [0, 0, 0.0008], ...g("#2f8f5a") });
-      for (const [a, d] of [[0.9, 0.6], [2.4, 0.8], [4.1, 0.45]]) dot(b, [Math.cos(a) * R * d, Math.sin(a) * R * d, Z1], 0.007, 0.002, g("#ffe27a"));
+      for (const [a, d] of [[0.9, 0.6], [2.4, 0.8], [4.1, 0.45]]) spot(b, [Math.cos(a) * R * d, Math.sin(a) * R * d, Z1 + 0.0012], 0.007, "#ffe27a");
       break;
     }
     case "globe": {
@@ -207,10 +218,10 @@ function wallPicture(b, kind, w, h, r) {
       for (let i = 0; i < 4; i++) {
         const cx = (i % 2 ? 1 : -1) * w * 0.23, cy = (i < 2 ? 1 : -1) * h * 0.23;
         b.box(w * 0.43, h * 0.42, 0.0012, { at: [cx, cy, 0.0008], ...g(cols[i]), r: 0 });
-        dot(b, [cx, cy + h * 0.02, Z1], h * 0.06, 0.0015, g("#d9e6f2"));
+        spot(b, [cx, cy + h * 0.02, Z1], h * 0.06, "#d9e6f2");
         b.box(h * 0.16, h * 0.1, 0.0015, { at: [cx, cy - h * 0.1, Z1], ...g("#d9e6f2"), r: 0 });
       }
-      dot(b, [w * 0.42, h * 0.4, Z1 + 0.0004], h * 0.035, 0.0015, g("#ff4d3d"));
+      spot(b, [w * 0.42, h * 0.4, Z1], h * 0.035, "#ff4d3d");
       break;
     }
     case "gauge": {
@@ -218,7 +229,7 @@ function wallPicture(b, kind, w, h, r) {
       b.torus(R, 0.012, { at: [0, -h * 0.08, 0.0006], rot: [0, 0, -PI / 6], arc: (4 * PI) / 3, ...g("#2c4f73"), seg: 30, tubeSeg: 3 });
       b.torus(R, 0.013, { at: [0, -h * 0.08, Z1], rot: [0, 0, PI / 2], arc: (2 * PI) / 3 + 0.25, ...g("#ffb43a"), seg: 24, tubeSeg: 3 });
       b.rod([0, -h * 0.08, Z1], [Math.cos(0.75) * R * 0.85, -h * 0.08 + Math.sin(0.75) * R * 0.85, Z1], 0.004, { ...g("#f2fbff"), seg: 5 });
-      dot(b, [0, -h * 0.08, Z1], 0.012, 0.002, g("#f2fbff"));
+      spot(b, [0, -h * 0.08, Z1 + 0.003], 0.012, "#f2fbff");
       break;
     }
     default: {
@@ -242,7 +253,7 @@ function rackUnit(b, type, cy, fz, w, h, r) {
   // rack ears with a little handle
   b.mirrorX(() => {
     b.box(0.018, h * 0.84, 0.006, { at: [w / 2 - 0.013, cy, z + 0.002], color: "#aab2bc", kind: "metal", r: 0 });
-    b.box(0.008, h * 0.5, 0.012, { at: [w / 2 - 0.013, cy, z + 0.008], color: "#c9cfd6", kind: "metal", r: 0.002, seg: 1 });
+    b.box(0.008, h * 0.5, 0.012, { at: [w / 2 - 0.013, cy, z + 0.008], color: "#c9cfd6", kind: "metal", r: 0 });
   });
   const ledCol = () => (r() < 0.72 ? LED.green : r() < 0.6 ? LED.blue : LED.amber);
   const x0 = -w / 2 + 0.035, x1 = w / 2 - 0.035;
@@ -251,7 +262,7 @@ function rackUnit(b, type, cy, fz, w, h, r) {
       for (let i = 0; i < 4; i++) b.box(0.05, h * 0.36, 0.003, { at: [x0 + 0.03 + i * 0.058, cy, z], color: "#22262d", r: 0 });
       for (let i = 0; i < 4; i++) b.box(0.07, 0.003, 0.002, { at: [0.11, cy + (i - 1.5) * h * 0.17, z], color: "#2b3038", r: 0 });
       for (let i = 0; i < 3; i++) led(b, [x1 - 0.066 + i * 0.019, cy, z + 0.001], i === 0 ? LED.blue : ledCol(), 0.006);
-      dot(b, [x1 - 0.008, cy, z + 0.002], 0.0065, 0.004, { color: "#d4d9df", kind: "metal" });
+      dot(b, [x1 - 0.008, cy, z + 0.002], 0.0065, 0.004, { color: "#d4d9df", kind: "metal", seg: 10 });
       break;
     }
     case "server2":
@@ -264,7 +275,7 @@ function rackUnit(b, type, cy, fz, w, h, r) {
         b.box(bw * 0.55, 0.002, 0.002, { at: [cx - bw * 0.1, cyy, z + 0.002], color: "#3d434e", r: 0 });
         if (r() < 0.85) led(b, [cx + bw / 2 - 0.012, cyy, z + 0.0025], ledCol(), 0.0046);
       }
-      dot(b, [x1 - 0.012, cy + h * 0.2, z + 0.002], 0.008, 0.004, { color: "#d4d9df", kind: "metal" });
+      dot(b, [x1 - 0.012, cy + h * 0.2, z + 0.002], 0.008, 0.004, { color: "#d4d9df", kind: "metal", seg: 10 });
       led(b, [x1 - 0.012, cy - h * 0.2, z + 0.001], LED.blue);
       break;
     }
@@ -288,7 +299,7 @@ function rackUnit(b, type, cy, fz, w, h, r) {
         const side = sx < 0 ? -1 : 1;
         b.box(pw * 0.62, h * 0.24, 0.012, { at: [sx, sy, z + 0.006], color: cab[k], kind: "gloss", r: 0.002, seg: 1 });
         b.tube([[sx, sy, z + 0.012], [sx, sy - 0.012, z + 0.03], [sx + side * 0.03, sy - 0.05, z + 0.034],
-          [side * (w / 2 - 0.02), sy - 0.07 - k * 0.008, z + 0.018]], 0.0045, { color: cab[k], kind: "gloss", seg: 16, radial: 6 });
+          [side * (w / 2 - 0.02), sy - 0.07 - k * 0.008, z + 0.018]], 0.0045, { color: cab[k], kind: "gloss", seg: 12, radial: 5 });
       }
       break;
     }
@@ -328,18 +339,19 @@ export default {
     });
     // keyboard: a low base with three rows of chunky keys and a space bar
     const kz = 0.11, KW = 0.4, KD = 0.12, KH = 0.018;
-    b.box(KW, KH, KD, { at: [0, KH / 2, kz], color: shade(shell, -0.3), kind: "gloss", r: 0.007 });
+    const keyCol = isDark(shell) ? shade(shell, 0.16) : shell;
+    b.box(KW, KH, KD, { at: [0, KH / 2, kz], color: isDark(shell) ? shade(shell, -0.06) : shade(shell, -0.3), kind: "gloss", r: 0.007 });
     const pitch = 0.0345;
     for (let row = 0; row < 3; row++) {
       const z = kz - KD / 2 + 0.022 + row * 0.029;
       const n = row === 2 ? 10 : 11;
       for (let i = 0; i < n; i++) {
         const x = (i - (n - 1) / 2) * pitch + (row === 1 ? 0.006 : 0);
-        const accent = row === 0 && i === 0 ? "#ff8a5c" : row === 1 && i === n - 1 ? "#4fc3b0" : shell;
+        const accent = row === 0 && i === 0 ? "#ff8a5c" : row === 1 && i === n - 1 ? "#4fc3b0" : keyCol;
         b.box(0.028, 0.009, 0.024, { at: [x, KH + 0.004, z], color: accent, r: 0 });
       }
     }
-    b.box(0.17, 0.009, 0.022, { at: [0, KH + 0.004, kz + KD / 2 - 0.02], color: shell, r: 0 });
+    b.box(0.17, 0.009, 0.022, { at: [0, KH + 0.004, kz + KD / 2 - 0.02], color: keyCol, r: 0 });
     // mouse with its cable
     const mx = 0.255, mzz = kz + 0.005;
     b.sphere(1, { at: [mx, 0.001, mzz], scale: [0.03, 0.024, 0.044], thetaLength: PI / 2, color: shell, kind: "gloss", seg: 16 });
@@ -353,7 +365,7 @@ export default {
   // (p.text, or lines of code). color = casing.
   laptop(b, p) {
     const shell = p.color || "#c5cad1";
-    const keyCol = "#2c3038";
+    const keyCol = isDark(shell) ? shade(shell, 0.2) : "#2c3038";
     const r = randomFor(b, p);
     const text = textOf(b, p.text);
     const BW = 0.36, BD = 0.235, BT = 0.016, lift = 0.004, hz = -0.1, bz = hz + BD / 2;
@@ -398,7 +410,7 @@ export default {
     const inner = W - 2 * side;
     b.box(inner, sh, 0.02, { at: [0, foot + plinth + sh / 2, -D / 2 + 0.03], color: "#16191e", r: 0 });
     const fz = D / 2 - 0.03; // front of the unit faces
-    b.mirrorX(() => b.box(0.02, sh - 0.02, 0.02, { at: [inner / 2 - 0.01, foot + plinth + sh / 2, fz - 0.012], color: "#8d959f", kind: "metal", r: 0.003 }));
+    b.mirrorX(() => b.box(0.02, sh - 0.02, 0.02, { at: [inner / 2 - 0.01, foot + plinth + sh / 2, fz - 0.012], color: "#8d959f", kind: "metal", r: 0.003, seg: 1 }));
     const units = [["switch", 1], ["server", 1], ["server", 1], ["server2", 2], ["blank", 1], ["server", 1], ["server2", 2],
       ["server", 1], ["storage", 3], ["blank", 1], ["ups", 2]];
     const total = units.reduce((s, u) => s + u[1], 0);
@@ -537,17 +549,17 @@ export default {
         thread.push([0.0455, y], [0.05, y + 0.0045], [0.0505, y + 0.0068], [0.05, y + 0.009], [0.0455, y + 0.0135]);
       }
       thread.push([0.047, 0.114], [0.0, 0.114]);
-      b.lathe(thread, { ...metal, seg: 26 });
+      b.lathe(thread, { ...metal, seg: 20 });
       b.cyl(0.048, 0.05, 0.01, { at: [0, 0.117, 0], ...metal, seg: 26 });
       // glass envelope
       const glass = smoothProfile([[0.045, 0.118], [0.05, 0.145], [0.068, 0.19], [0.096, 0.235], [0.112, 0.282], [0.113, 0.322],
-        [0.099, 0.362], [0.068, 0.389], [0.03, 0.399], [0.0, 0.4]], 22);
+        [0.099, 0.362], [0.068, 0.389], [0.03, 0.399], [0.0, 0.4]], 18);
       if (on) {
         const core = glass.map(([rr, y]) => [rr * 0.93, 0.28 + (y - 0.28) * 0.95]);
-        b.lathe(core, { color: glowCol, kind: "glow", seg: 28 });
-        b.lathe(glass, { color: glowCol, kind: "glass", seg: 28 });
+        b.lathe(core, { color: glowCol, kind: "glow", seg: 24 });
+        b.lathe(glass, { color: glowCol, kind: "glass", seg: 24 });
       } else {
-        b.lathe(glass, { color: "#dfeef3", kind: "glass", seg: 28 });
+        b.lathe(glass, { color: "#dfeef3", kind: "glass", seg: 24 });
         // glass stem, support wires and a coiled filament
         b.cyl(0.006, 0.014, 0.08, { at: [0, 0.16, 0], color: "#e9f2f4", kind: "gloss", seg: 10 });
         b.mirrorX(() => b.rod([0.004, 0.19, 0], [0.032, 0.268, 0], 0.0018, { color: "#7c7f86", kind: "metal", seg: 5 }));
@@ -615,12 +627,12 @@ export default {
       const ya = levels[k], yb = levels[k + 1], ha = half(ya), hb = half(yb);
       const col = k % 2 ? white : red;
       const P = (c, y, h) => [c[0] * h, y, c[1] * h];
-      for (const c of corners) b.rod(P(c, ya, ha), P(c, yb, hb), 0.0085, { color: col, seg: 6 });
+      for (const c of corners) b.rod(P(c, ya, ha), P(c, yb, hb), 0.011, { color: col, seg: 6 });
       for (let f = 0; f < 4; f++) {
         const c0 = corners[f], c1 = corners[(f + 1) % 4];
-        b.rod(P(c0, ya, ha), P(c1, yb, hb), 0.0042, { color: col, seg: 5 });
-        b.rod(P(c1, ya, ha), P(c0, yb, hb), 0.0042, { color: col, seg: 5 });
-        b.rod(P(c0, yb, hb), P(c1, yb, hb), 0.005, { color: col, seg: 5 });
+        b.rod(P(c0, ya, ha), P(c1, yb, hb), 0.0052, { color: col, seg: 5 });
+        b.rod(P(c1, ya, ha), P(c0, yb, hb), 0.0052, { color: col, seg: 5 });
+        b.rod(P(c0, yb, hb), P(c1, yb, hb), 0.0065, { color: col, seg: 5 });
       }
     }
     for (const c of corners) b.box(0.03, 0.02, 0.03, { at: [c[0] * a0, base + 0.01, c[1] * a0], color: "#9a9488", r: 0.004, seg: 1 });
@@ -733,6 +745,17 @@ export default {
       b.lathe(prof, { color: col, kind: "gloss", seg: 28 });
       b.lathe(prof.slice().reverse().map(([rr, y]) => [Math.max(0, rr - 0.004), y]), { color: inner, seg: 28 });
       b.torus(0.0838, 0.0065, { at: [0, L, 0], rot: [PI / 2, 0, 0], color: C.white, kind: "gloss", seg: 32, tubeSeg: 8 });
+      // a white band painted around the horn
+      const rAt = (y) => {
+        for (let i = 1; i < prof.length; i++) {
+          if (prof[i][1] >= y) {
+            const [r0, y0] = prof[i - 1], [r1, y1] = prof[i];
+            return r0 + ((r1 - r0) * (y - y0)) / (y1 - y0);
+          }
+        }
+        return prof[prof.length - 1][0];
+      };
+      b.lathe([0.15, 0.161, 0.172, 0.183].map((y) => [rAt(y) + 0.0016, y]), { color: C.white, kind: "gloss", seg: 28 });
       // speaker grille: a dark disc with silver rings and a cap, set into the throat
       const gy = 0.08, gr = 0.041;
       b.cyl(gr, gr, 0.006, { at: [0, gy, 0], color: "#24272d", seg: 22 });
@@ -927,52 +950,56 @@ export default {
     const beam = "#ffd84a";
     const zc = -0.055, hub = 0.17, py = 0.36, R = 0.062, Lc = 0.15, e = 0.62;
     const yokeY = py - 0.112; // below the swing of the can's back end
-    // tripod with spreaders, and the column up to the yoke
-    for (const a of [-PI / 2, PI / 6, (5 * PI) / 6]) {
-      const fx = Math.cos(a) * 0.1, fz = zc + Math.sin(a) * 0.1;
-      b.rod([0, hub, zc], [fx, 0.012, fz], 0.0075, { ...steel, seg: 8 });
-      b.sphere(0.013, { at: [fx, 0.008, fz], scale: [1, 0.6, 1], color: RUBBER, seg: 10 });
-      const t = 0.55;
-      b.rod([0, 0.09, zc], [fx * t, hub + (0.012 - hub) * t, zc + (fz - zc) * t], 0.0045, { ...steel, seg: 6 });
-    }
-    b.cyl(0.018, 0.018, 0.03, { at: [0, hub, zc], color: "#3a3d44", seg: 12 });
-    b.cyl(0.008, 0.008, hub - 0.07, { at: [0, (hub + 0.07) / 2, zc], ...steel, seg: 8 });
-    b.cyl(0.011, 0.011, yokeY - hub, { at: [0, (hub + yokeY) / 2, zc], ...steel, seg: 10 });
-    b.cyl(0.016, 0.016, 0.02, { at: [0, yokeY - 0.015, zc], color: "#3a3d44", seg: 12 });
-    // U-yoke with pivot knobs, panned towards the front right so the beam shows from the front
-    const pan = 0.85;
-    b.group({ at: [0, 0, zc], rot: [0, pan, 0] }, () => {
-      b.box(0.178, 0.016, 0.03, { at: [0, yokeY, 0], color: can, r: 0.006 });
-      b.mirrorX(() => {
-        b.box(0.014, py - yokeY + 0.012, 0.03, { at: [0.082, (py + yokeY) / 2, 0], color: can, r: 0.005, seg: 1 });
-        b.cyl(0.016, 0.016, 0.02, { at: [0.092, py, 0], rot: [0, 0, PI / 2], color: "#c9cfd6", kind: "metal", seg: 14 });
-      });
-      // the lamp can, tilted e above the horizon (local +y is the beam direction)
-      b.group({ at: [0, py, 0], rot: [PI / 2 - e, 0, 0] }, () => {
-        b.cyl(R, R, Lc, { color: can, seg: 24 });
-        for (let i = 0; i < 4; i++) b.cyl(R + 0.005, R + 0.005, 0.008, { at: [0, -Lc / 2 + 0.018 + i * 0.016, 0], color: shade(can, 0.06), seg: 24 });
-        b.cyl(R * 0.7, R * 0.85, 0.02, { at: [0, -Lc / 2 - 0.008, 0], color: shade(can, 0.04), seg: 20 });
-        b.torus(0.024, 0.005, { at: [0, 0.0, -R - 0.012], rot: [0, PI / 2, 0], color: shade(can, 0.1), seg: 12, tubeSeg: 5, arc: PI });
-        ring(b, R - 0.012, R + 0.004, Lc / 2 - 0.004, Lc / 2 + 0.01, { color: shade(can, -0.05), seg: 24 });
-        b.cyl(R - 0.01, R - 0.01, 0.004, { at: [0, Lc / 2 + 0.004, 0], color: "#fff7d6", kind: "glow", seg: 24 });
-        // barn doors, opened wider than the beam
-        const yE = Lc / 2 + 0.01, phi = 0.62;
-        for (const s of [-1, 1]) {
-          const len = 0.055;
-          b.box(2 * R * 0.95, len, 0.004, { at: [0, yE + (Math.cos(phi) * len) / 2, s * (R + 0.002 + (Math.sin(phi) * len) / 2)],
-            rot: [s * phi, 0, 0], color: can, r: 0 });
-        }
-        for (const s of [-1, 1]) {
-          const len = 0.045;
-          b.box(0.004, len, 2 * R * 0.75, { at: [s * (R + 0.002 + (Math.sin(phi) * len) / 2), yE + (Math.cos(phi) * len) / 2, 0],
-            rot: [0, 0, -s * phi], color: can, r: 0 });
-        }
-        // beam: nested open cones, denser near the lens so it fades out
-        const L0 = Lc / 2 + 0.006, Lb = 0.15;
-        for (const [k, sc] of [[1, 1], [0.66, 0.84], [0.36, 0.68]]) {
-          const len = Lb * k, r0 = (R - 0.012) * sc, r1 = r0 + len * 0.5;
-          b.cyl(r1, r0, len, { at: [0, L0 + len / 2, 0], color: beam, kind: "glass", open: true, seg: 24 });
-        }
+    b.group({ at: [-0.04, 0, 0] }, () => {
+      // tripod with spreaders, and the column up to the yoke
+      for (const a of [-PI / 2, PI / 6, (5 * PI) / 6]) {
+        const fx = Math.cos(a) * 0.1, fz = zc + Math.sin(a) * 0.1;
+        b.rod([0, hub, zc], [fx, 0.012, fz], 0.0075, { ...steel, seg: 8 });
+        b.sphere(0.013, { at: [fx, 0.008, fz], scale: [1, 0.6, 1], color: RUBBER, seg: 10 });
+        const t = 0.55;
+        b.rod([0, 0.09, zc], [fx * t, hub + (0.012 - hub) * t, zc + (fz - zc) * t], 0.0045, { ...steel, seg: 6 });
+      }
+      b.cyl(0.018, 0.018, 0.03, { at: [0, hub, zc], color: "#3a3d44", seg: 12 });
+      b.cyl(0.008, 0.008, hub - 0.07, { at: [0, (hub + 0.07) / 2, zc], ...steel, seg: 8 });
+      b.cyl(0.011, 0.011, yokeY - hub, { at: [0, (hub + yokeY) / 2, zc], ...steel, seg: 10 });
+      b.cyl(0.016, 0.016, 0.02, { at: [0, yokeY - 0.015, zc], color: "#3a3d44", seg: 12 });
+      // U-yoke with pivot knobs, panned towards the front right so the beam shows from the front
+      const pan = 0.85;
+      b.group({ at: [0, 0, zc], rot: [0, pan, 0] }, () => {
+        b.box(0.178, 0.016, 0.03, { at: [0, yokeY, 0], color: can, r: 0.006 });
+        b.mirrorX(() => {
+          b.box(0.014, py - yokeY + 0.012, 0.03, { at: [0.082, (py + yokeY) / 2, 0], color: can, r: 0.005, seg: 1 });
+          b.cyl(0.016, 0.016, 0.02, { at: [0.092, py, 0], rot: [0, 0, PI / 2], color: "#c9cfd6", kind: "metal", seg: 14 });
+        });
+        // the lamp can, tilted e above the horizon (local +y is the beam direction)
+        b.group({ at: [0, py, 0], rot: [PI / 2 - e, 0, 0] }, () => {
+          b.cyl(R, R, Lc, { color: can, seg: 24 });
+          for (let i = 0; i < 4; i++) b.cyl(R + 0.005, R + 0.005, 0.008, { at: [0, -Lc / 2 + 0.018 + i * 0.016, 0], color: shade(can, 0.06), seg: 24 });
+          b.cyl(R * 0.7, R * 0.85, 0.02, { at: [0, -Lc / 2 - 0.008, 0], color: shade(can, 0.04), seg: 20 });
+          b.torus(0.024, 0.005, { at: [0, 0.0, -R - 0.012], rot: [0, PI / 2, 0], color: shade(can, 0.1), seg: 12, tubeSeg: 5, arc: PI });
+          ring(b, R - 0.012, R + 0.004, Lc / 2 - 0.004, Lc / 2 + 0.01, { color: shade(can, -0.05), seg: 24 });
+          b.cyl(R - 0.01, R - 0.01, 0.004, { at: [0, Lc / 2 + 0.004, 0], color: "#fff7d6", kind: "glow", seg: 24 });
+          // barn doors, opened wider than the beam
+          const yE = Lc / 2 + 0.01, phi = 0.62;
+          for (const s of [-1, 1]) {
+            const len = 0.055;
+            b.box(2 * R * 0.95, len, 0.004, { at: [0, yE + (Math.cos(phi) * len) / 2, s * (R + 0.002 + (Math.sin(phi) * len) / 2)],
+              rot: [s * phi, 0, 0], color: can, r: 0 });
+          }
+          for (const s of [-1, 1]) {
+            const len = 0.045;
+            b.box(0.004, len, 2 * R * 0.75, { at: [s * (R + 0.002 + (Math.sin(phi) * len) / 2), yE + (Math.cos(phi) * len) / 2, 0],
+              rot: [0, 0, -s * phi], color: can, r: 0 });
+          }
+          // beam: an open cone with an outside and an inside surface (so it shows even when it points at the
+          // viewer), and a shorter core cone near the lens so it is denser there and fades out
+          const L0 = Lc / 2 + 0.006, Lb = 0.15, r0 = R - 0.012, r1 = r0 + Lb * 0.5;
+          const glass = { color: beam, kind: "glass", seg: 24 };
+          b.lathe([[r0, L0], [r1, L0 + Lb]], glass);
+          b.lathe([[r1, L0 + Lb], [r0, L0]], glass);
+          const Lm = Lb * 0.55, rm0 = r0 * 0.78;
+          b.lathe([[rm0, L0], [rm0 + Lm * 0.5, L0 + Lm]], glass);
+        });
       });
     });
   },
