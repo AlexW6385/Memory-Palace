@@ -402,7 +402,7 @@ export default {
       lines(1);
       if (text) {
         b.group({ at: [-0.13, pageY(0.13) + 0.0028, -0.006], rot: [0, 0, ang] }, () => {
-          b.text(text, { rot: [-PI / 2, 0, 0], w: 0.18, h: 0.25, fg: INK, font: "display" });
+          b.text(text, { rot: [-PI / 2, 0, 0], w: 0.18, h: 0.25, fg: "#1f2128", font: "display", weight: "600" });
         });
       } else lines(-1);
       // ribbon bookmark lying in the gutter and hanging over the front edge
@@ -614,8 +614,8 @@ export default {
     b.geo(surface(32, 4, (u, v) => [-W / 2 + u * W, y0 + v * H, zc(u) + 0.0025]), { color: cloth });
     b.geo(surface(32, 4, (u, v) => [-W / 2 + u * W, y0 + v * H, zc(u) - 0.0025], { flip: true }), { color: shade(cloth, -0.06) });
     const along = (y, n = 24) => Array.from({ length: n + 1 }, (_, i) => [-W / 2 + (i / n) * W, y, zc(i / n)]);
-    b.tube(along(y0 + H), 0.009, { color: shade(cloth, -0.1), radial: 8 });
-    b.tube(along(y0), 0.006, { color: GOLD, kind: "metal", radial: 6 });
+    b.tube(along(y0 + H), 0.009, { color: shade(cloth, -0.1), radial: 8, seg: 48 });
+    b.tube(along(y0), 0.006, { color: GOLD, kind: "metal", radial: 6, seg: 48 });
     for (const s of [-1, 1]) {
       for (const y of [y0 + 0.02, y0 + H - 0.02]) {
         b.torus(0.025, 0.005, { at: [s * X, y, 0], rot: [PI / 2, 0, 0], color: "#e2cc8f", seg: 16, tubeSeg: 6 });
@@ -678,7 +678,7 @@ export default {
       [0, 1, 0, [-PI / 2, 0, 0]]];
     for (const [nx, ny, nz, rot] of faces) {
       b.group({ at: [nx * h, h + ny * h, nz * h], rot }, () => {
-        rectFrame(b, s - 0.05, s - 0.05, 0.012, [0, 0, 0.0015], { color: trim, depth: 0.004, r: 0.003 });
+        rectFrame(b, s - 0.05, s - 0.05, 0.012, [0, 0, 0.0015], { color: trim, depth: 0.004 });
         b.text(letter, { at: [0, 0, 0.003], w: s - 0.07, h: s - 0.07, fg: ink, font: "display", weight: "700" });
       });
     }
@@ -929,11 +929,11 @@ export default {
         post(yc - R - 0.02);
         const g = mobiusGeo(R, w, 0.011);
         g.rotateZ(turn);
-        g.rotateY(1.2);
+        g.rotateY(0.75);
         g.translate(0, yc, 0);
         b.geo(g, o);
         const edge = [];
-        const m = new THREE.Matrix4().makeTranslation(0, yc, 0).multiply(new THREE.Matrix4().makeRotationY(1.2))
+        const m = new THREE.Matrix4().makeTranslation(0, yc, 0).multiply(new THREE.Matrix4().makeRotationY(0.75))
           .multiply(new THREE.Matrix4().makeRotationZ(turn));
         for (let i = 0; i < 200; i++) edge.push(new THREE.Vector3(...mobiusPoint(R, w, (i / 200) * 2 * TAU)).applyMatrix4(m).toArray());
         b.tube(edge, 0.0055, { closed: true, color: col, kind: "gloss", seg: 300, radial: 6 });

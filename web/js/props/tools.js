@@ -59,7 +59,7 @@ function hue(c, dh, ds = 0, dl = 0) {
 }
 
 /** Contents seen through glass: pre-darken and saturate so the light glass layer brings them back to tone. */
-const inGlass = (c) => hue(c, 0, 0.2, -0.14);
+const inGlass = (c) => hue(c, 0, 0.25, -0.18);
 
 /** Points of a smooth open profile through control points (centripetal Catmull-Rom). */
 function smooth(pts, n = 16) {
@@ -776,18 +776,19 @@ const TOOLS = {
   // Variant sets the level: hot (red, high), mid, cold (blue, low).
   thermometer(b, p) {
     const v = p.variant || "mid";
-    const liquid = inGlass(v === "hot" ? "#e3342b" : v === "cold" ? "#2f86e0" : "#ec6a2c");
+    const liquid = v === "hot" ? "#e3342b" : v === "cold" ? "#2f86e0" : "#ec6a2c";
     const level = v === "hot" ? 0.5 : v === "cold" ? 0.18 : 0.34;
     b.box(0.12, 0.028, 0.05, { at: [0, 0.014, 0], color: "#3f5f8c", kind: "gloss", r: 0.01 });
     b.box(0.105, 0.57, 0.02, { at: [0, 0.31, -0.008], color: "#3f5f8c", kind: "gloss", r: 0.012 });
     b.box(0.09, 0.545, 0.006, { at: [0, 0.313, 0.004], color: C.white, kind: "gloss", r: 0.003, seg: 1 });
     // tube and bulb
     const z = 0.016;
-    b.capsule(0.0095, 0.43, { at: [0, 0.335, z], color: "#e8f6fb", kind: "glass", seg: 12 });
-    b.sphere(0.023, { at: [0, 0.095, z], color: liquid, kind: "gloss", seg: 18 });
-    b.sphere(0.0265, { at: [0, 0.095, z], color: "#e8f6fb", kind: "glass", seg: 18 });
-    b.cyl(0.0058, 0.0058, level - 0.1, { at: [0, (level + 0.1) / 2, z], color: liquid, kind: "gloss", seg: 10 });
-    b.sphere(0.0058, { at: [0, level, z], color: liquid, kind: "gloss", seg: 8 });
+    // the capillary is drawn as an opaque pale channel so the coloured column stays crisp
+    b.capsule(0.0092, 0.43, { at: [0, 0.335, z - 0.003], color: "#eef7fb", kind: "gloss", seg: 12 });
+    b.sphere(0.024, { at: [0, 0.095, z], color: liquid, kind: "gloss", seg: 18 });
+    b.cyl(0.0068, 0.0068, level - 0.1, { at: [0, (level + 0.1) / 2, z + 0.0012], color: liquid, kind: "gloss", seg: 10 });
+    b.sphere(0.0068, { at: [0, level, z + 0.0012], color: liquid, kind: "gloss", seg: 8 });
+    b.box(0.0025, 0.4, 0.002, { at: [0.0052, 0.34, z + 0.0075], color: "#ffffff", kind: "glow", light: false, r: 0 });
     b.sphere(0.0055, { at: [-0.009, 0.104, z + 0.017], color: "#ffffff", kind: "glow", light: false, seg: 6 });
     // ticks on the left, colour strip on the right
     for (let i = 0; i <= 12; i++) {

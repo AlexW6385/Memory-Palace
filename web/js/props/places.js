@@ -507,9 +507,9 @@ function arrowBoard(b, y, dir, str, wood, ink) {
 /** The C-shaped sun visor over a traffic-light lamp, sticking out towards +z from `at`. */
 function visor(b, at, color) {
   const s = new THREE.Shape();
-  s.absarc(0, 0, 0.057, -0.28, PI + 0.28, false);
-  s.absarc(0, 0, 0.05, PI + 0.28, -0.28, true);
-  b.extrude(s, 0.05, { at: [at[0], at[1], at[2] + 0.027], color, bevel: 0.002, curveSeg: 8 });
+  s.absarc(0, 0, 0.057, -0.2, PI + 0.2, false);
+  s.absarc(0, 0, 0.05, PI + 0.2, -0.2, true);
+  b.extrude(s, 0.036, { at: [at[0], at[1], at[2] + 0.02], color, bevel: 0.002, curveSeg: 5 });
 }
 
 // ── market goods ─────────────────────────────────────────────────────────────
@@ -655,7 +655,7 @@ export default {
     const stone = p.color || STONE;
     const R = randomFor(b, p, 3);
     const L = 1.26, Dz = 0.38, span = 0.3, rise = 0.21, bev = 0.008;
-    const deck = (x) => 0.29 + 0.055 * Math.cos((x / (L / 2)) * (PI / 2));
+    const deck = (x) => 0.268 + 0.08 * Math.cos((x / (L / 2)) * (PI / 2));
     const n = 18;
     const body = [[-L / 2, 0], [-span, 0]];
     for (let i = 1; i < n; i++) {
@@ -762,16 +762,16 @@ export default {
           keep: (x, y, w, h) => Math.hypot(x, Math.max(0, y - ys)) > a + 0.13 && (y > ys || Math.abs(x) > a + 0.05) });
       });
     }
-    // raised portcullis inside the arch
-    const iron = { color: "#3d3b3a", kind: "metal" };
+    // the teeth of a raised portcullis just showing under the crown
+    const iron = { color: "#55514c", kind: "metal" };
+    const yb0 = ys + 0.1;
     for (let i = -3; i <= 3; i++) {
-      const x = i * 0.06, yt = ys + Math.sqrt(a * a - x * x) - 0.014, y0 = ys - 0.09;
-      b.box(0.012, yt - y0, 0.012, { at: [x, (yt + y0) / 2, 0], ...iron, r: 0 });
-      b.cone(0.009, 0.03, { at: [x, y0 - 0.015, 0], rot: [PI, 0, 0], ...iron, seg: 6 });
+      const x = i * 0.058, yt = ys + Math.sqrt(a * a - x * x) - 0.01;
+      b.box(0.013, yt - yb0, 0.013, { at: [x, (yt + yb0) / 2, 0], ...iron, r: 0 });
+      b.cone(0.01, 0.034, { at: [x, yb0 - 0.017, 0], rot: [PI, 0, 0], ...iron, seg: 6 });
     }
-    for (const y of [ys - 0.06, ys + 0.04, ys + 0.13]) {
-      const hw = y < ys ? a - 0.012 : Math.sqrt(a * a - (y - ys) ** 2) - 0.012;
-      b.box(2 * hw, 0.012, 0.01, { at: [0, y, 0], ...iron, r: 0 });
+    for (const y of [yb0 + 0.02, yb0 + 0.09]) {
+      b.box(2 * (Math.sqrt(a * a - (y - ys) ** 2) - 0.01), 0.013, 0.011, { at: [0, y, 0], ...iron, r: 0 });
     }
   },
 
@@ -804,8 +804,10 @@ export default {
       const flare = (1 - v) ** 3 * 0.03;
       return [lerp(W, 0, v) - nx * s + flare, lerp(0, H, v) - ny * s, lerp(-L / 2, L / 2, u)];
     };
+    const hem = 0.07; // a darker hem along the pegged edge
     b.mirrorX(() => {
-      b.geo(gridGeo(8, 6, panel, true), { color: cloth });
+      b.geo(gridGeo(8, 5, (u, v) => panel(u, lerp(hem, 1, v)), true), { color: cloth });
+      b.geo(gridGeo(8, 1, (u, v) => panel(u, lerp(0, hem, v)), true), { color: shade(cloth, -0.13) });
       b.geo(gridGeo(8, 6, panel, false), { color: inner });
     });
     // gables: the back closed, the front with an A-shaped doorway and folded-back flaps
@@ -821,19 +823,19 @@ export default {
         bevel: 0.002, curveSeg: 1 });
       b.sphere(0.011, { at: [dW + 0.035, 0.2, L / 2 + 0.012], color: shade(cloth, -0.2), seg: 8 });
     });
-    // ridge seam, poles, guy ropes and pegs
+    // ridge seam, poles (just inside the gables, showing above the ridge), guy ropes and pegs
     b.cyl(0.011, 0.011, L + 0.02, { at: [0, H + 0.004, 0], rot: [PI / 2, 0, 0], color: shade(cloth, -0.16), seg: 8 });
     for (const s of [-1, 1]) {
-      const z = s * (L / 2 + 0.012);
+      const z = s * (L / 2 - 0.03);
       b.cyl(0.011, 0.011, H + 0.06, { at: [0, (H + 0.06) / 2, z], color: C.wood, seg: 8 });
       b.sphere(0.016, { at: [0, H + 0.066, z], color: C.darkWood, seg: 8 });
-      b.rod([0, H + 0.035, z], [0, 0.012, s * 0.39], 0.003, { color: ROPE, seg: 4 });
+      b.rod([0, H + 0.04, z], [0, 0.012, s * 0.39], 0.003, { color: ROPE, seg: 4 });
       b.cyl(0.006, 0.003, 0.04, { at: [0, 0.016, s * 0.395], color: "#8d9097", seg: 5 });
       for (const sx of [-1, 1]) {
         b.cyl(0.005, 0.003, 0.035, { at: [sx * (W + 0.035), 0.014, s * (L / 2 - 0.03)], color: "#8d9097", seg: 5 });
       }
     }
-    b.group({ at: [0.011, H + 0.03, L / 2 + 0.012] }, () => flagCloth(b, 0.085, 0.05, { color: C.yellow, tri: true }));
+    b.group({ at: [0.011, H + 0.035, L / 2 - 0.03] }, () => flagCloth(b, 0.085, 0.05, { color: C.yellow, tri: true }));
   },
 
   // A wooden signpost with arrow boards; text "A|B" (up to three parts) is lettered on the boards, blank boards
@@ -861,13 +863,15 @@ export default {
     b.box(0.2, 0.43, 0.012, { at: [0, 0.885, -0.058], color: "#f2f0ea", r: 0.004, seg: 1 });
     b.box(0.18, 0.41, 0.014, { at: [0, 0.885, -0.054], color: body, r: 0.004, seg: 1 });
     b.box(0.13, 0.37, 0.1, { at: [0, 0.885, 0], color: body, r: 0.024 });
-    const ON = { red: "#ff3b2f", yellow: "#ffb520", green: "#2fd47a" };
-    const OFF = { red: "#4d2422", yellow: "#4d4120", green: "#1d4231" };
+    const ON = { red: "#ff3b2f", yellow: "#ffb21c", green: "#22d870" };
+    const OFF = { red: "#46201f", yellow: "#453a1c", green: "#1a3b2c" };
     ["red", "yellow", "green"].forEach((c, i) => {
       const y = 1.0 - i * 0.115, on = c === v;
-      b.sphere(0.042, { at: [0, y, 0.043], scale: [1, 1, 0.42], color: on ? ON[c] : OFF[c], kind: on ? "glow" : "gloss",
-        seg: 16, light: on });
-      b.torus(0.044, 0.006, { at: [0, y, 0.05], color: "#1f2226", seg: 18, tubeSeg: 5 });
+      b.sphere(0.043, { at: [0, y, 0.043], scale: [1, 1, 0.45], color: on ? ON[c] : OFF[c], kind: on ? "glow" : "gloss",
+        seg: 14, light: on });
+      if (on) b.sphere(0.022, { at: [0, y + 0.004, 0.057], scale: [1, 1, 0.4], color: mix(ON[c], "#ffffff", 0.55),
+        kind: "glow", seg: 10, light: false });
+      b.torus(0.044, 0.006, { at: [0, y, 0.05], color: "#1f2226", seg: 16, tubeSeg: 4 });
       visor(b, [0, y, 0.05], body);
     });
   },
@@ -931,14 +935,14 @@ export default {
     const paint = p.color || "#e2553f";
     const glass = "#3d5a78";
     b.box(0.33, 0.15, 0.66, { at: [0, 0.145, 0], color: paint, r: 0.055 });
-    b.extrude([[0.2, 0.2], [-0.13, 0.2], [-0.07, 0.33], [0.14, 0.33]], 0.25,
+    b.extrude([[0.2, 0.2], [-0.125, 0.2], [-0.04, 0.322], [0.145, 0.322]], 0.24,
       { rot: [0, PI / 2, 0], color: glass, kind: "gloss", bevel: 0.012, curveSeg: 1 });
-    b.box(0.29, 0.03, 0.24, { at: [0, 0.342, -0.035], r: 0.013, color: paint });
+    b.box(0.278, 0.03, 0.222, { at: [0, 0.336, -0.05], r: 0.014, color: paint });
     b.mirrorX(() => {
-      b.rod([0.13, 0.205, 0.128], [0.13, 0.338, 0.068], 0.011, { color: paint, seg: 6 });
-      b.rod([0.13, 0.205, -0.198], [0.13, 0.338, -0.138], 0.011, { color: paint, seg: 6 });
-      b.rod([0.134, 0.205, -0.035], [0.134, 0.338, -0.035], 0.01, { color: paint, seg: 6 });
-      block(b, 0.022, 0.018, 0.012, { at: [0.16, 0.235, 0.118], color: paint, bevel: 0.004 });
+      b.rod([0.126, 0.205, 0.124], [0.126, 0.333, 0.036], 0.011, { color: paint, seg: 6 });
+      b.rod([0.126, 0.205, -0.203], [0.126, 0.333, -0.143], 0.011, { color: paint, seg: 6 });
+      b.rod([0.13, 0.205, -0.045], [0.13, 0.333, -0.045], 0.01, { color: paint, seg: 6 });
+      block(b, 0.022, 0.018, 0.012, { at: [0.155, 0.235, 0.112], color: paint, bevel: 0.004 });
     });
     for (const sx of [-1, 1]) {
       for (const sz of [-1, 1]) {
@@ -1028,7 +1032,7 @@ export default {
     const hull = p.color || (v === "row" ? "#b9773f" : "#2f6fb2");
     const H = HULL;
     boatHull(b, H, { hull, band: v === "row" ? "#f1e6cf" : TRIM, inner: C.lightWood, rail: C.wood,
-      transom: v === "row" ? shade(hull, -0.05) : TRIM });
+      transom: v === "row" ? shade(C.lightWood, -0.08) : TRIM });
     for (const t of [0.3, 0.62]) {
       const z = lerp(H.z0, H.z1, t), y = hullTop(H, t) - 0.05;
       const hw = hullInnerHalf(H, t, 0.05);
@@ -1050,27 +1054,26 @@ export default {
           return [lerp(-half, half, u), lerp(0.31, 0.7, vv), mz + 0.02 + bulge];
         }, { color: col });
       }
-      for (const [x, y, z] of [[0, 0.22, 0.385], [0, 0.2, -0.36], [0.14, 0.18, 0.02], [-0.14, 0.18, 0.02]]) {
+      for (const [x, y, z] of [[0, 0.2, -0.36], [0.14, 0.18, 0.02], [-0.14, 0.18, 0.02]]) {
         b.rod([0, 0.78, mz], [x, y, z], 0.0025, { color: "#5a4a3c", seg: 4 });
       }
       b.group({ at: [0.012, 0.77, mz], rot: [0, -0.5, 0] }, () => flagCloth(b, 0.11, 0.05, { color: hull, tri: true }));
     } else {
-      // oars resting in their locks, blades trailing in the water behind
+      // a pair of oars shipped along the thwarts, blades aft, and their rowlocks on the gunwales
       b.mirrorX(() => {
-        const A = [0.035, 0.205, 0.17], B = [0.198, 0.07, -0.25];
-        const d = [B[0] - A[0], B[1] - A[1], B[2] - A[2]];
-        const S = [A[0] + d[0] * 0.72, A[1] + d[1] * 0.72, A[2] + d[2] * 0.72];
-        b.rod(A, S, 0.008, { color: C.lightWood, seg: 6 });
-        b.group({ at: [A[0] + d[0] * 0.86, A[1] + d[1] * 0.86, A[2] + d[2] * 0.86], ...towards(d) }, () =>
-          block(b, 0.008, 0.045, 0.13, { color: C.lightWood, bevel: 0.003 }));
+        const A = [0.03, 0.16, 0.2], B = [0.052, 0.139, -0.215], d = [B[0] - A[0], B[1] - A[1], B[2] - A[2]];
+        b.rod(A, B, 0.009, { color: C.lightWood, seg: 6 });
+        b.sphere(0.011, { at: A, color: shade(C.lightWood, -0.1), seg: 6 });
+        b.group({ at: [0.056, 0.135, -0.28], ...towards(d) }, () =>
+          b.sphere(1, { scale: [0.028, 0.006, 0.072], color: C.lightWood, seg: 10 }));
         const lock = hullPt(H, 0.5, PI / 2);
         b.torus(0.012, 0.0035, { at: [lock[0], lock[1] + 0.012, lock[2]], rot: [0, PI / 2, 0], ...METAL, seg: 10, tubeSeg: 4 });
       });
-      // a lantern hung from a pole at the stern
+      // a lantern hung from a crook-topped pole at the stern
       const zs = H.z0 + 0.035;
-      b.cyl(0.008, 0.009, 0.5, { at: [0, 0.4, zs], color: C.darkWood, seg: 6 });
-      b.rod([0, 0.64, zs], [0, 0.645, zs - 0.07], 0.006, { color: C.darkWood, seg: 6 });
-      hangingLantern(b, [0, 0.632, zs - 0.065], 1);
+      b.tube([[0, 0.1, zs], [0, 0.4, zs], [0, 0.6, zs], [0, 0.655, zs + 0.025], [0, 0.66, zs + 0.075], [0, 0.635, zs + 0.1]],
+        0.008, { color: C.darkWood, seg: 40, radial: 6 });
+      hangingLantern(b, [0, 0.628, zs + 0.1], 1.35);
     }
   },
 
