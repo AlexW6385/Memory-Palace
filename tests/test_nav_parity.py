@@ -9,7 +9,6 @@ import pytest
 
 from palace.nav import Nav
 from palace.world import build_world
-from tests.factory import make_city
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -25,14 +24,12 @@ console.log(JSON.stringify(out));
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
 def test_js_and_python_agree(tmp_path):
-    world = build_world(make_city([("a", "spiral", 3, 2, 4), ("c", "terraces", 4, 2, 4), ("e", "radial", 3, 2, 4)]))
+    world = build_world()
     nav = Nav(world["nav"]["surfaces"], world["nav"]["colliders"])
     rng = random.Random(1)
     samples = []
-    for so in world["buildings"]:
-        cx, cz = world["plots"][so["plot"]]["center"]
-        for _ in range(1500):
-            samples.append([cx + rng.uniform(-100, 100), cz + rng.uniform(-100, 100), rng.choice([0, 0.2, 0.5, 4.5, 9, 12])])
+    for _ in range(6000):
+        samples.append([rng.uniform(-40, 75), rng.uniform(-130, 95), rng.choice([0, 0.15, 0.3, 0.6, 0.9, 1.2, 1.5, 1.8])])
     (tmp_path / "data.json").write_text(json.dumps({"nav": world["nav"], "samples": samples}))
     script = tmp_path / "check.mjs"
     script.write_text(NODE_SCRIPT % (ROOT / "web" / "js" / "nav.js").as_uri())

@@ -35,6 +35,14 @@ export class MapView {
         case "helix": rings.push({ x: p.c[0], z: p.c[1], r0: p.r0, r1: p.r1, segs: p.segs, a0: p.a0, sweep: p.sweep }); break;
         case "wall": if (p.st !== "none") walls.push({ pts: rectCorners(p.p[0], p.p[2], Math.max(p.s[0], 0.4), p.s[2], p.r), c: p.c }); break;
         case "water": waters.push({ pts: rectCorners(p.p[0], p.p[2], p.w, p.d, p.r), c: p.c }); break;
+        case "ewall": if (p.p[1] < 1.5) walls.push({ pts: rectCorners(p.p[0], p.p[2], p.w, p.d, 0), c: p.c }); break;
+        case "piece": {
+          const o = p.o || {};
+          if (p.k === "column") discs.push({ x: p.p[0], z: p.p[2], r0: 0, r1: o.r * 1.1, c: "rgba(60,48,34,0.75)", y: 99 });
+          else if (p.k === "harbour" || p.k === "lake" || p.k === "nilometer") waters.push({ pts: rectCorners(p.p[0], p.p[2], o.w, o.d, 0), c: "#5c9fb0" });
+          else if (p.k === "palm") discs.push({ x: p.p[0], z: p.p[2], r0: 0, r1: 1.6, c: "rgba(92,128,64,0.55)", y: 99 });
+          break;
+        }
         default: break;
       }
     }
@@ -60,7 +68,7 @@ export class MapView {
         return;
       }
       this.cx -= (e.clientX - p.x) / this.k;
-      this.cz -= (e.clientY - p.y) / this.k;
+      this.cz += (e.clientY - p.y) / this.k;
       p.x = e.clientX; p.y = e.clientY;
       this.draw();
     });
@@ -95,10 +103,10 @@ export class MapView {
   zoomAt(clientX, clientY, f) {
     const r = this.canvas.getBoundingClientRect();
     const sx = clientX - r.left - r.width / 2, sy = clientY - r.top - r.height / 2;
-    const wx = this.cx + sx / this.k, wz = this.cz + sy / this.k;
+    const wx = this.cx + sx / this.k, wz = this.cz - sy / this.k;
     this.k = Math.min(14, Math.max(0.35, this.k * f));
     this.cx = wx - sx / this.k;
-    this.cz = wz - sy / this.k;
+    this.cz = wz + sy / this.k;
     this.draw();
   }
 
@@ -119,7 +127,7 @@ export class MapView {
   click(clientX, clientY) {
     const r = this.canvas.getBoundingClientRect();
     const wx = this.cx + (clientX - r.left - r.width / 2) / this.k;
-    const wz = this.cz + (clientY - r.top - r.height / 2) / this.k;
+    const wz = this.cz - (clientY - r.top - r.height / 2) / this.k;
     // a click near a room's loci goes to that room's entrance; anywhere else, to that spot
     let best = null, bestD = Math.max(3, 14 / this.k);
     for (const b of this.world.buildings) for (const w of b.wings) for (const r of w.rooms) for (const id of r.loci) {
@@ -141,18 +149,19 @@ export class MapView {
     }
     const ctx = c.getContext("2d");
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const k = this.k, ox = W / 2 - this.cx * k, oz = H / 2 - this.cz * k;
-    const X = (x) => x * k + ox, Z = (z) => z * k + oz;
+    // north (+z, deeper into the temple) is up
+    const k = this.k, ox = W / 2 - this.cx * k, oz = H / 2 + this.cz * k;
+    const X = (x) => x * k + ox, Z = (z) => -z * k + oz;
     const poly = (pts) => {
       ctx.beginPath();
       pts.forEach(([x, z], i) => (i ? ctx.lineTo(X(x), Z(z)) : ctx.moveTo(X(x), Z(z))));
       ctx.closePath();
     };
     const night = document.documentElement.dataset.night === "1";
-    ctx.fillStyle = cssVar("--map-ground", night ? "#2c3a2c" : "#a9bf93");
+    ctx.fillStyle = this.world.setting === "desert" ? (night ? "#3a3428" : "#e2cfa6") : cssVar("--map-ground", night ? "#2c3a2c" : "#a9bf93");
     ctx.fillRect(0, 0, W, H);
     // plots
-    for (const p of this.world.plots) {
+    for (const p of this.world.setting === "desert" ? [] : this.world.plots) {
       const sys = p.building && this.world.buildings.find((s) => s.id === p.building);
       ctx.fillStyle = sys ? (night ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.22)") : "rgba(0,0,0,0.04)";
       ctx.fillRect(X(p.center[0] - p.half), Z(p.center[1] - p.half), p.half * 2 * k, p.half * 2 * k);
@@ -166,13 +175,6 @@ export class MapView {
     }
     const S = this.shapes;
     for (const p of S.paths) { ctx.fillStyle = p.c; poly(p.pts); ctx.fill(); }
-    for (const d of S.discs) {
-      ctx.fillStyle = d.c;
-      ctx.beginPath();
-      ctx.arc(X(d.x), Z(d.z), d.r1 * k, 0, Math.PI * 2);
-      if (d.r0 > 0) ctx.arc(X(d.x), Z(d.z), d.r0 * k, 0, Math.PI * 2, true);
-      ctx.fill("evenodd");
-    }
     for (const r of S.rings) {
       for (const s of r.segs) {
         ctx.fillStyle = s.cols[0];
@@ -195,11 +197,19 @@ export class MapView {
     }
     for (const f of S.floors) { ctx.fillStyle = f.c; poly(f.pts); ctx.fill(); }
     for (const w of S.waters) { ctx.fillStyle = w.c; poly(w.pts); ctx.fill(); }
+    for (const d of S.discs) {
+      ctx.fillStyle = d.c;
+      ctx.beginPath();
+      ctx.arc(X(d.x), Z(d.z), d.r1 * k, 0, Math.PI * 2);
+      if (d.r0 > 0) ctx.arc(X(d.x), Z(d.z), d.r0 * k, 0, Math.PI * 2, true);
+      ctx.fill("evenodd");
+    }
+
     ctx.fillStyle = night ? "rgba(230,220,200,0.55)" : "rgba(40,36,30,0.55)";
     for (const w of S.walls) { poly(w.pts); ctx.fill(); }
     // loci
     const colorOf = Object.fromEntries(this.world.buildings.map((b) => [b.id, b.color]));
-    const rad = Math.max(1.8, 1.35 * k);
+    const rad = Math.max(2.2, Math.min(9, 0.9 * k));
     for (const l of Object.values(this.world.loci)) {
       const x = X(l.pos[0]), z = Z(l.pos[2]);
       if (x < -20 || z < -20 || x > W + 20 || z > H + 20) continue;
@@ -208,8 +218,15 @@ export class MapView {
       ctx.fillStyle = colorOf[l.building];
       ctx.fill();
       ctx.lineWidth = 1.2;
-      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.strokeStyle = "rgba(255,255,255,0.9)";
       ctx.stroke();
+      if (rad >= 6) {
+        ctx.fillStyle = "#fff";
+        ctx.font = `700 ${Math.round(rad * 1.05)}px "IBM Plex Sans", system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(l.n), x, z + 0.5);
+      }
     }
     // labels
     ctx.textAlign = "center";
@@ -241,7 +258,7 @@ export class MapView {
     const px = X(pl.x), pz = Z(pl.z);
     ctx.save();
     ctx.translate(px, pz);
-    ctx.rotate(-pl.yaw);
+    ctx.rotate(Math.PI + pl.yaw);
     ctx.beginPath();
     ctx.moveTo(0, -11);
     ctx.lineTo(7, 7);

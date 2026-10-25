@@ -1,7 +1,7 @@
 [project]
 name = "memory-palace"
-version = "3.0.0"
-description = "A walkable 3D city of distinct rooms and objects for the method of loci"
+version = "4.0.0"
+description = "A walkable 3D memory palace of real buildings, planned as they were used, for the method of loci"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

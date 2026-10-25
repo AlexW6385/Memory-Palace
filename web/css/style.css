@@ -93,6 +93,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus
 .progress { width: 200px; height: 3px; margin-top: 18px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .progress span { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.3s ease; }
 .loading-msg { margin: 6px 0 0; color: var(--muted); font-size: 12px; letter-spacing: 0.02em; }
+@media (pointer: coarse) { .caption { bottom: calc(var(--gutter-b) + 170px); } }
 @keyframes rise { 0%, 100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(-4px); opacity: 0.75; } }
 
 /* ── top bar ─────────────────────────────────────────────── */
@@ -134,6 +135,24 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus
 .toast-kicker { color: var(--muted); font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; }
 html[data-lang="zh"] .toast-kicker { letter-spacing: 0.02em; }
 .toast-title { font: 400 20px/1.3 var(--font-display); }
+.toast-about { max-width: min(440px, 80vw); margin-top: 3px; color: var(--ink-2); font-size: 13px; line-height: 1.45; }
+
+/* ── caption: the locus in view ──────────────────────────── */
+.caption {
+  position: absolute; z-index: 8; left: 50%; bottom: calc(var(--gutter-b) + 22px); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 12px; width: max-content; max-width: min(560px, calc(100vw - 32px)); padding: 9px 18px 9px 10px;
+  border-radius: 999px; background: var(--panel); box-shadow: var(--shadow); pointer-events: none;
+  animation: rise 0.35s ease both;
+}
+.caption.out { animation: sink 0.35s ease both; }
+.cap-n { display: grid; place-items: center; flex: none; min-width: 34px; height: 34px; padding: 0 6px; border-radius: 999px;
+  background: var(--accent); color: var(--accent-ink); font: 600 16px/1 var(--font-body); font-variant-numeric: tabular-nums; }
+.cap-text { display: grid; min-width: 0; }
+.cap-name { font: 400 17px/1.25 var(--font-display); color: var(--ink); }
+.cap-other { color: var(--muted); font-size: 12px; }
+@media (pointer: coarse) { .caption { bottom: calc(var(--gutter-b) + 170px); } }
+@keyframes rise { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes sink { to { opacity: 0; transform: translate(-50%, 8px); } }
 @keyframes drop { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @keyframes lift { to { opacity: 0; transform: translate(-50%, -8px); } }
 
@@ -295,6 +314,11 @@ html[data-lang="zh"] .wing-title { letter-spacing: 0.02em; }
 .row-main { display: grid; min-width: 0; }
 .row-where { color: var(--muted); font-size: 12px; }
 .row-count { color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.loci-list { margin: 0 0 6px 8px; padding: 0; list-style: none; border-left: 1.5px solid var(--line); }
+.locus-row { display: flex; align-items: baseline; gap: 9px; width: 100%; padding: 3px 8px 3px 10px; border-radius: 8px; text-align: left;
+  font-size: 12.5px; color: var(--ink-2); }
+.locus-row:hover { background: var(--panel-2); color: var(--ink); }
+.locus-n { flex: none; min-width: 20px; color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
 .result { --c: var(--accent); }
 .empty { color: var(--muted); padding: 16px; text-align: center; }
 .gen { display: grid; gap: 8px; padding: 12px 14px 14px; border-top: 1px solid var(--line); }

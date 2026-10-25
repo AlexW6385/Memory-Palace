@@ -2,7 +2,6 @@ import * as THREE from "three";
 import { Nav } from "./nav.js";
 import { createRenderer, createLights } from "./look.js";
 import { World } from "./world.js";
-import { Loci } from "./loci.js";
 import { UI } from "./ui.js";
 import { t, tr, onLang } from "./i18n.js";
 
@@ -67,11 +66,17 @@ async function main() {
 
   const world = new World(data, scene);
   await world.build((f) => setProgress(0.2 + f * 0.7));
-  const loci = new Loci(data, scene);
   const nav = new Nav(data.nav);
 
+  let base = { hemi: 1, exposure: 1, night: false };
   function applyTheme() {
     const th = readTheme();
+    if (data.setting === "desert") {
+      // the Nile valley: pale gold sand, a warm haze, a hard blue sky
+      Object.assign(th, th.night
+        ? { grass: "#5e5040", fog: "#3d3a44" }
+        : { grass: "#d6bd8c", fog: "#eadfc8", skyHorizon: "#f1e6cf", skyTop: "#5f93cf", skyBottom: "#e3d3b2", sunI: th.sunI * 1.15 });
+    }
     document.documentElement.dataset.night = th.night ? "1" : "0";
     scene.fog.color.set(th.fog);
     lights.sun.color.set(th.sun);
@@ -81,11 +86,41 @@ async function main() {
     // warm bounce light from below keeps ceilings and undersides from going murky
     lights.hemi.groundColor.set(th.grass).lerp(new THREE.Color(th.night ? "#6b6152" : "#d9ccb2"), 0.65);
     renderer.toneMappingExposure = th.exposure;
+    base = { hemi: th.hemiI, exposure: th.exposure, night: th.night };
     world.setTheme(th);
   }
   applyTheme();
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
   new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  // ── light: daylight fades as you go deeper in; the nearest lamps and braziers really shine ──
+  const lamps = [];
+  for (let i = 0; i < 6; i++) {
+    const L = new THREE.PointLight(0xffb062, 0, 12, 2);
+    scene.add(L);
+    lamps.push(L);
+  }
+  let daylight = 1, lampT = 0;
+  function updateLight(dt) {
+    const target = here.room ? (roomInfo[here.room]?.r.light ?? 1) : 1;
+    daylight += (target - daylight) * Math.min(1, dt * 1.2);
+    const dark = 1 - daylight;
+    lights.hemi.intensity = base.hemi * (0.16 + 0.84 * daylight);
+    renderer.toneMappingExposure = base.exposure * (1 + dark * 0.3);
+    lampT -= dt;
+    if (lampT > 0) return;
+    lampT = 0.35;
+    const near = world.glows
+      .map((g) => ({ g, d: (g.x - player.x) ** 2 + (g.z - player.z) ** 2 + ((g.y - player.y) * 2) ** 2 }))
+      .filter((e) => e.d < 26 * 26).sort((a, b) => a.d - b.d).slice(0, lamps.length);
+    const power = (base.night ? 9 : 2) + dark * 10;
+    lamps.forEach((L, i) => {
+      const e = near[i];
+      if (!e) { L.intensity = 0; return; }
+      L.position.set(e.g.x, e.g.y + 0.15, e.g.z);
+      L.intensity = power;
+    });
+  }
 
   // ── the visitor ────────────────────────────────────────────────────────────
   const player = { x: data.spawn.pos[0], y: data.spawn.pos[1], z: data.spawn.pos[2], yaw: data.spawn.yaw, pitch: 0.02 };
@@ -99,6 +134,26 @@ async function main() {
   for (const b of data.buildings) for (const w of b.wings) for (const r of w.rooms) roomInfo[r.id] = { b, w, r };
   let here = { building: null, room: null };
   let lastRoom = null;
+  let shownLocus = null;
+
+  /** The locus the visitor is looking at, if standing near it and facing it. */
+  function lookedAt() {
+    let best = null, bestScore = 0;
+    const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
+    for (const id in data.loci) {
+      const l = data.loci[id];
+      if (Math.abs(l.view[1] - player.y) > 1.2) continue;
+      const dx = l.pos[0] - player.x, dz = l.pos[2] - player.z;
+      const d = Math.hypot(dx, dz);
+      const reach = Math.hypot(l.pos[0] - l.view[0], l.pos[2] - l.view[2]) + 2.2;
+      if (d > reach || d < 0.3) continue;
+      const facing = (dx * fx + dz * fz) / d;
+      if (facing < 0.72) continue;
+      const score = facing - d / (reach * 3);
+      if (score > bestScore) { bestScore = score; best = id; }
+    }
+    return best;
+  }
   function locate() {
     let plot = null;
     for (const p of data.plots) {
@@ -111,18 +166,23 @@ async function main() {
       return;
     }
     const b = byId[plot.building];
-    let best = null, bestD = 13;
+    let best = null, bestD = 11;
     for (const w of b.wings) for (const r of w.rooms) for (const id of r.loci) {
       const l = data.loci[id];
-      const d = Math.hypot(l.view[0] - player.x, l.view[2] - player.z) + Math.abs(l.pos[1] - player.y) * 3;
+      const d = Math.hypot(l.view[0] - player.x, l.view[2] - player.z) + Math.abs(l.view[1] - player.y) * 3;
       if (d < bestD) { bestD = d; best = { w, r }; }
     }
     here = { building: b.id, room: best ? best.r.id : null };
-    ui.setWhere(tr(b.title), best ? t("inRoom", { wing: tr(best.w.title), room: tr(best.r.title) }) : t("grounds"), b.color);
+    ui.setWhere(tr(b.title), best ? t("inRoom", { wing: tr(best.w.title), room: tr(best.r.title) }) : tr(b.subtitle), b.color);
     if (best && best.r !== lastRoom) {
       lastRoom = best.r;
-      const st = data.styles[best.r.style];
-      ui.toast(`<span class="toast-kicker">${t("enterRoom", { style: tr(st) })}</span><span class="toast-title">${tr(best.r.title)}</span>`);
+      ui.toast(`<span class="toast-kicker">${tr(best.w.title)}</span><span class="toast-title">${tr(best.r.title)}</span>` +
+        (best.r.about ? `<span class="toast-about">${tr(best.r.about)}</span>` : ""), 5200);
+    }
+    const lid = lookedAt();
+    if (lid !== shownLocus) {
+      shownLocus = lid;
+      ui.caption(lid ? data.loci[lid] : null);
     }
   }
 
@@ -150,10 +210,15 @@ async function main() {
   /** Stand at a room's entrance, looking along it towards its first loci. */
   function goRoom(room) {
     const [x, y, z] = room.anchor;
-    const a = data.loci[room.loci[0]], b = data.loci[room.loci[1]];
-    const mx = (a.view[0] + b.view[0]) / 2, mz = (a.view[2] + b.view[2]) / 2;
-    room.loci.slice(0, 4).forEach((id) => loci.prepare(id));
-    goTo(x, y, z, Math.atan2(-(mx - x), -(mz - z)), { fade: true });
+    goTo(x, y, z, room.yaw ?? player.yaw, { fade: true, pitch: 0.02 });
+  }
+
+  /** Stand where a locus is best seen, looking at it. */
+  function goLocus(id) {
+    const l = data.loci[id];
+    const [x, y, z] = l.view;
+    const pitch = Math.atan2(l.pos[1] - (y + data.eye), Math.hypot(l.pos[0] - x, l.pos[2] - z));
+    goTo(x, y, z, l.viewYaw, { pitch: Math.max(-0.6, Math.min(1.1, pitch)) });
   }
 
   function goBuilding(b) {
@@ -167,6 +232,7 @@ async function main() {
   const ui = new UI(data, {
     goRoom,
     goBuilding,
+    goLocus,
     goPoint(x, z) {
       const hs = nav.heights(x, z).slice().sort((a, b) => a - b);
       for (const y of hs) if (nav.stand(x, z, y) !== null) return goTo(x, y, z, player.yaw, { fade: true });
@@ -183,9 +249,17 @@ async function main() {
 
   // ── input ──────────────────────────────────────────────────────────────────
   const keys = new Set();
+  const order = data.buildings.flatMap((b) => b.wings.flatMap((w) => w.rooms.flatMap((r) => r.loci)));
   addEventListener("keydown", (e) => {
     if (e.target.tagName === "INPUT") return;
     keys.add(e.code);
+    // N / B: walk the route locus by locus
+    if ((e.code === "KeyN" || e.code === "KeyB") && !ui.anyOverlay()) {
+      const cur = shownLocus ? order.indexOf(shownLocus) : -1;
+      const next = e.code === "KeyN" ? Math.min(order.length - 1, cur + 1) : Math.max(0, cur < 0 ? 0 : cur - 1);
+      goLocus(order[next]);
+      setTimeout(locate, 1600);
+    }
   });
   addEventListener("keyup", (e) => keys.delete(e.code));
   addEventListener("blur", () => keys.clear());
@@ -310,7 +384,7 @@ async function main() {
     camera.rotation.set(player.pitch, player.yaw, 0);
     lights.follow(player.x - Math.sin(player.yaw) * 12, player.y, player.z - Math.cos(player.yaw) * 12);
     world.update(dt, camera);
-    loci.update(dt, camera.position);
+    updateLight(dt);
     locT -= dt;
     if (locT <= 0) { locT = 0.4; locate(); }
     saveT -= dt;
@@ -323,7 +397,6 @@ async function main() {
   }
 
   setProgress(0.95, t("loadingLight"));
-  loci.update(0, new THREE.Vector3(player.x, player.y, player.z));
   locate();
   requestAnimationFrame((tm) => { last = tm; frame(tm); });
   setProgress(1);
@@ -333,7 +406,7 @@ async function main() {
   else ui.hint(coarse ? t("hintTouch") : t("hintDesktop"), 7000);
 
   // automation hook (tests and screenshots)
-  window.palace = { data, player, ui, loci, world, nav, camera, renderer, goRoom, goBuilding, goTo };
+  window.palace = { data, player, ui, world, nav, camera, renderer, goRoom, goBuilding, goLocus, goTo };
   window.READY = true;
 }
 

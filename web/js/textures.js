@@ -203,6 +203,50 @@ const FLOOR = {
       });
     }
   } },
+  paving: { tile: 4.8, draw(ctx, N, [a, b], r) {
+    // worn sandstone flags laid in courses of uneven width, each slab its own tone
+    ctx.fillStyle = shade(b, -0.22);
+    ctx.fillRect(0, 0, N, N);
+    const rows = [];
+    let y = 0;
+    while (y < N - 20) { const hh = r.range(0.14, 0.24) * N; rows.push([y, Math.min(hh, N - y)]); y += hh; }
+    rows[rows.length - 1][1] = N - rows[rows.length - 1][0];
+    for (const [y0, hh] of rows) {
+      let x = -r() * N * 0.3;
+      while (x < N) {
+        const len = r.range(0.16, 0.34) * N;
+        const c = tone(mix(a, b, r()), r, 0.045);
+        wrapped(N, x, y0, len, hh, (px, py) => {
+          ctx.fillStyle = c;
+          ctx.fillRect(px + 2, py + 2, len - 4, hh - 4);
+          const g = ctx.createLinearGradient(px, py, px + len, py + hh);
+          g.addColorStop(0, "rgba(255,245,220,0.07)");
+          g.addColorStop(1, "rgba(60,40,20,0.08)");
+          ctx.fillStyle = g;
+          ctx.fillRect(px + 2, py + 2, len - 4, hh - 4);
+          if (r() < 0.25) {
+            // a hairline crack
+            ctx.strokeStyle = "rgba(60,40,20,0.22)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(px + r() * len, py + 2);
+            ctx.lineTo(px + r() * len, py + hh * r.range(0.4, 1));
+            ctx.stroke();
+          }
+        });
+        x += len;
+      }
+    }
+    speckle(ctx, N, r, 9000, [shade(a, -0.25), shade(a, 0.12), "#7a5a3a"], [0.8, 1.8], [0.04, 0.12]);
+    for (let i = 0; i < 18; i++) {
+      ctx.globalAlpha = r.range(0.03, 0.07);
+      ctx.fillStyle = r() < 0.5 ? "#6a4a2a" : "#fff2d6";
+      ctx.beginPath();
+      ctx.ellipse(r() * N, r() * N, r.range(20, 70), r.range(12, 40), r() * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  } },
   sand: { tile: 3.0, draw(ctx, N, [a, b], r) {
     ctx.fillStyle = a;
     ctx.fillRect(0, 0, N, N);

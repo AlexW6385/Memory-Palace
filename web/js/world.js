@@ -8,9 +8,10 @@ import { tr } from "./i18n.js";
 import { expand } from "./scene.js";
 import { floorTexture, signTexture, glowTexture, cloudTexture } from "./textures.js";
 import {
-  Chunk, addArch, addDisc, addFloor, addHelix, addLamp, addPath, addRamp, addRoof, addShape, addLocusShell,
+  Chunk, addArch, addDisc, addFloor, addHelix, addLamp, addPath, addRamp, addRoof, addShape,
   addSupport, addWall, addWater,
 } from "./arch.js";
+import { addEwall, addPiece } from "./sites/egypt.js";
 
 const CHUNK = 48;
 const COARSE = new Set(["tree", "bush", "rock", "hedge", "flower", "lamp_post", "fence", "mushroom", "potted_plant"]);
@@ -61,9 +62,35 @@ function buildClouds(group) {
   return clouds;
 }
 
-function buildHills(half) {
+function buildHills(half, desert) {
   const b = new Builder({ seed: 7 });
   const r = b.rng;
+  if (desert) {
+    // the Nile valley: flat-topped sandstone cliffs on the horizon, low dunes nearer in
+    for (let k = 0; k < 90; k++) {
+      const a = (k / 90) * Math.PI * 2 + r.range(-0.02, 0.02);
+      const dist = half + 260 + r.range(0, 200);
+      const h = r.range(28, 70), w = r.range(60, 140);
+      const far = (dist - half) / 460;
+      const c = mix("#c79a68", "#d9c4b0", 0.3 + far * 0.6);
+      b.group({ at: [Math.sin(a) * dist, 0, Math.cos(a) * dist], rot: [0, -a, 0] }, (bb) => {
+        bb.cyl(w * 0.42, w * 0.5, h, { at: [0, h / 2 - 2, 0], seg: 7, color: c, flat: true, scale: [1.6, 1, 0.7] });
+        bb.cyl(w * 0.36, w * 0.42, h * 0.1, { at: [0, h - 2 + h * 0.05, 0], seg: 7, color: shade(c, 0.05), flat: true, scale: [1.6, 1, 0.7] });
+      });
+    }
+    for (let k = 0; k < 70; k++) {
+      const a = (k / 70) * Math.PI * 2 + r.range(0, 0.1);
+      const dist = half + 30 + r.range(0, 160);
+      const h = r.range(4, 14);
+      b.sphere(r.range(20, 46), { at: [Math.sin(a) * dist, -h * 0.55, Math.cos(a) * dist], scale: [1.8, h / 30, 1.1], seg: 12, color: mix("#dcc296", "#e6d2ac", r()), flat: true });
+    }
+    const { geos } = bake(b, mergeGeometries);
+    const g = new THREE.Group();
+    const mat = new THREE.MeshLambertMaterial({ vertexColors: true, fog: false });
+    for (const geo of Object.values(geos)) g.add(new THREE.Mesh(geo, mat));
+    g.userData.mat = mat;
+    return g;
+  }
   for (let k = 0; k < 70; k++) {
     const a = (k / 70) * Math.PI * 2 + r.range(-0.03, 0.03);
     const dist = half + 140 + r.range(0, 260);
@@ -86,14 +113,25 @@ function buildHills(half) {
   return g;
 }
 
-function buildGround(half, color) {
+function buildGround(half, color, pattern = "grass", holes = []) {
   const size = half * 2 + 1400;
-  const geo = new THREE.PlaneGeometry(size, size, 1, 1);
+  // the ground is a big square with holes cut for basins, lakes and shafts (shape x, y = world x, −z)
+  const shape = new THREE.Shape([[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([x, y]) => new THREE.Vector2(x * size / 2, y * size / 2)));
+  for (const h of holes) {
+    if (h.k !== "rect") continue;
+    const c = Math.cos(h.r || 0), s = Math.sin(h.r || 0);
+    const pts = [[-1, -1], [-1, 1], [1, 1], [1, -1]].map(([u, v]) => {
+      const lx = u * h.w / 2, lz = v * h.d / 2;
+      return new THREE.Vector2(h.c[0] + lx * c + lz * s, -(h.c[1] - lx * s + lz * c));
+    });
+    shape.holes.push(new THREE.Path(pts));
+  }
+  const geo = new THREE.ShapeGeometry(shape);
   geo.rotateX(-Math.PI / 2);
   const tile = 3.2;
-  const uv = geo.attributes.uv;
-  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * size / tile, uv.getY(i) * size / tile);
-  const { map } = floorTexture("grass", [color, shade(color, -0.07)]);
+  const uv = geo.attributes.uv, pos = geo.attributes.position;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i) / tile, pos.getZ(i) / tile);
+  const { map } = floorTexture(pattern, [color, shade(color, -0.07)]);
   const mat = new THREE.MeshStandardMaterial({ map, roughness: 1, envMapIntensity: 0.4 });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.y = -0.02;
@@ -185,6 +223,7 @@ export class World {
     this.signs = [];
     this.textProps = [];     // decor props carrying text: rebuilt when the language changes
     this.haloMat = haloMaterial();
+    this.glows = [];         // every flame and glowing thing: the nearest get real lights
     this.root = new THREE.Group();
     scene.add(this.root);
   }
@@ -212,13 +251,13 @@ export class World {
     this.cloudGroup = new THREE.Group();
     this.clouds = buildClouds(this.cloudGroup);
     this.scene.add(this.cloudGroup);
-    this.hills = buildHills(d.half);
+    this.desert = d.setting === "desert";
+    this.hills = buildHills(d.half, this.desert);
     this.scene.add(this.hills);
-    this.ground = buildGround(d.half, "#93ad7c");
+    this.groundPattern = this.desert ? "sand" : "grass";
+    this.ground = buildGround(d.half, this.desert ? "#d6bd8c" : "#93ad7c", this.groundPattern, d.nav.surfaces[0].holes || []);
     this.scene.add(this.ground);
 
-    const lociById = d.loci;
-    const colorOf = Object.fromEntries(d.buildings.map((b) => [b.id, b.color]));
     let n = 0;
     const t0 = performance.now();
     for (const p of d.prims) {
@@ -245,12 +284,8 @@ export class World {
           break;
         }
         case "prop": this.addDecor(ch, p); break;
-        case "locus": {
-          const l = lociById[p.ref];
-          const st = l && d.styles[l.style];
-          addLocusShell(ch, p, { stage: mix(st ? st.stage : "#9a8f7e", "#e6dfd2", 0.5), accent: shade(colorOf[p.g] || "#b8862f", -0.05) });
-          break;
-        }
+        case "ewall": addEwall(ch, p); break;
+        case "piece": addPiece(ch, p); break;
         default: break;
       }
       if (++n % 400 === 0) {
@@ -263,6 +298,10 @@ export class World {
     let k = 0;
     for (const ch of this.chunks.values()) {
       this.finishDecor(ch);
+      for (const l of ch.solid.lights) {
+        ch.halos.push({ x: l.position.x, y: l.position.y, z: l.position.z, color: l.color, size: Math.min(3, 0.6 + l.radius * 6) });
+      }
+      this.glows.push(...ch.halos);
       ch.finish(mergeGeometries, mats, bake);
       if (ch.halos.length) ch.group.add(haloPoints(ch.halos, this.haloMat));
       this.root.add(ch.group);
@@ -384,7 +423,7 @@ export class World {
     u.horizon.value.set(t.skyHorizon);
     u.bottom.value.set(t.skyBottom);
     u.sunColor.value.set(t.sun);
-    this.ground.material.map = floorTexture("grass", [t.grass, shade(t.grass, -0.07)]).map;
+    this.ground.material.map = floorTexture(this.groundPattern, [t.grass, shade(t.grass, -0.07)]).map;
     this.ground.material.needsUpdate = true;
     this.haloMat.uniforms.intensity.value = t.night ? 1.0 : 0.22;
     for (const c of this.clouds) c.s.material.opacity = t.night ? 0.25 : 0.85;

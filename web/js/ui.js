@@ -25,6 +25,7 @@ export class UI {
     this.map = new MapView($("map-canvas"), world, {
       goPoint: (x, z) => { this.closeOverlays(); this.h.goPoint(x, z); },
       goRoom: (room) => { this.closeOverlays(); this.h.goRoom(room); },
+      goLocus: (id) => { this.closeOverlays(); this.h.goLocus(id); },
       player: () => this.h.player(),
     });
     this.bind();
@@ -95,6 +96,22 @@ export class UI {
     $("where").style.setProperty("--c", color || "var(--accent)");
   }
 
+  /** The locus in view: its number on the route and its name. */
+  caption(l) {
+    const n = $("caption");
+    if (!l) {
+      n.classList.add("out");
+      clearTimeout(this._cap);
+      this._cap = setTimeout(() => { n.hidden = true; }, 350);
+      return;
+    }
+    clearTimeout(this._cap);
+    n.innerHTML = `<span class="cap-n">${l.n}</span><span class="cap-text"><span class="cap-name">${tr(l.name)}</span>` +
+      `<span class="cap-other">${other(l.name)}</span></span>`;
+    n.hidden = false;
+    n.classList.remove("out");
+  }
+
   toast(html, ms = 2400) {
     const n = $("toast");
     n.innerHTML = html;
@@ -131,10 +148,11 @@ export class UI {
     const body = $("places-body");
     const here = this.h.here();
     const match = (x) => !q || x.title.en.toLowerCase().includes(q) || x.title.zh.includes(q);
+    const lmatch = (id) => { const l = this.world.loci[id]; return !q || l.name.en.toLowerCase().includes(q) || l.name.zh.includes(q); };
     const nodes = [];
     for (const b of this.world.buildings) {
       const rooms = b.wings.flatMap((w) => w.rooms.map((r) => ({ w, r })));
-      const hits = rooms.filter(({ w, r }) => match(r) || match(w) || match(b));
+      const hits = rooms.filter(({ w, r }) => match(r) || match(w) || match(b) || r.loci.some(lmatch));
       if (!hits.length) continue;
       const open = !!q || this.openB?.has(b.id) || here.building === b.id;
       const det = el("details", { class: "sys", style: `--c:${b.color}`, open: open || undefined });
@@ -147,7 +165,7 @@ export class UI {
         el("span", { class: "sys-text" },
           el("span", { class: "sys-title" }, tr(b.title)),
           el("span", { class: "sys-sub" }, tr(b.subtitle))),
-        el("span", { class: "sys-meta" }, t("rooms", { n: rooms.length }))));
+        el("span", { class: "sys-meta" }, t("lociCount", { n: rooms.reduce((a, x) => a + x.r.loci.length, 0) }))));
       const inner = el("div", { class: "sys-body" },
         el("button", { type: "button", class: "btn btn-small", onclick: () => this.h.goBuilding(b) },
           el("span", { html: icon("walk") }), t("toEntrance")));
@@ -156,11 +174,19 @@ export class UI {
         if (!rs.length) continue;
         inner.append(el("p", { class: "wing-title" }, tr(w.title)));
         for (const r of rs) {
-          const style = this.world.styles[r.style];
           inner.append(el("button", { type: "button", class: "row" + (here.room === r.id ? " here" : ""),
             onclick: () => { this.closeOverlays(); this.h.goRoom(r); } },
             el("span", { class: "row-main" }, tr(r.title), el("span", { class: "row-where" }, other(r.title))),
-            el("span", { class: "row-count" }, style ? tr(style) : "")));
+            el("span", { class: "row-count" }, t("lociCount", { n: r.loci.length }))));
+          const list = el("ol", { class: "loci-list" });
+          for (const id of r.loci) {
+            const l = this.world.loci[id];
+            if (q && !lmatch(id) && !match(r) && !match(w)) continue;
+            list.append(el("li", {}, el("button", { type: "button", class: "locus-row",
+              onclick: () => { this.closeOverlays(); this.h.goLocus(id); } },
+              el("span", { class: "locus-n" }, String(l.n)), el("span", { class: "locus-name" }, tr(l.name)))));
+          }
+          inner.append(list);
         }
       }
       det.append(inner);
