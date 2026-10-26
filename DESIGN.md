@@ -118,12 +118,27 @@ Append-only: date, decision, reason.
 - 2026-10-26 — Music synthesised per building from its civilization and period. Reason: author's wish; keeps the site asset-free.
 - 2026-10-26 — Open-ended: keep adding buildings and depth indefinitely; release in versions.
 - 2026-10-26 — This document is the brief for autonomous work; the agent decides §9 items itself.
+- 2026-10-26 — Without WebGPU the site still runs, on three.js's WebGL 2 backend, with a notice. Reason: same TSL code path; better than a dead page on older browsers and in headless test runs.
+- 2026-10-26 — Materials are procedural TSL shaders (ashlar, drums, paving, granite, cedar, metal, ground, water) rather than CDN texture sets for now. Reason: masonry must follow each wall's real coursing and block sizes from the dossier, which a tiling photo texture cannot; it also keeps loads small and needs no third-party assets. CC0 scanned sets may be layered in later for micro-detail.
+- 2026-10-26 — Baked indirect light is an irradiance volume per building: L1 spherical-harmonic probes on a 1 m grid, ray traced offline in Node (three-mesh-bvh) with sun, sky, oil lamps and two bounces; sampled per fragment and also used for blurry reflections. Shipped as half-float data compressed by HTTP gzip, not KTX2 (KTX2/Basis is for colour textures). Lightmaps may follow at Visual L2 where volumes are too coarse. Reason: no UV unwrapping, robust for procedural geometry, fast to bake (minutes).
+- 2026-10-26 — Eye adaptation driven by the baked ambient light at the viewer (up to ~3 stops). Reason: a fixed exposure leaves sanctuaries black or courts blown out; real eyes adapt.
+- 2026-10-26 — One fixed time of day (clear mid-morning, sun azimuth 115°, elevation 38°) because baked light depends on it. Time of day (World L3) will need a bake per time.
+- 2026-10-26 — Interface uses system fonts; no web fonts. Reason: Google Fonts are OFL, not CC0/MIT.
+- 2026-10-26 — The world is a city of civilizations along a river running north–south (docs/world.md); the Nile district comes first, with Edfu at the origin in its true orientation. The river is brought closer to Edfu than in reality so the district reads as a river city.
+- 2026-10-26 — Edfu is shown complete and in use (57 BC), with unpainted stone until L3 (extent of original paint uncertain). Published dimensions conflict (UNESCO 47 m width vs a 40 m pronaos); we take a 50 m enclosure (docs/buildings/edfu.md §4).
+- 2026-10-26 — Edfu's roof stairs and roof terrace, the New Year court, the nilometer and the pylon's internal stairs are deferred to L2 of the building; the mammisi is a separate building for later.
 
 ## 11. Roadmap and status
 
 The implementing agent updates this section at the end of every session. Phases run in order; within a phase, order is the agent's choice. A phase is done when its items are built, pass the release-tier checks of §7, are pushed, and the live site works on desktop and phone.
 
-**Done (previous version, to be replaced)**
+**Status — 2026-10-26 (v5.0)**
+- Phase 0 done: pure-JS ES modules (`src/core`, `src/engine`, `src/styles`, `src/buildings`, `src/ui`), WebGPU renderer with WebGL 2 fallback, procedural PBR materials, cascaded sun shadows, GTAO, bloom, AgX tone mapping, eye adaptation, first-person walking with collision, steps and ramps, map, settings, bilingual UI. Python package, `world.json` pipeline, loci UI, props catalogue and modeling guide removed. README (both languages), `ASSETS.md`, `docs/world.md`, `CHANGELOG.md`; tools: `tools/shot.mjs` (fixed viewpoints, headless WebGPU via SwiftShader), `tools/plan-check.mjs`, `tools/bake.mjs`, `tools/budget.mjs`.
+- Lighting pipeline done: offline bake to an irradiance volume (sun, sky, lamps, two bounces), verified on Edfu's halls.
+- Phase 1 in progress: Edfu dossier rewritten to §4 standard; Edfu rebuilt at Building L1 (plan, section, structure, materials, daylight, lamps, music) plus parts of L2 (torus and cornices, door frames with winged discs, uraeus frieze, cedar doors, naos, barque). World L1: the Nile district with the river.
+- Known gaps: Edfu L2 still lacks the roof stairs and terrace, the New Year court, the nilometer, a finer barque and naos, ceiling slabs' decoration, door leaves on inner doors; palms are coarse; paving joints too regular. Budget: initial load 5.2 MB.
+
+**Done (previous version, replaced)**
 - Python planner, Edfu temple plan with 47 loci, three.js viewer with loci UI, toy-style props, bilingual UI, Pages deployment.
 
 **Phase 0 — New foundation**

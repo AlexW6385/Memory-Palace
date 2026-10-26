@@ -1,0 +1,124 @@
+{
+  "edfu": [
+    {
+      "name": "approach",
+      "at": [
+        -14,
+        1.6,
+        58
+      ],
+      "yaw": 0.12,
+      "pitch": 0.2
+    },
+    {
+      "name": "pylon-gate",
+      "at": [
+        0,
+        0,
+        16
+      ],
+      "yaw": 0,
+      "pitch": 0.35
+    },
+    {
+      "name": "court",
+      "at": [
+        -9,
+        0,
+        -18
+      ],
+      "yaw": -0.25,
+      "pitch": 0.08
+    },
+    {
+      "name": "colonnade",
+      "at": [
+        -20.5,
+        0,
+        -50
+      ],
+      "yaw": 3.14,
+      "pitch": 0.05
+    },
+    {
+      "name": "pronaos-facade",
+      "at": [
+        5,
+        0,
+        -34
+      ],
+      "yaw": 0.12,
+      "pitch": 0.18
+    },
+    {
+      "name": "pronaos",
+      "at": [
+        0,
+        0.45,
+        -59.8
+      ],
+      "yaw": 0.0,
+      "pitch": 0.12
+    },
+    {
+      "name": "hypostyle",
+      "at": [
+        0,
+        0.9,
+        -76.3
+      ],
+      "yaw": 0.0,
+      "pitch": 0.1
+    },
+    {
+      "name": "offering-hall",
+      "at": [
+        0,
+        1.35,
+        -89.5
+      ],
+      "yaw": 0,
+      "pitch": 0.0
+    },
+    {
+      "name": "sanctuary",
+      "at": [
+        0,
+        1.85,
+        -105.2
+      ],
+      "yaw": 0,
+      "pitch": -0.02
+    },
+    {
+      "name": "corridor",
+      "at": [
+        -4.9,
+        1.85,
+        -105
+      ],
+      "yaw": 0,
+      "pitch": 0.0
+    },
+    {
+      "name": "ambulatory",
+      "at": [
+        -20,
+        0,
+        -60
+      ],
+      "yaw": 0,
+      "pitch": 0.05
+    },
+    {
+      "name": "aerial",
+      "at": [
+        70,
+        60,
+        60
+      ],
+      "yaw": 0.78,
+      "pitch": -0.45
+    }
+  ]
+}

@@ -1,5 +1,4 @@
-# Test, lay out the world and publish the static viewer (web/) to GitHub Pages.
-# Browsing needs only these static files; the generation API is not deployed.
+# Check the plans and publish the static site to GitHub Pages.
 name: Deploy to GitHub Pages
 
 on:
@@ -22,33 +21,25 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-          cache: pip
-
       - uses: actions/setup-node@v5
         with:
           node-version: "22"
-          cache: npm
 
-      - name: Install
-        run: |
-          pip install -e ".[dev]"
-          npm ci
-
-      - name: Test the props
-        run: node tests/js/props.test.mjs
+      - name: Install dev tools (no browsers are downloaded)
+        run: npm install --no-audit --no-fund
 
       - name: Test
-        run: pytest -q
+        run: npm test
 
-      - name: Lay out the world
-        run: python -m palace build
+      - name: Assemble the site
+        run: |
+          mkdir _site
+          cp -r index.html src data _site/
+          touch _site/.nojekyll
 
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: web
+          path: _site
 
   deploy:
     needs: build

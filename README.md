@@ -2,75 +2,46 @@
 
 [中文说明](README.zh-CN.md)
 
-A walkable 3D memory palace for the method of loci, built from real kinds of buildings of many ages, each
-planned the way it was actually used. The loci are the things that stood in them, in their places, numbered
-along the route. What you hang on them lives in your head.
+A walkable, realistic 3D world of **architecture**: buildings of every age, civilization and style, each built after a real example and planned the way the real thing was used, with real materials, light and shadow, and music in the manner of its civilization and time.
 
-**Walk it: <https://alexw6385.github.io/Memory-Palace/>** (desktop or phone, English or Chinese)
+**Walk it: <https://alexw6385.github.io/Memory-Palace/>** — desktop or phone, a browser with WebGPU (Chrome, Edge, Safari 26). English or Chinese.
 
-## Why real buildings
+The name is meant in two senses. These buildings are the memory of civilizations; and a well-planned building already gives every room and object a place and an order, which is what the classical memory palace needs. But this is a world to walk, not a study tool: no notes, no markers, no route. Where a building has a route, its architecture shows it.
 
-The method of loci works because a place you know has an order you never have to remember: the gate comes
-before the court, the altar stands in front of the shrine, the lamp is on the wall by the door. A building
-designed for a purpose gives every room a reason to be where it is and every object a reason to be in its room.
-Random rooms full of random objects have none of that, so they do not hold memories.
+## What you can visit
 
-So each site here is planned as the real thing would be, after real examples, and its loci are the real things
-in it.
+- **The Temple of Horus at Edfu** (Ptolemaic Egypt, 237–57 BC), the best preserved temple of ancient Egypt, at true scale: the pylon with its flagpoles and granite falcons, the court of 32 columns, the pronaos of 18, the hall of appearances, the offering hall, the hall of the Ennead, the sanctuary with the granite naos of Nectanebo II and the sacred barque, the corridor of mysteries and its nine chapels, and the ambulatory inside the enclosure wall — each hall higher, lower and darker than the last. On the bank of a river, among palms.
 
-## The first site: a temple of Horus
+More buildings, one from each major tradition, are next (see [DESIGN.md](DESIGN.md) §11).
 
-After the temple at Edfu (237–57 BC), the best preserved temple of ancient Egypt. The route through it is the
-route of the daily ritual:
+## Controls
 
-1. **The approach** — the god's barge at the quay, an avenue of ram-headed sphinxes, a barque way station.
-2. **The pylon** — two towers carved with the king smiting his enemies, obelisks, colossi, flagpoles, the great gate.
-3. **The court of offerings** — the last place open to the sky: basin, stela, falcons of Horus, the great altar.
-4. **The halls** — the pronaos (18 columns, each capital a different plant, with the House of Books and the robing
-   room), the hall of appearances (laboratory, treasury, Nile room, storeroom), the offering hall with its stairs
-   to the roof, the hall of the Ennead. Each hall is a step higher, lower and darker than the last.
-5. **The sanctuary** — the sacred barque and the granite naos, and around them the corridor of mysteries with
-   nine chapels of the gods of Horus's family and myth.
-6. **The precinct** — the ambulatory carved with the myth of Horus and Seth, the sacred lake, the scarab and the
-   nilometer.
+W A S D or arrows to walk, mouse to look (click to capture the mouse), Shift to run, M for the map, Esc to pause. On a phone: left thumb on the stick to walk, drag anywhere to look. The map jumps to any building's entrance.
 
-47 loci in all. Look at one and its number and name appear; **N** and **B** step along the route.
+## How it is made
 
-**Controls:** W A S D to walk, drag to look, Shift to run, `N` / `B` next or previous locus, `M` for the map,
-`P` for places. On a phone, the joystick walks and dragging looks. **Places** lists every room and locus.
+- **Dossier first.** Every building is built from a sourced dossier in [`docs/buildings/`](docs/buildings) (real example, plan and dimensions, structure, use, materials, decoration, light, music; what is stated by sources and what is inferred). The world layout is in [`docs/world.md`](docs/world.md).
+- **Plan is data, look is code.** A building is a plan of walls, openings, floors, roofs, columns and objects in metres (`src/buildings/<id>/plan.js`), drawn by the reusable vocabulary of its civilization (`src/styles/<civilization>/`: columns and capitals, torus and cornice, pylons, door frames, statues).
+- **Renderer:** three.js WebGPU (WebGL 2 fallback), procedural physically based materials aligned to each wall's real coursing, cascaded sun shadows, GTAO, bloom, AgX tone mapping, and eye adaptation.
+- **Baked light:** indirect light (sky, sun bounced off stone, oil lamps) is ray traced offline into an irradiance volume per building (`tools/bake.mjs` → `data/gi/`), loaded with the building.
+- **Music:** synthesised in the browser from each building's score (`src/buildings/<id>/music.js`); it changes as you pass from open courts to halls to the sanctuary.
 
-## Run locally
-
-```bash
-pip install -e ".[dev]"
-python -m palace build      # lay out the sites → web/data/world.json
-python -m palace serve      # http://127.0.0.1:8000
-```
-
-## How it is built
-
-```
-palace/site.py         drawing a site like a plan: walls between corners, doorways, floors, roofs, pieces, loci
-palace/sites/edfu.py   the temple of Horus: its plan, rooms and loci, with the reasoning in comments
-palace/world.py        assembles the sites → web/data/world.json
-palace/nav.py          walkability; tests prove every locus can be reached and seen
-web/js/sites/          Egyptian architecture (battered walls, cornices, columns, painted ceilings), statues,
-                       furnishings, and canvas textures for carved stone and reliefs
-web/js/                three.js viewer: world, navigation, map, places, light
-```
-
-Everything is procedural (no model or image files). The viewer lets daylight fade as you go deeper in and
-lights the nearest lamps.
+Pure static ES modules — no build step, no server. three.js comes from a CDN.
 
 ## Development
 
 ```bash
-pytest -q                                  # plan, reachability, JS/Python parity
-python3 tools/view_shot.py --js "palace.goLocus('edfu-33')" --wait 3000 --shot out.png
+npm install                      # dev tools only: playwright, three, three-mesh-bvh
+npm run serve                    # http://127.0.0.1:8000
+npm run check                    # plan check: walkability, every room reachable, doors connect, nothing floating
+npm run bake -- edfu             # bake a building's indirect light into data/gi/edfu.bin
+npm run shot -- --building edfu  # screenshots at the fixed viewpoints in tools/viewpoints.json → shots/
+npm run budget                   # load and size budgets
+npm test
 ```
 
-Every push to `master` runs the tests, lays out the sites and publishes `web/` to GitHub Pages.
+Every push to `master` runs the checks and publishes the site to GitHub Pages.
 
 ## License
 
-MIT
+MIT. Third-party assets are listed in [ASSETS.md](ASSETS.md).

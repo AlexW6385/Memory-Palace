@@ -1,12 +1,21 @@
 {
-  "name": "memory-palace-web",
+  "name": "memory-palace",
   "private": true,
   "type": "module",
-  "description": "Browser viewer for the Memory Palace (three.js). Only needed for development tests; the site itself loads three.js from a CDN.",
+  "description": "A walkable, realistic 3D world of architecture. The site is static ES modules; Node is only for tests, checks and offline baking.",
   "scripts": {
-    "test": "node tests/js/props.test.mjs"
+    "serve": "node tools/serve.mjs",
+    "check": "node tools/plan-check.mjs",
+    "bake": "node tools/bake.mjs",
+    "shot": "node tools/shot.mjs",
+    "budget": "node tools/budget.mjs",
+    "test": "node --test tests/"
   },
   "devDependencies": {
-    "three": "0.160.0"
+    "playwright": "1.63.0",
+    "three": "0.186.1",
+    "three-mesh-bvh": "^0.9.0",
+    "pngjs": "^7.0.0",
+    "pixelmatch": "^6.0.0"
   }
 }
