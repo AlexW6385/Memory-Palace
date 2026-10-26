@@ -154,43 +154,66 @@ export function barqueStand(el, { bag, col }) {
 }
 
 /**
- * The portable barque of the god: a gilded boat with an aegis (falcon head with broad collar) at
- * prow and stern, the cabin-shrine amidships under its veil, and the carrying poles.
+ * The portable barque of the god: a long, shallow gilded boat whose ends sweep up into posts
+ * crowned by the aegis of Horus (a broad collar beneath a falcon head with a sun disc); the
+ * veiled cabin-shrine amidships; long carrying poles with cross-bars (dossier §6.7).
+ * Local axis: the boat lies along z; prow at -z.
  */
 export function barque(el, { bag, col }) {
   const [x, z] = el.at, y = el.y ?? 0, yaw = el.yaw ?? 0, L = el.l ?? 5.0;
   const gold = [], cedar = [], linen = [];
-  // hull: a lathe about the long axis, flattened
-  const hull = lathe([[0.0, -L / 2], [0.18, -L * 0.42], [0.42, -L * 0.25], [0.48, 0], [0.42, L * 0.25], [0.18, L * 0.42], [0.0, L / 2]], 18);
-  hull.applyMatrix4(new Matrix4().makeScale(1, 1, 0.55).premultiply(new Matrix4().makeRotationX(Math.PI / 2)));
-  // keep the upper half only by squashing the lower side into the deck plane
-  const p = hull.attributes.position;
-  for (let i = 0; i < p.count; i++) {
-    const zz = p.getZ(i), yy = p.getY(i);
-    const lift = 0.35 * Math.pow(Math.abs(zz) / (L / 2), 3);
-    p.setY(i, (yy < 0 ? yy * 0.6 : 0) + lift);
+  const deck = 1.45;                                   // height of the deck above the poles' base
+  // hull: half-elliptic sections along the length, the sheer rising steeply at the ends
+  const NI = 36, NJ = 10, W = 0.46, D = 0.32;
+  const ring = (t) => {
+    const u = Math.abs(t);                              // 0 at the middle, 1 at the ends
+    const w = W * Math.pow(Math.max(0, 1 - Math.pow(u, 2.6)), 0.55) + 0.04;
+    const d = D * (1 - 0.7 * Math.pow(u, 2));
+    const lift = 0.42 * Math.pow(u, 3);
+    const pts = [];
+    for (let j = 0; j <= NJ; j++) {
+      const a = Math.PI * (j / NJ);                     // from one gunwale under the keel to the other
+      pts.push([Math.cos(a) * w, deck + lift - Math.sin(a) * d, t * L / 2]);
+    }
+    return pts;
+  };
+  const rows = [];
+  for (let i = 0; i <= NI; i++) rows.push(ring(-1 + 2 * i / NI));
+  const t = [];
+  for (let i = 0; i < NI; i++) {
+    for (let j = 0; j < NJ; j++) quad(t, rows[i][j], rows[i + 1][j], rows[i + 1][j + 1], rows[i][j + 1]);
+    // deck between the gunwales
+    quad(t, rows[i][NJ], rows[i + 1][NJ], rows[i + 1][0], rows[i][0]);
   }
-  hull.computeVertexNormals();
-  gold.push(place(hull, 0, 1.25, 0));
-  // aegis at each end: a disc (the collar) and a falcon head above
+  gold.push(fromTriangles(t));
+  // aegis on a post at prow and stern
   for (const s of [-1, 1]) {
-    const col2 = disc(0.34, 0, 20);
-    col2.applyMatrix4(new Matrix4().makeRotationX(Math.PI / 2 * s));
-    gold.push(place(col2, 0, 1.75, s * (L / 2 - 0.1)));
-    gold.push(lathe([[0, 0], [0.13, 0.05], [0.15, 0.18], [0.1, 0.3], [0, 0.32]], 12, null, 0, 1.95, s * (L / 2 - 0.12)));
+    const zz = s * L / 2, yy = deck + 0.42;
+    gold.push(box(-0.05, yy - 0.35, zz - 0.05, 0.05, yy + 0.05, zz + 0.05));
+    // the collar: a thick rounded shield facing outward, the falcon head above it, the sun disc on the head
+    const shield = lathe([[0.0, -0.04], [0.22, -0.035], [0.25, 0.0], [0.22, 0.035], [0.0, 0.05]], 20);
+    shield.applyMatrix4(new Matrix4().makeRotationX(Math.PI / 2));
+    gold.push(place(shield, 0, yy + 0.12, zz + s * 0.04));
+    gold.push(lathe([[0.0, 0], [0.09, 0.03], [0.11, 0.12], [0.08, 0.22], [0.0, 0.25]], 12, null, 0, yy + 0.3, zz));
+    const sun = lathe([[0.0, -0.015], [0.1, -0.015], [0.1, 0.015], [0.0, 0.015]], 16);
+    sun.applyMatrix4(new Matrix4().makeRotationX(Math.PI / 2));
+    gold.push(place(sun, 0, yy + 0.64, zz));
   }
-  // cabin shrine with its veil
-  linen.push(box(-0.42, 1.45, -0.6, 0.42, 2.35, 0.6));
-  gold.push(box(-0.46, 2.35, -0.64, 0.46, 2.45, 0.64));
-  // carrying poles
-  for (const sx of [-0.62, 0.62]) cedar.push(box(sx - 0.05, 1.12, -L * 0.62, sx + 0.05, 1.22, L * 0.62));
-  for (const sz of [-1.2, 0, 1.2]) cedar.push(box(-0.7, 1.12, sz - 0.05, 0.7, 1.22, sz + 0.05));
+  // cabin-shrine amidships: a gilded naos with cornice, draped in linen on the sides
+  gold.push(box(-0.36, deck, -0.55, 0.36, deck + 0.9, 0.55));
+  gold.push(frustum([-0.36, -0.55, 0.36, 0.55], deck + 0.9, deck + 1.05, -0.08, -0.08, -0.08, -0.08));
+  linen.push(box(-0.4, deck + 0.05, -0.5, 0.4, deck + 0.8, 0.5));
+  // small kneeling figures (the king) fore and aft of the shrine
+  for (const s of [-1, 1]) gold.push(lathe([[0.1, 0], [0.11, 0.2], [0.07, 0.32], [0.06, 0.38], [0, 0.42]], 10, null, 0, deck, s * 0.8));
+  // carrying poles along the length and three cross-bars beneath the hull
+  for (const sx of [-0.62, 0.62]) cedar.push(box(sx - 0.05, 1.0, -L * 0.64, sx + 0.05, 1.1, L * 0.64));
+  for (const sz of [-1.25, 0, 1.25]) cedar.push(box(-0.72, 1.1, sz - 0.05, 0.72, 1.2, sz + 0.05));
   for (const [list, mat] of [[gold, 'gold'], [cedar, 'cedar'], [linen, 'linen']]) {
     const g = mergeLocal(list);
     place(g, x, y, z, yaw);
     bag.add(mat, g);
   }
-  col.rect(rotRect([x, z], 1.5, L * 1.24, yaw), y + 1.1, y + 2.5);
+  col.rect(rotRect([x, z], 1.5, L * 1.3, yaw), y + 1.0, y + deck + 1.6);
 }
 
 /** Stone altar with torus and cornice. */
@@ -207,7 +230,7 @@ export function altar(el, { bag, col }) {
 }
 
 /** A pair of cedar door leaves standing open against the reveals of a doorway. */
-export function doorLeaves(el, { bag }) {
+export function doorLeaves(el, { bag, col }) {
   const [x, z] = el.at, y = el.y ?? 0, yaw = el.yaw ?? 0;
   const W = el.w, H = el.h, T = el.th ?? 0.18, depth = el.depth ?? 0.2;
   const leaf = W / 2;
@@ -224,6 +247,13 @@ export function doorLeaves(el, { bag }) {
     const g = mergeLocal(list);
     place(g, x, y, z, yaw);
     bag.add(mat, g);
+  }
+  // each open leaf is a thin obstacle along its reveal
+  const c = Math.round(Math.cos(yaw)), sn = Math.round(Math.sin(yaw));
+  for (const s of [-1, 1]) {
+    const lx0 = s * W / 2 - (s > 0 ? T : 0), lx1 = s * W / 2 + (s < 0 ? T : 0);
+    const pts = [[lx0, depth], [lx1, depth + leaf]].map(([u, v]) => [x + c * u + sn * v, z - sn * u + c * v]);
+    col.rect([Math.min(pts[0][0], pts[1][0]), Math.min(pts[0][1], pts[1][1]), Math.max(pts[0][0], pts[1][0]), Math.max(pts[0][1], pts[1][1])], y, y + H);
   }
 }
 
@@ -245,30 +275,51 @@ export function palm(el, { bag, col }) {
   place(trunk, x, y, z, yaw);
   bag.add('palm_trunk', trunk);
   const top = [x + Math.cos(-yaw) * lean * h, y + h, z + Math.sin(-yaw) * lean * h];
-  const tris = [];
-  const nf = 22;
+  const live = [], dead = [];
+  const nf = 26;
   for (let f = 0; f < nf; f++) {
-    const az = (f / nf) * Math.PI * 2 + r() * 0.3;
-    const up = 0.9 - (f % 3) * 0.45 + r() * 0.2;       // younger fronds stand up, older droop
-    const len = 3.4 + r() * 1.2;
+    const az = (f / nf) * Math.PI * 2 * 2.618 + r() * 0.4;     // phyllotaxis-like spiral
+    const age = f / nf;                                         // older fronds lower and drooping
+    const isDead = age > 0.86;
+    const up = isDead ? -1.25 + r() * 0.2 : 1.15 - age * 1.5 + r() * 0.15;
+    const len = (isDead ? 2.6 : 3.2) + r() * 1.1;
     const pts = [];
-    for (let k = 0; k <= 8; k++) {
-      const t = k / 8, d = t * len;
-      const yy = Math.sin(up) * d - 0.55 * d * d / len;
-      pts.push([top[0] + Math.cos(az) * Math.cos(up) * d, top[1] + yy, top[2] + Math.sin(az) * Math.cos(up) * d]);
+    const K = 12;
+    for (let k = 0; k <= K; k++) {
+      const t = k / K, d = t * len;
+      const yy = Math.sin(up) * d - (isDead ? 0.05 : 0.5) * d * d / len;
+      pts.push([top[0] + Math.cos(az) * Math.cos(up) * d, top[1] - 0.15 + yy, top[2] + Math.sin(az) * Math.cos(up) * d]);
     }
     const sx = -Math.sin(az), sz = Math.cos(az);
-    for (let k = 1; k < 8; k++) {
+    const out = isDead ? dead : live;
+    // rachis
+    for (let k = 0; k < K; k++) {
       const p = pts[k], q = pts[k + 1];
-      const w = 0.62 * Math.sin(Math.PI * (k / 8)) + 0.1;
+      out.push(p[0] + sx * 0.02, p[1], p[2] + sz * 0.02, q[0], q[1], q[2], p[0] - sx * 0.02, p[1], p[2] - sz * 0.02);
+    }
+    // leaflets: narrow blades along both sides, angled forward and folded up into a V
+    const nl = isDead ? 14 : 28;
+    for (let l = 2; l < nl; l++) {
+      const t = l / nl, kf = t * K, k0 = Math.min(K - 1, Math.floor(kf)), fr = kf - k0;
+      const p = [0, 1, 2].map((c) => pts[k0][c] * (1 - fr) + pts[k0 + 1][c] * fr);
+      const q = pts[Math.min(K, k0 + 2)];
+      const fx = q[0] - p[0], fy = q[1] - p[1], fz = q[2] - p[2], fl = Math.hypot(fx, fy, fz) || 1;
+      const ll = (0.25 + 0.55 * Math.sin(Math.PI * Math.min(1, t * 1.15))) * (isDead ? 0.7 : 1);
       for (const side of [-1, 1]) {
-        const tip = [p[0] + side * sx * w, p[1] - 0.18 * w, p[2] + side * sz * w];
-        // double-sided leaflet fan
-        tris.push(...p, ...q, ...tip, ...q, ...p, ...tip);
+        const jitter = (r() - 0.5) * 0.25;
+        const tip = [p[0] + side * sx * ll + fx / fl * ll * 0.55, p[1] + ll * (0.22 + jitter) * (isDead ? -1 : 1) + fy / fl * ll * 0.55, p[2] + side * sz * ll + fz / fl * ll * 0.55];
+        const b2 = [p[0] + fx / fl * 0.07, p[1] + fy / fl * 0.07, p[2] + fz / fl * 0.07];
+        out.push(...p, ...b2, ...tip);
       }
     }
   }
-  bag.add('palm_leaf', fromTriangles(tris));
+  bag.add('palm_leaf', fromTriangles(live));
+  if (dead.length) bag.add('palm_trunk', fromTriangles(dead));
+  // a few date clusters under the crown
+  if (r() < 0.6) for (let c = 0; c < 3; c++) {
+    const a = r() * Math.PI * 2;
+    bag.add('palm_trunk', lathe([[0.0, 0], [0.18, 0.15], [0.16, 0.45], [0.0, 0.6]], 6, null, top[0] + Math.cos(a) * 0.45, top[1] - 1.0, top[2] + Math.sin(a) * 0.45));
+  }
   col.circle(x, z, 0.4, y, y + h);
 }
 

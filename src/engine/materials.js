@@ -68,11 +68,39 @@ const blocks = (u, v, course, block, stagger = 0.5) => {
   return { id, d, row };
 };
 
+/**
+ * Irregular paving: rows of large cells, each cell split once or twice at random into
+ * rectangular flags of different sizes, as temple floors were laid with whatever slabs came.
+ */
+const flags = (u, v, size) => {
+  const row = floor(v.div(size));
+  const uu = u.add(hash(row.mul(7.31)).mul(size));
+  const cell = vec2(floor(uu.div(size)), row);
+  const lu = fract(uu.div(size)).mul(size), lv = fract(v.div(size)).mul(size);
+  const h1 = hash(cell.x.mul(12.9898).add(cell.y.mul(78.233)));
+  const h2 = hash(cell.x.mul(39.346).add(cell.y.mul(11.135)));
+  const h3 = hash(cell.x.mul(73.156).add(cell.y.mul(52.235)));
+  const vertical = h1.greaterThan(0.5);
+  const sp = h2.mul(0.4).add(0.3).mul(size);
+  const a = select(vertical, lu, lv), b = select(vertical, lv, lu);
+  const side = a.greaterThan(sp);
+  // second split, across the first, in about half of the pieces
+  const sp2 = h3.mul(0.5).add(0.25).mul(size);
+  const split2 = hash(h1.add(select(side, float(0.37), float(0.71)))).greaterThan(0.45);
+  const d0 = min(min(lu, float(size).sub(lu)), min(lv, float(size).sub(lv)));
+  const d1 = abs(a.sub(sp));
+  const d2 = select(split2, abs(b.sub(sp2)), float(9));
+  const d = min(d0, min(d1, d2));
+  const id = hash(h1.add(select(side, float(0.13), float(0.57))).add(select(split2.and(b.greaterThan(sp2)), float(0.29), float(0))));
+  return { id, d };
+};
+
 function make(spec) {
   const m = new MeshStandardNodeMaterial();
   const base = new Color(spec.color);
   const baseNode = vec3(base.r, base.g, base.b);
   m.roughness = spec.roughness ?? 0.8;
+  if (spec.side === 'double') { m.side = DoubleSide; m.shadowSide = DoubleSide; }
   m.metalness = spec.metalness ?? 0;
   const P = positionWorld;
 
@@ -83,7 +111,7 @@ function make(spec) {
       const course = spec.course, blk = spec.block;
       const { u, v, isTop } = wallUV();
       // floors and tops: flags laid in rows along x
-      const b = blocks(u, v, course, blk, spec.kind === 'mudbrick' ? 0.5 : 0.37);
+      const b = spec.kind === 'paving' ? flags(u, v, blk * 1.5) : blocks(u, v, course, blk, spec.kind === 'mudbrick' ? 0.5 : 0.37);
       const jointW = spec.kind === 'mudbrick' ? 0.014 : 0.006;
       const joint = float(1).sub(smoothstep(jointW * 0.4, jointW * 2.2, b.d));
       const stain = mx_fractal_noise_float(P.mul(0.11), 4, 2.0, 0.5);
@@ -168,9 +196,11 @@ function make(spec) {
       break;
     }
     case 'leaf': {
+      // palm leaflets: double sided, a little translucent-looking (brighter, yellower toward the tips)
       const n = mx_noise_float(P.mul(2.0));
       m.colorNode = baseNode.mul(n.mul(0.25).add(1)).mul(vec3(1.0, 1.0, 0.85).mul(hash(floor(P.y.mul(3))).mul(0.2).add(0.9)));
       m.side = DoubleSide;
+      m.shadowSide = DoubleSide;
       break;
     }
     default: {

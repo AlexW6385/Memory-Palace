@@ -27,3 +27,7 @@ for (const b of BUILDINGS) {
 test('plan check passes', () => {
   execFileSync('node', ['tools/plan-check.mjs'], { cwd: ROOT, stdio: 'pipe' });
 });
+
+test('walk-through check passes', () => {
+  execFileSync('node', ['tools/walk-check.mjs'], { cwd: ROOT, stdio: 'pipe' });
+});

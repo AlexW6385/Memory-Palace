@@ -2,8 +2,7 @@
 // drag-to-look on touch screens. Collision against the world's floors and obstacles;
 // steps, stairs and ramps are climbed by following the floor height.
 
-const EYE = 1.62, RADIUS = 0.3, STEP = 0.5, HEAD = 1.75, LOW = 0.25;
-const WALK = 2.6, RUN = 6.5, GRAVITY = 18;
+import { EYE, STEP, WALK, RUN, move } from '../core/walk.js';
 
 export class Controls {
   constructor(camera, canvas, collide) {
@@ -115,25 +114,9 @@ export class Controls {
     const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
     let dx = (-sin * f + cos * s) * speed * dt, dz = (-cos * f - sin * s) * speed * dt;
 
-    // move in small steps so thin walls are never skipped
-    const n = Math.max(1, Math.ceil(Math.hypot(dx, dz) / 0.12));
-    const P = this.feet, C = this.collide;
-    for (let i = 0; i < n; i++) {
-      let nx = P.x + dx / n, nz = P.z + dz / n;
-      let g = C.groundAt(nx, nz, P.y + STEP);
-      [nx, nz] = C.resolve(nx, nz, RADIUS, Math.max(g, P.y) + LOW, Math.max(g, P.y) + HEAD);
-      g = C.groundAt(nx, nz, P.y + STEP);
-      if (!Number.isFinite(g)) continue;
-      P.x = nx; P.z = nz;
-      if (g >= P.y - STEP && this.vy === 0) P.y = g;   // follow steps up and down
-    }
-    // gravity: drop to the floor below when stepping off an edge
-    const g = C.groundAt(P.x, P.z, P.y + 0.01);
-    if (P.y > g + 1e-3) {
-      this.vy -= GRAVITY * dt;
-      P.y = Math.max(g, P.y + this.vy * dt);
-      if (P.y <= g) this.vy = 0;
-    } else if (g > P.y) P.y = g;
+    this.feet.vy = this.vy;
+    move(this.feet, dx, dz, dt, this.collide);
+    this.vy = this.feet.vy;
     this.apply();
   }
 }

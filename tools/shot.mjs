@@ -38,7 +38,7 @@ if (opt('pose') || opt('cam')) {
     for (const v of all[b.id] || []) {
       if (only && !only.includes(v.name)) continue;
       const p = toWorld(plan, v.at[0], v.at[2], v.at[1]);
-      views.push({ name: `${b.id}-${v.name}`, world: p, yaw: v.yaw - (plan.yaw || 0) * Math.PI / 180, pitch: v.pitch, free: v.at[1] > 8 });
+      views.push({ name: `${b.id}-${v.name}`, world: p, yaw: v.yaw - (plan.yaw || 0) * Math.PI / 180, pitch: v.pitch, free: v.at[1] > 20 });
     }
   }
 }
@@ -48,7 +48,8 @@ const port = srv.address().port;
 const gpuArgs = flag('webgl') ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] :
   ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-webgpu-adapter=swiftshader', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'];
 const browser = await chromium.launch({ args: [...gpuArgs, '--ignore-gpu-blocklist'] });
-const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
+const mobile = W < 700;
+const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: mobile ? 2 : 1, isMobile: mobile, hasTouch: mobile });
 const log = [];
 page.on('console', (m) => { if (['error', 'warning'].includes(m.type())) log.push(`${m.type()}: ${m.text()}`); });
 page.on('pageerror', (e) => log.push(`pageerror: ${e.message}`));
@@ -66,7 +67,10 @@ await page.goto(`http://127.0.0.1:${port}/index.html?${q}`);
 try { await page.waitForFunction('window.READY === true', null, { timeout: 600_000 }); }
 catch (e) { log.push('timeout waiting for READY'); }
 console.log(`ready after ${((Date.now() - t0) / 1000).toFixed(1)}s (${await page.evaluate(() => window.palace?.renderer.webgpu ? 'WebGPU' : 'WebGL2')})`);
-await page.evaluate(() => { document.getElementById('intro').hidden = true; document.getElementById('notice').hidden = true; });
+if (!flag('intro')) await page.evaluate(() => { document.getElementById('intro').hidden = true; document.getElementById('notice').hidden = true; });
+else await page.evaluate(() => { document.getElementById('stick').hidden = !matchMedia('(pointer: coarse)').matches; });
+if (opt('eval')) console.log('eval:', await page.evaluate(opt('eval')));
+if (flag('begin')) { await page.evaluate(() => window.palace.begin()); await page.waitForTimeout(8000); console.log('after begin:', await page.evaluate(() => JSON.stringify(window.palace.stats))); }
 for (const v of views) {
   const t1 = Date.now();
   await page.evaluate(([v]) => v.free ? window.palace.camera(v.world[0], v.world[1], v.world[2], v.yaw, v.pitch) : window.palace.pose(v.world[0], v.world[1], v.world[2], v.yaw, v.pitch), [v]);

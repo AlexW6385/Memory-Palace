@@ -81,6 +81,8 @@ for (const s of [-1, 1]) wall([s * 18.75, -56.5], [s * 18.75, -75.5], 2.5, 0, PR
 // rear wall = front of the naos, with the door to the hall of appearances
 wall([-20, -74.25], [20, -74.25], 2.5, 0, PRO_TOP, [door(20, 4.4, 8.6, Y.pronaos)]);
 stair([-2.2, -75.5, 2.2, -73.0], 'n', Y.pronaos, Y.hypo, 0.15);
+// cedar doors of the inner halls, standing open against the reveals on the inner side
+obj('door_leaves', 0, -75.5, Y.hypo, { yaw: PI, w: 4.4, h: 8.6 - (Y.hypo - Y.pronaos), th: 0.16, depth: 0 });
 // 18 columns, 3 rows of 6; every capital different (Ptolemaic variety), pairs across the axis
 const PRO_CAPS = ['composite_b', 'palm', 'composite_c', 'papyrus_open', 'composite_a', 'lotus', 'composite_c', 'papyrus_bud', 'composite_b'];
 const PX = [3.4, 9.0, 14.6], PZ = [-58.0, -63.8, -69.6];
@@ -123,34 +125,53 @@ const HY_H = 9.6, HY_ARCH = Y.hypo + HY_H;
 const HY_CAPS = ['composite_a', 'palm', 'papyrus_open', 'composite_c', 'lotus', 'composite_b'];
 [-78.5, -81.5, -84.5].forEach((z, r) => [2.9, 7.3].forEach((x, c) => { for (const s of [-1, 1]) column(s * x, z, Y.hypo, HY_H, 1.45, HY_CAPS[r * 2 + c]); }));
 for (const x of [-7.3, -2.9, 2.9, 7.3]) beam([x, -75.5], [x, -87.5], HY_ARCH, 1.3, 1.0);
-slab([-10.9, -87.5, 10.9, -75.5], HY_ARCH + 1.0, HY_ARCH + 1.9, [[-1.6, -80.3, 1.6, -79.6], [-1.6, -83.4, 1.6, -82.7]]);
+slab([-10.9, -88.9, 10.9, -75.5], HY_ARCH + 1.0, HY_ARCH + 1.9, [[-1.6, -80.3, 1.6, -79.6], [-1.6, -83.4, 1.6, -82.7]], { walk: true });
 for (const s of [-1, 1]) {
   // side rooms: laboratory and treasury (west), liquid offerings and the Nile room (east)
   wall([s * 10.9, -75.5], [s * 10.9, -87.5], 1.2, Y.hypo, HY_ARCH + 1.0, [door(2.75, 1.6, 4.2, Y.hypo), door(9.25, 1.6, 4.2, Y.hypo)]);
   wall([s * 11.5, -81.5], [s * 14.3, -81.5], 1.0, Y.hypo, 8.4);
-  slab([s < 0 ? -14.3 : 11.5, -87.5, s < 0 ? -11.5 : 14.3, -75.5], 8.4, 9.2);
+  slab([s < 0 ? -14.3 : 11.5, -87.5, s < 0 ? -11.5 : 14.3, -75.5], 8.4, 9.2, [], { walk: true });
 }
 wall([-14.3, -88.2], [14.3, -88.2], 1.4, Y.hypo, HY_ARCH + 1.9, [door(14.3, 3.4, 7.0, Y.hypo)]);
 stair([-1.7, -88.9, 1.7, -87.5], 'n', Y.hypo, Y.offer, 0.15);
+obj('door_leaves', 0, -88.9, Y.offer, { yaw: PI, w: 3.4, h: 7.0 - (Y.offer - Y.hypo), th: 0.14, depth: 0 });
 
 // ── offering hall ─────────────────────────────────────────────────────────────
 floor([-14.3, -96.5, 14.3, -88.2], Y.offer);
-slab([-10.9, -95.9, 10.9, -88.9], 10.6, 11.4, [[-1.0, -92.8, 1.0, -92.1]]);
+slab([-11.5, -97.1, 11.5, -88.9], 10.6, 11.4, [[-1.0, -92.8, 1.0, -92.1]], { walk: true });
+// the two stair rooms: stairs to the roof for the New Year procession (dossier §6.5). Each is a
+// dog-leg of four flights in two lanes either side of a spine wall, arriving on the roof of the
+// offering hall at 11.4 m; the stairwell is open to the sky above its upper flights.
+const R1 = 3.975, R2 = 6.6, R3 = 9.2, ROOF_OFFER = 11.4;
 for (const s of [-1, 1]) {
-  // the two stair rooms (stairs to the roof: L2)
-  wall([s * 10.9, -88.9], [s * 10.9, -95.9], 1.2, Y.offer, 10.6, [door(3.5, 1.6, 4.0, Y.offer)]);
-  slab([s < 0 ? -14.3 : 11.5, -95.9, s < 0 ? -11.5 : 14.3, -88.9], 8.4, 9.2);
+  const X = (a, b) => (s < 0 ? [-b, -a] : [a, b]);
+  const rect = (a, b, z0, z1) => { const [x0, x1] = X(a, b); return [x0, z0, x1, z1]; };
+  wall([s * 10.9, -88.9], [s * 10.9, -95.9], 1.2, Y.offer, 10.6, [door(0.75, 1.2, 3.6, Y.offer)]);
+  add({ t: 'stair', rect: rect(11.5, 12.8, -94.5, -90.3), dir: 'n', y0: Y.offer, y1: R1, riser: 0.175 });
+  slab(rect(11.5, 14.3, -95.9, -94.5), R1 - 0.4, R1, [], { walk: true });
+  add({ t: 'stair', rect: rect(13.0, 14.3, -94.5, -90.3), dir: 's', y0: R1, y1: R2, riser: 0.175, base: R1 - 0.4 });
+  slab(rect(11.5, 14.3, -90.3, -88.9), R2 - 0.4, R2, [], { walk: true });
+  add({ t: 'stair', rect: rect(11.5, 12.8, -94.5, -90.3), dir: 'n', y0: R2, y1: R3, riser: 0.175, base: R2 - 0.45 });
+  slab(rect(11.5, 14.3, -95.9, -94.5), R3 - 0.4, R3, [], { walk: true });
+  add({ t: 'stair', rect: rect(13.0, 14.3, -94.5, -90.9), dir: 's', y0: R3, y1: ROOF_OFFER, riser: 0.18, base: R3 - 0.4 });
+  // oil lamps on the landings (the real stairs are lit by small windows)
+  lamp(s * 14.05, Y.offer + 1.6, -89.15, 3, 6, Y.offer); lamp(s * 11.75, R2 + 1.6, -89.15, 3, 6, R2); lamp(s * 14.05, R1 + 1.6, -95.65, 3, 6, R1);
+  // spine wall between the lanes, rising as a parapet beside the top flight
+  { const [x0, x1] = X(12.8, 13.0); wall([(x0 + x1) / 2, -90.3], [(x0 + x1) / 2, -94.5], 0.2, Y.offer, ROOF_OFFER + 1.0); }
+  // the top landing, roofing the entrance: walkable at the level of the offering-hall roof
+  slab(rect(11.5, 14.3, -90.9, -88.9), 10.6, ROOF_OFFER, [], { walk: true });
 }
 wall([-14.3, -96.5], [14.3, -96.5], 1.2, Y.offer, 11.4, [door(14.3, 3.0, 6.4, Y.offer)]);
 stair([-1.5, -97.1, 1.5, -95.9], 'n', Y.offer, Y.ennead, 0.125);
+obj('door_leaves', 0, -97.1, Y.ennead, { yaw: PI, w: 3.0, h: 6.4 - (Y.ennead - Y.offer), th: 0.12, depth: 0 });
 
 // ── hall of the Ennead ────────────────────────────────────────────────────────
 floor([-14.3, -103.7, 14.3, -96.5], Y.ennead);
-slab([-10.9, -103.1, 10.9, -97.1], 9.8, 10.6);
+slab([-10.9, -103.1, 10.9, -97.1], 9.8, 10.6, [], { walk: true });
 for (const s of [-1, 1]) {
   // chapel of Min (west) and linen room (east)
   wall([s * 10.9, -97.1], [s * 10.9, -103.1], 1.2, Y.ennead, 9.8, [door(3.0, 1.6, 4.0, Y.ennead)]);
-  slab([s < 0 ? -14.3 : 11.5, -103.1, s < 0 ? -11.5 : 14.3, -97.1], 8.4, 9.2);
+  slab([s < 0 ? -14.3 : 11.5, -103.1, s < 0 ? -11.5 : 14.3, -97.1], 8.4, 9.2, [], { walk: true });
 }
 wall([-14.3, -103.7], [14.3, -103.7], 1.2, Y.ennead, 9.8, [door(14.3, 2.6, 5.6, Y.ennead), door(14.3 - 4.9, 1.6, 4.2, Y.ennead), door(14.3 + 4.9, 1.6, 4.2, Y.ennead)]);
 for (const x of [-4.9, 0, 4.9]) stair([x - (x ? 0.8 : 1.3), -104.3, x + (x ? 0.8 : 1.3), -103.1], 'n', Y.ennead, Y.sanct, 0.125);
@@ -162,7 +183,14 @@ for (const s of [-1, 1]) wall([s * 3.3, -104.3], [s * 3.3, -116.9], 1.2, Y.sanct
 wall([-3.9, -116.3], [3.9, -116.3], 1.2, Y.sanct, SAN_TOP);
 slab([-3.9, -116.9, 3.9, -104.3], SAN_TOP, SAN_TOP + 0.8, [[-0.3, -108.3, 0.3, -107.7], [-0.3, -110.3, 0.3, -109.7], [-0.3, -112.3, 0.3, -111.7]]);
 trim([-3.9, -116.9, 3.9, -104.3], Y.sanct, SAN_TOP - 1.4, { torus: 0.14, cornice: 0.9, cap: false, sides: [false, true, true, true], cornersMask: [false, false, true, true] });
-slab([-14.3, -126.3, 14.3, -104.3], 8.4, 9.2, [[-3.9, -116.9, 3.9, -104.3]]);
+slab([-14.3, -126.3, 14.3, -104.3], 8.4, 9.2, [[-3.9, -116.9, 3.9, -104.3]], { walk: true });
+// steps between the roof levels (chapels 9.2 → Ennead 10.6 → offering hall 11.4 → hall of appearances 12.4)
+for (const s of [-1, 1]) {
+  const xa = Math.min(s * 6.4, s * 8.6), xb = Math.max(s * 6.4, s * 8.6);
+  add({ t: 'stair', rect: [xa, -106.9, xb, -103.1], dir: 's', y0: 9.2, y1: 10.6, riser: 0.175, base: 9.2 });
+  add({ t: 'stair', rect: [xa, -99.6, xb, -97.1], dir: 's', y0: 10.6, y1: 11.4, riser: 0.16, base: 10.6 });
+  add({ t: 'stair', rect: [xa, -92.3, xb, -88.9], dir: 's', y0: 11.4, y1: 12.4, riser: 0.17, base: 11.4 });
+}
 // chapel walls
 for (const s of [-1, 1]) {
   wall([s * 6.4, -104.3], [s * 6.4, -118.9], 1.0, Y.sanct, 8.4, [-106.65, -112.1, -117.55].map((z) => door(-104.3 - z, 1.4, 3.8, Y.sanct)));
@@ -172,10 +200,10 @@ for (const s of [-1, 1]) {
 wall([-14.3, -119.4], [14.3, -119.4], 1.0, Y.sanct, 8.4, [-4.5, 0, 4.5].map((x) => door(x + 14.3, 1.4, 3.8, Y.sanct)));
 obj('naos', 0, -114.6, Y.sanct, { yaw: PI, w: 1.6, d: 1.45, h: 4.0 });
 obj('barque_stand', 0, -109.4, Y.sanct, { w: 1.3, d: 2.6, h: 1.05 });
-obj('barque', 0, -109.4, Y.sanct + 1.05 - 1.12, { l: 5.4 });
+obj('barque', 0, -109.4, Y.sanct + 1.05 - 1.0, { l: 4.6 });
 // oil lamps in the dark inner rooms (baked into the light of the room)
-lamp(-4.9, Y.sanct + 1.6, -110.6, 4, 7, Y.sanct); lamp(4.9, Y.sanct + 1.6, -110.6, 4, 7, Y.sanct);
-lamp(0, Y.sanct + 1.6, -117.9, 4, 7, Y.sanct);
+lamp(-5.6, Y.sanct + 1.6, -110.6, 4, 7, Y.sanct); lamp(5.6, Y.sanct + 1.6, -110.6, 4, 7, Y.sanct);
+lamp(-2.2, Y.sanct + 1.6, -118.6, 4, 7, Y.sanct); lamp(2.2, Y.sanct + 1.6, -118.6, 4, 7, Y.sanct);
 for (const s of [-1, 1]) for (const z of [-106.65, -112.1, -117.55]) lamp(s * 10.6, Y.sanct + 1.5, z, 3, 6, Y.sanct);
 for (const x of [-8.6, 0, 8.6]) lamp(x, Y.sanct + 1.5, -123.1, 3, 6, Y.sanct);
 for (const s of [-1, 1]) lamp(s * 3.6, Y.ennead + 1.6, -99.0, 3, 8, Y.ennead);
@@ -231,6 +259,23 @@ const rooms = [
   room('ambulatory-n', [-22.7, -134.7, 22.7, -128.6], 0, 'open'),
 ];
 
+// walk-through routes for tools/walk-check.mjs (local [x, z]); each starts on the ground floor
+const walks = [
+  // the axis, from the forecourt to the sanctuary
+  [[0, 26], [0, -6], [0, -30], [-2.6, -33], [-2.6, -39], [0, -45], [0, -55.0], [0, -60], [0, -74], [0, -80], [0, -88.2], [0, -92], [0, -96.5], [0, -100], [0, -103.7], [0, -105.5]],
+  // the side rooms of the hall of appearances and the offering hall
+  [[0, -80], [-9.5, -78.25], [-13, -78.25], [-9.5, -78.25], [-9.5, -84.75], [-13, -84.75], [-9.5, -84.75], [9.5, -84.75], [13, -84.75], [9.5, -84.75], [9.5, -78.25], [13, -78.25], [9.5, -78.25], [0, -80], [0, -88.2], [0, -91.2], [-9.5, -91.2], [-9.5, -89.6], [-12.15, -89.6], [-9.5, -89.6], [-9.5, -91.2], [9.5, -91.2], [9.5, -89.6], [12.15, -89.6]],
+  // the corridor of mysteries and every chapel
+  [[0, -100], [-12.5, -100.1], [-4.9, -100.6], [-4.9, -103.7], [-4.9, -106.65], [-9.5, -106.65], [-4.9, -106.65], [-4.9, -112.1], [-9.5, -112.1], [-4.9, -112.1], [-4.9, -117.9], [-4.5, -117.9], [-4.5, -121.8], [-4.5, -117.9], [0, -117.9], [0, -121.8], [0, -117.9], [4.5, -117.9], [4.5, -121.8], [4.5, -117.9], [4.9, -117.9], [4.9, -117.55], [9.5, -117.55], [4.9, -117.55], [4.9, -112.1], [9.5, -112.1], [4.9, -112.1], [4.9, -106.65], [9.5, -106.65], [4.9, -106.65], [4.9, -103.7], [4.9, -100.6], [12.5, -100.1]],
+  // the pronaos side rooms
+  [[0, -60.5], [11.5, -60.9], [15.5, -60.9], [11.5, -60.9], [-11.5, -60.9], [-15.5, -60.9]],
+  // up the east stair to the roof, across the roof levels, and down the west stair
+  [[0, -92], [9.5, -89.6], [12.15, -89.6], [12.15, -95.2], [13.65, -95.2], [13.65, -89.6], [12.15, -89.6], [12.15, -95.2], [13.65, -95.2], [13.65, -89.6], [11.0, -89.8], [7.5, -92.5], [7.5, -86.0], [7.5, -92.5], [7.5, -100.0], [7.5, -110], [-7.5, -110], [-7.5, -100], [-7.5, -92.5], [-11.0, -89.8], [-13.65, -89.6], [-13.65, -95.2], [-12.15, -95.2], [-12.15, -89.6], [-13.65, -89.6], [-13.65, -95.2], [-12.15, -95.2], [-12.15, -89.6], [-9.5, -89.6], [0, -92]],
+  // the ambulatory around the temple
+  [[-20.5, -50], [-21.4, -55.0], [-21.4, -57.5], [-19.6, -80], [-19.6, -131], [19.6, -131], [19.6, -80], [21.4, -57.5], [21.4, -55.0], [20.5, -50]],
+];
+walks.forEach((w, i) => { w.y0 = [0, 0.9, 1.6, 0.45, 1.35, 0][i]; });
+
 export const edfu = {
   id: 'edfu',
   name: { en: 'Temple of Horus, Edfu', zh: '埃德富荷鲁斯神庙' },
@@ -244,6 +289,7 @@ export const edfu = {
   bakeTop: 18,
   elements: E,
   rooms,
+  walks,
 };
 
 export default edfu;

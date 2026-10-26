@@ -14,7 +14,7 @@ export function cavettoProfile(H, P, inset) {
     const t = (i / n) * Math.PI / 2;
     pts.push([P * (1 - Math.cos(t)), 0.07 * H + 0.73 * H * Math.sin(t)]);
   }
-  pts.push([P, H], [-inset, H]);
+  pts.push([P, H], [-inset, H], [-inset, 0]);   // close the section so the inner side is solid
   return pts;
 }
 
