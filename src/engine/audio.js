@@ -21,9 +21,19 @@ export class Music {
   start() {
     if (this.ctx) { this.ctx.resume(); return; }
     const ctx = this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    ctx.resume?.();
+    // whatever was asked for before the context existed is set up now, on the next set()
+    const pending = this.score;
+    this.score = null; this.zone = null;
+    this.pending = pending;
     this.master = ctx.createGain();
     this.master.gain.value = this.volume;
-    this.master.connect(ctx.destination);
+    // a gentle compressor and make-up gain so quiet passages are still heard on laptop speakers
+    this.comp = ctx.createDynamicsCompressor();
+    this.comp.threshold.value = -24; this.comp.ratio.value = 3; this.comp.attack.value = 0.02; this.comp.release.value = 0.4;
+    this.makeup = ctx.createGain();
+    this.makeup.gain.value = 2.2;
+    this.master.connect(this.comp); this.comp.connect(this.makeup); this.makeup.connect(ctx.destination);
     this.dry = ctx.createGain();
     this.wet = ctx.createGain();
     this.reverb = ctx.createConvolver();
@@ -34,7 +44,21 @@ export class Music {
     this.bus = ctx.createGain();
     this.bus.connect(this.dry);
     this.bus.connect(this.reverb);
+    // a meter for the tests: RMS of what reaches the speakers
+    this.analyser = ctx.createAnalyser();
+    this.analyser.fftSize = 2048;
+    this.makeup.connect(this.analyser);
     this.timer = setInterval(() => this.tick(), 90);
+  }
+
+  /** Current output level (RMS, 0…1). */
+  level() {
+    if (!this.analyser) return 0;
+    const a = new Float32Array(this.analyser.fftSize);
+    this.analyser.getFloatTimeDomainData(a);
+    let s = 0;
+    for (const v of a) s += v * v;
+    return Math.sqrt(s / a.length);
   }
 
   setVolume(v) {

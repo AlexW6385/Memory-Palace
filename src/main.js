@@ -128,7 +128,7 @@ async function main() {
     entrance: (id) => goTo(world.plans.get(id)),
     walk: async (keys, ms) => { controls.enabled = true; for (const k of keys) controls.keys.add(k); await new Promise((r) => setTimeout(r, ms)); controls.keys.clear(); },
     feet: () => ({ ...controls.feet }),
-    world, renderer: R, controls, stats,
+    world, renderer: R, controls, stats, music,
     begin,
   };
   window.READY = true;
