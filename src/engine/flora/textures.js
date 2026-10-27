@@ -94,6 +94,25 @@ const DRAW = {
       if (rand() < 0.35) { g.fillStyle = jitter(rand, '#a1906a', 20); g.beginPath(); g.ellipse(x0 + lean, top + S * 0.03, S * 0.02, S * 0.06, 0.2, 0, Math.PI * 2); g.fill(); }
     }
   },
+  /** Japanese maple in autumn: small palmate leaves, scarlet, orange and a little late green. */
+  maple(g, S, rand) {
+    const cols = ['#b8321e', '#c94a1c', '#d8741f', '#9a2a1c', '#c9a13a', '#6f7a34'];
+    for (let k = 0; k < 360; k++) {
+      const r = Math.sqrt(rand()) * S * 0.46, a = rand() * Math.PI * 2, x = S / 2 + Math.cos(a) * r, y = S / 2 + Math.sin(a) * r;
+      const c = jitter(rand, cols[Math.floor(Math.pow(rand(), 1.4) * cols.length)], 24), L = S * (0.022 + rand() * 0.014), rot = rand() * Math.PI * 2;
+      for (let p = 0; p < 7; p++) leaf(g, x, y, rot + (p - 3) * 0.42, L * (p === 3 ? 1 : 0.75 + 0.1 * Math.abs(p - 3) * -1 + 0.3), S * 0.006, c);
+    }
+  },
+  /** Bamboo: sprays of narrow lance leaves hanging from thin twigs. */
+  bamboo(g, S, rand) {
+    for (let t = 0; t < 16; t++) {
+      const x0 = S * (0.1 + rand() * 0.8), y0 = S * (0.05 + rand() * 0.5);
+      for (let k = 0; k < 9; k++) {
+        const a = Math.PI / 2 + (rand() - 0.5) * 1.6, px = x0 + (rand() - 0.5) * S * 0.08, py = y0 + rand() * S * 0.15;
+        leaf(g, px, py, a, S * (0.12 + rand() * 0.06), S * 0.012, jitter(rand, rand() < 0.3 ? '#8d9a4c' : '#5f7a3a', 24));
+      }
+    }
+  },
   /** Oleander: lance leaves with pink flower clusters. */
   oleander(g, S, rand) {
     DRAW.broad(g, S, rand, '#3c5a33');

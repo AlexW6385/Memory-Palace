@@ -2,6 +2,13 @@
 
 Newest first. What you can visit and what looks better, in plain words.
 
+## v5.8 — Heian Japan and the Phoenix Hall (2026-10-27)
+
+- **A new region, Heian Japan,** north of Tang China over the pass of Mount Wutai: the green plain of Uji by the river, wooded hills of red pines and cryptomerias, maples in autumn red, bamboo groves, rice fields, a village of timber houses under bark and thatch roofs, and a soft autumn morning with mist on the water.
+- **The Phoenix Hall of Byōdō-in** (1053), Amida's palace on earth: seen across its pond on its island, the central hall with its hip-and-gable roof and gilt phoenixes on the ridge, the pent roof lifted at the front so that Amida's face shows from the far bank, the wing corridors of two levels turning forward to their corner towers, the tail corridor behind; cross the arched bridge and walk round to the open doors to see the gilt Amida on his lotus pedestal before his nimbus, under the canopy, with the bodhisattvas on clouds high on the walls.
+- **Ponds:** garden water dug into the ground, which you cannot wade; bridges cross it.
+- **Music:** court music of the Heian period — a shō cluster, a flute and a koto outside; chant and a small bell inside.
+
 ## v5.7 — Tang China and the Foguang East Hall (2026-10-27)
 
 - **A new region, Tang China,** north of Francia over a pass: loess hills with terraced fields, Chinese pines and arborvitae, a valley of elms and poplars, a village of grey-brick houses, and a dry northern sky that sometimes turns yellow with dust.

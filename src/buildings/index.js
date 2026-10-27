@@ -9,4 +9,5 @@ export const BUILDINGS = [
   { id: 'dome-of-the-rock', district: 'levant', load: () => import('./dome-of-the-rock/index.js') },
   { id: 'sainte-chapelle', district: 'francia', load: () => import('./sainte-chapelle/index.js') },
   { id: 'foguang-east-hall', district: 'tang', load: () => import('./foguang-east-hall/index.js') },
+  { id: 'byodo-in-phoenix-hall', district: 'heian', load: () => import('./byodo-in-phoenix-hall/index.js') },
 ];

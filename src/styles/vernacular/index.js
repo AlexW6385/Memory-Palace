@@ -251,11 +251,24 @@ function houseTimber(el, { bag, col }) {
  * house_china: a house of a north China village — earth or grey-brick walls, a gabled roof of grey
  * tiles with a ridge, small latticed windows and a door on the courtyard side. { rect, y, foot, front, seed }
  */
-function houseChina(el, { bag, col }) {
+function houseChina(el, ctx) {
+  gabledHouse(el, ctx, { H: 3.2, foot: 'brick_grey', walls: ['brick_grey', 'earth_wall'], roof: 'tile_grey', o: 0.5, pitch: 0.62, door: 'timber_red', window: 'timber_red', horns: true });
+}
+
+/**
+ * house_japan: a house of a Heian village by Uji — a timber frame on stones, walls of planks or
+ * white plaster between dark posts, deep eaves, a gabled roof of cypress bark or thatch.
+ */
+function houseJapan(el, ctx) {
+  const rand = rng((el.seed || 1) + 7);
+  gabledHouse(el, ctx, { H: 2.9, foot: 'limestone', walls: ['timber', 'plaster_white'], roof: rand() < 0.5 ? 'roof_bark' : 'thatch', o: 0.9, pitch: 0.85, door: 'timber', window: 'timber', horns: false });
+}
+
+function gabledHouse(el, { bag, col }, O) {
   const rand = rng(el.seed || 1);
-  const [x0, z0, x1, z1] = el.rect, y = el.y, H = 3.2;
-  const mat = rand() < 0.5 ? 'brick_grey' : 'earth_wall';
-  bag.add('brick_grey', box(x0 - 0.1, el.foot - 0.6, z0 - 0.1, x1 + 0.1, y + 0.45, z1 + 0.1));
+  const [x0, z0, x1, z1] = el.rect, y = el.y, H = O.H;
+  const mat = O.walls[rand() < 0.5 ? 0 : 1];
+  bag.add(O.foot, box(x0 - 0.1, el.foot - 0.6, z0 - 0.1, x1 + 0.1, y + 0.45, z1 + 0.1));
   bag.add(mat, box(x0, y + 0.45, z0, x1, y + H, z1));
   col.rect([x0, z0, x1, z1], el.foot - 0.6, y + H);
   const f = el.front || 's', along = f === 's' || f === 'n';
@@ -270,34 +283,34 @@ function houseChina(el, { bag, col }) {
   const n = Math.max(2, Math.floor(L / 3.2));
   for (let k = 0; k < n; k++) {
     const u = (k + 0.5) * L / n;
-    if (k === Math.floor(n / 2)) open(u - 0.55, 0.45, 1.1, 2.1, 'timber_red');
-    else open(u - 0.6, 1.2, 1.2, 1.1, 'timber_red');
+    if (k === Math.floor(n / 2)) open(u - 0.55, 0.45, 1.1, 2.1, O.door);
+    else open(u - 0.6, 1.2, 1.2, 1.1, O.window);
   }
   // the roof: a gable over the long side, grey tiles, a ridge with raised ends
-  const o = 0.5, ye = y + H;
+  const o = O.o, ye = y + H;
   const tris = [];
   let ridge;
   if ((x1 - x0) >= (z1 - z0)) {
-    const zm = (z0 + z1) / 2, rise = (z1 - z0) / 2 * 0.62;
+    const zm = (z0 + z1) / 2, rise = (z1 - z0) / 2 * O.pitch;
     const a = [x0 - o, ye, z0 - o], b = [x1 + o, ye, z0 - o], c = [x1 + o, ye, z1 + o], d = [x0 - o, ye, z1 + o], t0 = [x0 - o, ye + rise, zm], t1 = [x1 + o, ye + rise, zm];
     tris.push(...a, ...b, ...t1, ...a, ...t1, ...t0, ...d, ...t0, ...t1, ...d, ...t1, ...c);
     bag.add(mat, fromTriangles([x0, ye, z0, x0, ye + rise - 0.2, zm, x0, ye, z1, x1, ye, z0, x1, ye, z1, x1, ye + rise - 0.2, zm]));
     ridge = box(x0 - o, ye + rise - 0.05, zm - 0.18, x1 + o, ye + rise + 0.35, zm + 0.18);
-    for (const xx of [x0 - o, x1 + o]) bag.add('tile_grey', box(xx - 0.25, ye + rise, zm - 0.2, xx + 0.25, ye + rise + 0.75, zm + 0.2));
+    if (O.horns) for (const xx of [x0 - o, x1 + o]) bag.add('tile_grey', box(xx - 0.25, ye + rise, zm - 0.2, xx + 0.25, ye + rise + 0.75, zm + 0.2));
   } else {
-    const xm = (x0 + x1) / 2, rise = (x1 - x0) / 2 * 0.62;
+    const xm = (x0 + x1) / 2, rise = (x1 - x0) / 2 * O.pitch;
     const a = [x0 - o, ye, z0 - o], b = [x1 + o, ye, z0 - o], c = [x1 + o, ye, z1 + o], d = [x0 - o, ye, z1 + o], t0 = [xm, ye + rise, z0 - o], t1 = [xm, ye + rise, z1 + o];
     tris.push(...a, ...t0, ...t1, ...a, ...t1, ...d, ...b, ...c, ...t1, ...b, ...t1, ...t0);
     bag.add(mat, fromTriangles([x0, ye, z0, x1, ye, z0, xm, ye + rise - 0.2, z0, x0, ye, z1, xm, ye + rise - 0.2, z1, x1, ye, z1]));
     ridge = box(xm - 0.18, ye + rise - 0.05, z0 - o, xm + 0.18, ye + rise + 0.35, z1 + o);
-    for (const zz of [z0 - o, z1 + o]) bag.add('tile_grey', box(xm - 0.2, ye + rise, zz - 0.25, xm + 0.2, ye + rise + 0.75, zz + 0.25));
+    if (O.horns) for (const zz of [z0 - o, z1 + o]) bag.add('tile_grey', box(xm - 0.2, ye + rise, zz - 0.25, xm + 0.2, ye + rise + 0.75, zz + 0.25));
   }
   for (let i = 0; i < tris.length; i += 9) {
     const ux = tris[i + 3] - tris[i], uz = tris[i + 5] - tris[i + 2], vx = tris[i + 6] - tris[i], vz = tris[i + 8] - tris[i + 2];
     if (uz * vx - ux * vz < 0) for (let k = 0; k < 3; k++) { const t = tris[i + 3 + k]; tris[i + 3 + k] = tris[i + 6 + k]; tris[i + 6 + k] = t; }
   }
-  bag.add('tile_grey', fromTriangles(tris));
-  bag.add('tile_grey', ridge);
+  bag.add(O.roof, fromTriangles(tris));
+  bag.add(O.roof === 'tile_grey' ? 'tile_grey' : 'roof_ridge', ridge);
 }
 
 /** A low mud-brick wall (garden, animal pen). */
@@ -307,4 +320,4 @@ function wallLow(el, { bag, col }) {
   col.rect(el.rect, el.y - 0.5, el.y + el.h);
 }
 
-registerStyle('vernacular', { trim: () => {}, opening: () => {}, column: () => {}, elements: { house_egypt: houseEgypt, house_tiled: houseTiled, house_domed: houseDomed, house_timber: houseTimber, house_china: houseChina, wall_low: wallLow }, objects: {} });
+registerStyle('vernacular', { trim: () => {}, opening: () => {}, column: () => {}, elements: { house_egypt: houseEgypt, house_tiled: houseTiled, house_domed: houseDomed, house_timber: houseTimber, house_china: houseChina, house_japan: houseJapan, wall_low: wallLow }, objects: {} });

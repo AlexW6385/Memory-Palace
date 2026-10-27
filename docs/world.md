@@ -23,6 +23,7 @@ Coordinates: metres, +x east, +z south (north is −z), origin at the pylon gate
 | **The Levant** (Jerusalem) | −3950 … −5150 | The Dome of the Rock | clear morning, east-south-east (az 112°, el 32°) | clear · fair · *sharav* (hot dusty haze) · winter shower |
 | **Francia** (Paris) | −5150 … −6350 | The Sainte-Chapelle | summer afternoon, west-south-west (az 248°, el 34°) | fair · cloudy · overcast · showers |
 | **Tang China** (Mount Wutai) | −6350 … −7550 | The Great East Hall of Foguang Monastery | late afternoon, low in the west (az 256°, el 21°), on the hall's face | clear · fair · loess dust · showers |
+| **Heian Japan** (Uji) | −7550 … −8750 | The Phoenix Hall of Byōdō-in | autumn morning, low in the east-south-east (az 112°, el 17°), on the hall's face | fair · cloudy · river mist · drizzle |
 
 Climates are in `REGIONS[].climate`: sun, sky (turbidity, Rayleigh and Mie scattering, zenith and horizon radiance for the baker), haze (colour, density, height falloff), exposure, wind, and weather states with weights. A state sets cloud cover and density, the sun's strength under cloud, the haze, rain and wind. States are held for 2½–8 minutes and cross-fade over about 75 s. Cloud shadows drift over the ground with the wind; rain falls outdoors, and the ground darkens and pools while wet. `?weather=<id>` fixes a state (screenshots).
 
@@ -84,6 +85,16 @@ Climates are in `REGIONS[].climate`: sun, sky (turbidity, Rayleigh and Mie scatt
 - **Settlement:** a village of houses of grey brick and tamped earth with gabled roofs of grey tiles (`house_china`).
 - **Roads:** from Paris over the northern pass, up the valley to the monastery gate.
 
+### Heian Japan
+
+- **Landform:** the plain of Uji on the river's west bank; wooded hills west and north-west of it; Mount Asahi across the river; the ridge of Mount Wutai with its pass toward Tang China to the south; high mountains closing the world's north end.
+- **Climate:** soft and moist; an autumn morning with mist on the river, clouds and drizzle passing.
+- **Ground:** green grass and moss, rice fields (stubble after the harvest) on the plain.
+- **Plants:** Japanese red pines on the hills and by the water, cryptomerias in groves higher up, maples in autumn red, bamboo groves at the hills' foot, willows and reeds by the river.
+- **Water:** the pond Aji-ike dug into the Phoenix Hall's site round its island (`PONDS` in `regions.js`: the ground lowered under the water, and the water cannot be waded); a bridge to the island.
+- **Settlement:** a village of timber houses with plastered or plank walls under steep roofs of cypress bark or thatch (`house_japan`).
+- **Roads:** from the Tang village north over the pass of Wutai, down to the plain and to the south shore of the pond.
+
 ## Loading and drawing
 
 - **Terrain:** one height function; drawn as tiles of 512 m, the near ones split into chunks of 256 m whose grid follows the distance (2, 4, 8 m; 16 and 32 m far away), built in workers; skirts hide the seams.
@@ -99,4 +110,5 @@ Climates are in `REGIONS[].climate`: sun, sky (turbidity, Rayleigh and Mie scatt
 5. The Levant: the Aqsa mosque, the walls and gates of the Haram, the qanatir (later) on the platform.
 6. Francia: Notre-Dame (under construction in 1248), the Grand-Salle of the palace, the Seine's islands and bridges.
 7. Tang China: the Manjuśrī Hall (1137) and the monastery's other courts belong to later periods; other Tang buildings (Nanchan Temple) could join.
-8. New regions as Phase 2 continues (Japan, India, …), each with its own basin, sky and planting.
+8. Heian Japan: the bell tower and the Kannon-dō of Byōdō-in; the river with the Uji bridge; an older Japanese building (Hōryū-ji) could join.
+9. New regions as Phase 2 continues (India, …), each with its own basin, sky and planting.
