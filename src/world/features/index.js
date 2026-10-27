@@ -5,4 +5,5 @@ export const FEATURES = [
   { id: 'constantinople-town', region: 'byzantium', load: async () => { await import('../../styles/vernacular/index.js'); return { plan: (await import('./towns.js')).plan('constantinople', 'house_tiled', 562) }; } },
   { id: 'jerusalem-town', region: 'levant', load: async () => { await import('../../styles/vernacular/index.js'); return { plan: (await import('./towns.js')).plan('jerusalem', 'house_domed', 691) }; } },
   { id: 'paris-town', region: 'francia', load: async () => { await import('../../styles/vernacular/index.js'); return { plan: (await import('./towns.js')).plan('paris', 'house_timber', 1248) }; } },
+  { id: 'tang-village-town', region: 'tang', load: async () => { await import('../../styles/vernacular/index.js'); return { plan: (await import('./towns.js')).plan('tang-village', 'house_china', 857) }; } },
 ];

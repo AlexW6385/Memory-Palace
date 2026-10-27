@@ -22,6 +22,7 @@ Coordinates: metres, +x east, +z south (north is −z), origin at the pylon gate
 | **Byzantium** (Constantinople) | −2750 … −3950 | Hagia Sophia | late autumn morning, low in the south-east (az 142°, el 26°) | fair · cloudy · overcast · drizzle · sea mist · *poyraz* (north-east wind) |
 | **The Levant** (Jerusalem) | −3950 … −5150 | The Dome of the Rock | clear morning, east-south-east (az 112°, el 32°) | clear · fair · *sharav* (hot dusty haze) · winter shower |
 | **Francia** (Paris) | −5150 … −6350 | The Sainte-Chapelle | summer afternoon, west-south-west (az 248°, el 34°) | fair · cloudy · overcast · showers |
+| **Tang China** (Mount Wutai) | −6350 … −7550 | The Great East Hall of Foguang Monastery | late afternoon, low in the west (az 256°, el 21°), on the hall's face | clear · fair · loess dust · showers |
 
 Climates are in `REGIONS[].climate`: sun, sky (turbidity, Rayleigh and Mie scattering, zenith and horizon radiance for the baker), haze (colour, density, height falloff), exposure, wind, and weather states with weights. A state sets cloud cover and density, the sun's strength under cloud, the haze, rain and wind. States are held for 2½–8 minutes and cross-fade over about 75 s. Cloud shadows drift over the ground with the wind; rain falls outdoors, and the ground darkens and pools while wet. `?weather=<id>` fixes a state (screenshots).
 
@@ -74,6 +75,15 @@ Climates are in `REGIONS[].climate`: sun, sky (turbidity, Rayleigh and Mie scatt
 - **Settlement:** the courtyard of the palace with its round towers by the river; a town of timber-framed houses — stone ground floors, jettied upper storeys, plaster between dark oak timbers, steep gables of tile or slate facing the street (`house_timber`).
 - **Roads:** from the Levant over the pass of Samaria, along the foot of Sainte-Geneviève to the palace courtyard.
 
+### Tang China
+
+- **Landform:** **Foguang Mountain** rising behind the monastery, which climbs its western slope in three terraces and looks west over a valley; loess hills west and north; the peaks of Wutai closing the world's north end; the ridge with its pass toward Francia to the south.
+- **Climate:** dry and clear in the north; at times yellow with loess dust; showers in summer.
+- **Ground:** yellow loess, terraced fields on the gentle slopes, dry grass, rock high up.
+- **Plants:** Chinese pines and arborvitae on the hills and round the monastery, elms and poplars in the valley and by the village, jujubes by the fields.
+- **Settlement:** a village of houses of grey brick and tamped earth with gabled roofs of grey tiles (`house_china`).
+- **Roads:** from Paris over the northern pass, up the valley to the monastery gate.
+
 ## Loading and drawing
 
 - **Terrain:** one height function; drawn as tiles of 512 m, the near ones split into chunks of 256 m whose grid follows the distance (2, 4, 8 m; 16 and 32 m far away), built in workers; skirts hide the seams.
@@ -88,4 +98,5 @@ Climates are in `REGIONS[].climate`: sun, sky (turbidity, Rayleigh and Mie scatt
 4. Byzantium: the Hippodrome, the Mese with its colonnades, the Great Palace terraces, the sea walls.
 5. The Levant: the Aqsa mosque, the walls and gates of the Haram, the qanatir (later) on the platform.
 6. Francia: Notre-Dame (under construction in 1248), the Grand-Salle of the palace, the Seine's islands and bridges.
-7. New regions as Phase 2 continues (China, Japan, India, …), each with its own basin, sky and planting.
+7. Tang China: the Manjuśrī Hall (1137) and the monastery's other courts belong to later periods; other Tang buildings (Nanchan Temple) could join.
+8. New regions as Phase 2 continues (Japan, India, …), each with its own basin, sky and planting.

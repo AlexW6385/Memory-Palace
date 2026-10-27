@@ -2,6 +2,12 @@
 
 Newest first. What you can visit and what looks better, in plain words.
 
+## v5.7 — Tang China and the Foguang East Hall (2026-10-27)
+
+- **A new region, Tang China,** north of Francia over a pass: loess hills with terraced fields, Chinese pines and arborvitae, a valley of elms and poplars, a village of grey-brick houses, and a dry northern sky that sometimes turns yellow with dust.
+- **The Great East Hall of Foguang Monastery** (857), the grandest surviving Tang timber building: up three terraces to the hall facing west into the late sun; seven bays by four on red columns with lotus bases, bracket sets of seven ranks with their descending cantilevers on every column, the "seven red, eight white" architraves, the deep eaves and the hipped roof of grey tiles with its chiwei; inside, the latticed ceilings over two rings of columns and the altar with three seated Buddhas, attendants, Manjuśrī on his lion, Samantabhadra on his elephant and the heavenly kings. The Tang stone pillar of 857 and the old hexagonal pagoda stand on the terrace.
+- **Music:** a chanted sutra on the pentatonic scale with the wooden fish and the bowl-bell; the pipa and flute outside.
+
 ## v5.6 — Francia and the Sainte-Chapelle (2026-10-27)
 
 - **A new region, Francia,** north of the Levant over a pass: the plain of the Seine with Montmartre and Sainte-Geneviève, oaks, elms, poplars and willows, apple orchards and fields in strips, a summer sky that clouds over and showers, and a town of timber-framed houses with jettied storeys and steep gables.

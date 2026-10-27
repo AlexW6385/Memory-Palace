@@ -208,7 +208,7 @@ export class Music {
     const g = ctx.createGain();
     g.gain.value = level;
     // the kithara's gut strings over a wooden box sound brighter and drier than the harp
-    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = timbre === 'kithara' ? 5200 : timbre === 'oud' ? 1900 : 3200;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = timbre === 'kithara' ? 5200 : timbre === 'oud' ? 1900 : timbre === 'pipa' ? 4200 : 3200;
     src.connect(lp); lp.connect(g); g.connect(this.layers.get(this.zone).gain);
     src.start(when);
   }
@@ -312,6 +312,25 @@ export class Music {
         o.connect(g); g.connect(this.layers.get(this.zone).gain);
         o.start(t0); o.stop(t0 + d + 0.05);
       }
+    }
+  }
+
+  /** The wooden fish (muyu): a hollow knock. */
+  woodfish(when, level) {
+    const ctx = this.ctx, o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.setValueAtTime(820, when); o.frequency.exponentialRampToValueAtTime(640, when + 0.05);
+    g.gain.setValueAtTime(level, when); g.gain.exponentialRampToValueAtTime(0.001, when + 0.11);
+    o.connect(g); g.connect(this.layers.get(this.zone).gain); o.start(when); o.stop(when + 0.13);
+  }
+
+  /** The bowl-bell (qing): a long shimmering ring, slightly beating partials. */
+  qing(when, level) {
+    const ctx = this.ctx;
+    for (const [r, a, d] of [[1, 1, 9], [1.004, 0.6, 9], [2.71, 0.45, 5], [5.15, 0.25, 3], [8.3, 0.12, 1.6]]) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = 523 * r;
+      g.gain.setValueAtTime(0.0001, when); g.gain.exponentialRampToValueAtTime(level * a * 0.35, when + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, when + d);
+      o.connect(g); g.connect(this.layers.get(this.zone).gain); o.start(when); o.stop(when + d + 0.05);
     }
   }
 
@@ -422,6 +441,8 @@ export class Music {
         if (v && Math.floor(beat / p.length) % (Z.drum.every || 1) === 0) this.drum(t, Z.drum.level * v);
       }
       if (Z.bells && beat % Z.bells.every === 0) this.bells(t, Z.bells.level);
+      if (Z.woodfish) this.woodfish(t, Z.woodfish.level * (beat % 4 === 0 ? 1 : 0.7));
+      if (Z.qing && beat % Z.qing.every === 0) this.qing(t, Z.qing.level);
       this.next += Z.lead?.rhythm ? spb * Z.lead.rhythm[beat % Z.lead.rhythm.length] : spb * (Math.random() < 0.2 ? 1.5 : 1);
     }
   }

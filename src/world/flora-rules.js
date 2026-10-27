@@ -67,6 +67,18 @@ const RULES = {
     grass: ({ g }) => 80 * g.grass,
     boulder: ({ ny, g }) => (ny < 0.85 ? 0.25 * g.rock : 0),
   },
+  tang: {
+    // Chinese pines and arborvitae on the hills and round the monastery, elms and poplars in the
+    // valley and by the villages, jujubes by the fields, dry grass on the loess
+    chinese_pine: ({ x, z, h, ny }) => (ny > 0.6 ? 0.06 * smooth(15, 45, h) + 0.02 * smooth(0.2, 0.5, fbm(x * 0.01 + 1, z * 0.01)) : 0),
+    arborvitae: ({ x, z }) => 0.02 * smooth(0.2, 0.5, fbm(x * 0.012 + 5, z * 0.012)),
+    elm: ({ h, x, z }) => (h < 25 ? 0.025 * smooth(0.0, 0.4, fbm(x * 0.008 + 3, z * 0.008)) : 0),
+    poplar: ({ w, x, z, h }) => (w > 3 && h < 15 ? 0.05 * smooth(0.1, 0.4, fbm(x * 0.015 + 8, z * 0.015)) + (w < 50 ? 0.08 : 0) : 0),
+    jujube: ({ g }) => 0.05 * g.fields + 0.01,
+    maquis: ({ ny, g }) => (ny > 0.5 ? 0.3 * (g.grass + g.rock * 0.5) : 0),
+    grass_dry: ({ g }) => 45 * g.grass,
+    boulder: ({ ny, g }) => 0.3 * g.rock,
+  },
   francia: {
     // oaks and elms in the hedgerows and woods, poplars and willows by the water, apple orchards,
     // lush grass
@@ -117,7 +129,7 @@ export function densities(x, z, place) {
 
 /** The largest density each species can reach (for rejection sampling). */
 export const MAX_DENSITY = { date_palm: 1.2, doum_palm: 0.15, sycamore_fig: 0.06, acacia: 0.08, tamarisk: 0.16, papyrus: 2.2, reeds: 3, halfa: 0.25, boulder: 0.7,
-  stone_pine: 0.17, cypress: 0.05, holm_oak: 0.14, oleander: 0.21, grass: 80, olive: 0.55, aleppo_pine: 0.08, maquis: 0.9, grass_dry: 45, plane_tree: 0.06, fig: 0.08, carob: 0.04, oak: 0.06, elm: 0.03, poplar: 0.13, willow: 0.18, apple: 0.32 };
+  stone_pine: 0.17, cypress: 0.05, holm_oak: 0.14, oleander: 0.21, grass: 80, olive: 0.55, aleppo_pine: 0.08, maquis: 0.9, grass_dry: 45, plane_tree: 0.06, fig: 0.08, carob: 0.04, oak: 0.06, elm: 0.03, poplar: 0.13, willow: 0.18, apple: 0.32, chinese_pine: 0.08, arborvitae: 0.02, jujube: 0.07 };
 
 /** Small plants scattered only near the viewer. */
 export const NEAR_ONLY = new Set(['grass', 'grass_dry']);

@@ -315,6 +315,14 @@ function make(spec) {
       // painted stone: a ground colour with a gilded motif in a diaper (fleurs-de-lis, castles), or stars
       const C = spec.colors.map((c) => uniform(new Color(c)));
       const { u, v } = wallUV();
+      if (spec.grid) {
+        // a latticed ceiling of small square coffers: dark ribs on a ground
+        const gg = vec2(u, v).div(0.42), ff = fract(gg);
+        const rib = float(1).sub(smoothstep(0.06, 0.12, min(min(ff.x, float(1).sub(ff.x)), min(ff.y, float(1).sub(ff.y))))).mul(float(1).sub(smoothstep(0.3, 0.9, fwidth(gg.x).add(fwidth(gg.y)))));
+        m.colorNode = mix(C[0], C[1], rib);
+        m.roughnessNode = roughU;
+        break;
+      }
       const sz = spec.stars ? 0.55 : 0.32;
       const g = vec2(u, v).div(sz), cell = floor(g), f = fract(g).sub(0.5);
       const off = fract(cell.y.mul(0.5)).mul(2).mul(0.5);
