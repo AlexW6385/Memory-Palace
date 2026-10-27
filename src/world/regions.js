@@ -239,13 +239,13 @@ export const SITES = {
 };
 
 /**
- * Garden ponds dug into a site's pad: rectangles in building-local coordinates (the pad's
- * frame) and the water level above the base. The ground is dug 1.2 m below the water, and the
- * water cannot be waded (bridges cross it).
+ * Garden ponds dug into a site's pad: a union of ellipses { c, r } in building-local coordinates
+ * (the pad's frame) and the water level above the base. The ground is dug 1.2 m below the water
+ * and rises to the shore over 5 m; the water cannot be waded (bridges cross it).
  */
 export const PONDS = [
   // Aji-ike: in front of the Phoenix Hall and round both ends of its island
-  { site: 'byodo-in-phoenix-hall', level: -0.35, rects: [[16, -60, 66, 60], [-36, -60, 16, -42], [-36, 42, 16, 60], [60, -34, 80, 22], [-10, -66, 30, -58], [0, 58, 40, 64]] },
+  { site: 'byodo-in-phoenix-hall', level: -0.35, shapes: [{ c: [46, -5], r: [30, 66] }, { c: [-8, -53], r: [36, 11] }, { c: [-8, 53], r: [36, 11] }, { c: [64, 26], r: [16, 20] }] },
 ];
 
 /** Built-up quarters (towns), where the houses stand and no trees are planted. */
@@ -477,19 +477,26 @@ for (const site of Object.values(SITES)) {
   const [x0, z0, x1, z1] = site.pad, [ox, oz] = site.origin;
   registerPad([ox + x0, oz + z0, ox + x1, oz + z1], site.base);
 }
-const POND_RECTS = [];
+const POND_SHAPES = [];
 for (const p of PONDS) {
   const s = SITES[p.site], [ox, oz] = s.origin;
-  for (const [x0, z0, x1, z1] of p.rects) {
-    const r = [ox + x0, oz + z0, ox + x1, oz + z1];
-    registerPad(r, s.base + p.level - 1.08, 0, 4);
-    POND_RECTS.push({ r, y: s.base + p.level });
+  for (const { c, r } of p.shapes) POND_SHAPES.push({ c: [ox + c[0], oz + c[1]], r, y: s.base + p.level });
+}
+/** Signed distance (m, approximate) from the shore of the nearest pond: negative in the water. */
+function pondDistance(x, z) {
+  let best = Infinity, y = 0;
+  for (const P of POND_SHAPES) {
+    const dx = (x - P.c[0]) / P.r[0], dz = (z - P.c[1]) / P.r[1];
+    const d = (Math.hypot(dx, dz) - 1) * Math.min(P.r[0], P.r[1]);
+    if (d < best) { best = d; y = P.y; }
   }
+  return { d: best, y };
 }
 /** Is (x, z) in a garden pond, below its surface (y: the walker's feet, if on a bridge above)? */
 export function inPond(x, z, y = -Infinity) {
-  for (const { r, y: w } of POND_RECTS) if (x > r[0] + 1.2 && x < r[2] - 1.2 && z > r[1] + 1.2 && z < r[3] - 1.2 && y < w + 0.3) return true;
-  return false;
+  if (!POND_SHAPES.length) return false;
+  const p = pondDistance(x, z);
+  return p.d < -1.2 && y < p.y + 0.3;
 }
 /** Water that cannot be waded: the river and the ponds. */
 export function inWater(x, z, y) { return inRiver(x, z) || inPond(x, z, y); }
@@ -514,6 +521,10 @@ export function terrainHeight(x, z) {
     const d = Math.hypot(dx, dz);
     // just below the base inside the pad, so that paving laid at the base never fights the ground
     if (d < p.blend) h = p.base - 0.12 * (1 - smooth(0, 1, d / 6)) + (h - p.base) * smooth(0, 1, d / p.blend);
+  }
+  if (POND_SHAPES.length) {
+    const p = pondDistance(x, z);
+    if (p.d < 5) { const bed = p.y - 1.2; h = bed + (Math.max(h, bed) - bed) * smooth(-1, 5, p.d); }
   }
   const R = WORLD.river, c = riverCenter(z);
   const e = Math.abs(x - c) - R.width / 2;               // > 0 outside the channel

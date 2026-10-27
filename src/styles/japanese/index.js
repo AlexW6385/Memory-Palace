@@ -264,10 +264,15 @@ function lantern(el, { bag, col }) {
   col.circle(x, z, 0.55, y, y + 2.8);
 }
 
-/** Water of a garden pond over rect { rect, y } (the shores are the terrain dug by PONDS). */
+/** Water of a garden pond over an ellipse { c, r, y } (the shores are the terrain dug by PONDS);
+ *  the surface reaches a little beyond the shore line, under the rising bank. */
 function pond(el, { bag }) {
-  const [x0, z0, x1, z1] = el.rect, m = el.margin ?? 3.2;
-  bag.add('water', fromTriangles([x0 - m, el.y, z0 - m, x0 - m, el.y, z1 + m, x1 + m, el.y, z1 + m, x0 - m, el.y, z0 - m, x1 + m, el.y, z1 + m, x1 + m, el.y, z0 - m]));
+  const [cx, cz] = el.c, m = el.margin ?? 3, rx = el.r[0] + m, rz = el.r[1] + m, N = 64, t = [];
+  for (let k = 0; k < N; k++) {
+    const a0 = k / N * Math.PI * 2, a1 = (k + 1) / N * Math.PI * 2;
+    t.push(cx, el.y, cz, cx + Math.cos(a1) * rx, el.y, cz + Math.sin(a1) * rz, cx + Math.cos(a0) * rx, el.y, cz + Math.sin(a0) * rz);
+  }
+  bag.add('water', fromTriangles(t));
 }
 
 registerStyle('japanese', {

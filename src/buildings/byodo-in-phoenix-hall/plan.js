@@ -21,7 +21,7 @@ const CH = 5.4;                                  // core column height
 const EAVE = F + 7.3;                            // the main roof's eave
 
 // ── the island: gravel round the hall; the podium and its steps ─────────────
-floor([-30, -38, 12, 38], 0.02, 'pebbles', { th: 0.2 });
+floor([-30, -36, 10, 36], 0.02, 'pebbles', { th: 0.2 });
 block([-7.2, -8.7, 7.2, 8.7], 0, F, 'limestone', { walk: true });
 floor([-7.2, -8.7, 7.2, 8.7], F, 'sandstone_floor', { th: 0.1 });
 add({ t: 'stair', rect: [7.2, -2.3, 9.0, 2.3], dir: 'w', y0: 0.02, y1: F, riser: 0.18, base: 0, mat: 'limestone' });
@@ -162,9 +162,9 @@ function ring2(cx, cz, h, y, w, hh) {
 }
 
 // ── the garden: the pond, the bridge, the lantern ────────────────────────────
-for (const r of PONDS.find((p) => p.site === 'byodo-in-phoenix-hall').rects) add({ t: 'pond_water', rect: r, y: -0.35 });
-add({ t: 'bridge', a: [-20, 63], b: [-20, 39], y: 0.05, rise: 1.1, w: 2.4 });
-obj('lantern', 10.8, 0, 0.02);
+for (const { c, r } of PONDS.find((p) => p.site === 'byodo-in-phoenix-hall').shapes) add({ t: 'pond_water', c, r, y: -0.35 });
+add({ t: 'bridge', a: [-20, 67], b: [-20, 39], y: 0.05, rise: 1.2, w: 2.4 });
+obj('lantern', 9.6, 0, 0.02);
 
 // ── rooms and walks ──────────────────────────────────────────────────────────
 const room = (id, rect, y, kind) => ({ id, rect, y, kind });
@@ -175,7 +175,7 @@ const rooms = [
   room('tail-corridor', [-27, -1.1, -8, 1.1], F, 'open'),
 ];
 const walks = [
-  [[-20, 72], [-20, 64], [-20, 51], [-20, 38], [-14, 30], [-8, 17.3], [4, 17.3], [11.8, 10], [11.8, 2.4], [9.6, 1.4], [8.4, 0], [6.4, 0], [4.6, 0], [2.4, 0], [2.4, 3.5], [-3.3, 3.5], [-3.3, 0], [-4.8, 0], [-7.6, 0], [-20, 0], [-28.8, 0], [-31, 0], [-31, 10], [-12, 25], [-2, 25], [-2, 36]],
+  [[-20, 72], [-20, 64], [-20, 51], [-20, 38], [-14, 30], [-8, 17.3], [4, 17.3], [10.6, 10], [10.6, 2.6], [9.4, 1.6], [8.4, 0], [6.4, 0], [4.6, 0], [2.4, 0], [2.4, 3.5], [-3.3, 3.5], [-3.3, 0], [-4.8, 0], [-7.6, 0], [-20, 0], [-28.8, 0], [-31, 0], [-31, 10], [-12, 25], [-2, 25], [-2, 36]],
 ];
 walks[0].y0 = 0;
 
