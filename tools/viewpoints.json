@@ -375,6 +375,16 @@
       ],
       "yaw": 2.3,
       "pitch": 0.12
+    },
+    {
+      "name": "jerusalem-from-olives",
+      "at": [
+        150,
+        4,
+        -4540
+      ],
+      "yaw": 1.62,
+      "pitch": 0.0
     }
   ],
   "hagia-sophia": [
@@ -457,6 +467,68 @@
       ],
       "yaw": 0.78,
       "pitch": -0.32
+    }
+  ],
+  "dome-of-the-rock": [
+    {
+      "name": "platform",
+      "at": [
+        -62,
+        0,
+        -30
+      ],
+      "yaw": -2.03,
+      "pitch": 0.2
+    },
+    {
+      "name": "outer-ambulatory",
+      "at": [
+        -20.5,
+        0,
+        -6
+      ],
+      "yaw": -0.35,
+      "pitch": 0.15
+    },
+    {
+      "name": "rock",
+      "at": [
+        -13.8,
+        0,
+        4
+      ],
+      "yaw": -1.45,
+      "pitch": 0.45
+    },
+    {
+      "name": "dome",
+      "at": [
+        -12.5,
+        0,
+        0
+      ],
+      "yaw": -1.5708,
+      "pitch": 1.0
+    },
+    {
+      "name": "chain",
+      "at": [
+        75,
+        0,
+        18
+      ],
+      "yaw": 0.76,
+      "pitch": 0.15
+    },
+    {
+      "name": "aerial",
+      "at": [
+        170,
+        85,
+        150
+      ],
+      "yaw": 0.85,
+      "pitch": -0.38
     }
   ]
 }

@@ -67,6 +67,16 @@ const RULES = {
     grass: ({ g }) => 80 * g.grass,
     boulder: ({ ny, g }) => (ny < 0.85 ? 0.25 * g.rock : 0),
   },
+  levant: {
+    // olive groves on terraces, cypresses and Aleppo pines, carobs, low garrigue, dry grass
+    olive: ({ x, z, h, ny }) => (ny > 0.8 && h < 50 ? 0.45 * smooth(-0.2, 0.15, fbm(x * 0.005 + 2, z * 0.005)) : 0),
+    cypress: ({ x, z }) => 0.025 * smooth(0.2, 0.5, fbm(x * 0.012 + 9, z * 0.012)),
+    aleppo_pine: ({ x, z, h, ny }) => (ny > 0.6 ? 0.05 * smooth(25, 60, h) + 0.015 * smooth(0.3, 0.6, fbm(x * 0.01 + 3, z * 0.01)) : 0),
+    carob: ({ x, z, ny }) => (ny > 0.7 ? 0.03 * smooth(0.1, 0.5, fbm(x * 0.008 + 7, z * 0.008)) : 0),
+    maquis: ({ ny, g }) => (ny > 0.5 ? 0.6 * (g.grass + g.rock * 0.5) : 0),
+    grass_dry: ({ g }) => 40 * g.grass,
+    boulder: ({ ny, g }) => 0.35 * g.rock + (ny < 0.8 ? 0.3 : 0),
+  },
   greece: {
     // olive groves in rows on the plain, patchy
     olive: ({ x, z, h, ny }) => (ny > 0.85 && h < 30 ? 0.55 * smooth(-0.15, 0.2, fbm(x * 0.004 + 7, z * 0.004)) : 0),
@@ -96,7 +106,7 @@ export function densities(x, z, place) {
 
 /** The largest density each species can reach (for rejection sampling). */
 export const MAX_DENSITY = { date_palm: 1.2, doum_palm: 0.15, sycamore_fig: 0.06, acacia: 0.08, tamarisk: 0.16, papyrus: 2.2, reeds: 3, halfa: 0.25, boulder: 0.7,
-  stone_pine: 0.17, cypress: 0.05, holm_oak: 0.14, oleander: 0.21, grass: 80, olive: 0.55, aleppo_pine: 0.08, maquis: 0.9, grass_dry: 45, plane_tree: 0.06, fig: 0.08 };
+  stone_pine: 0.17, cypress: 0.05, holm_oak: 0.14, oleander: 0.21, grass: 80, olive: 0.55, aleppo_pine: 0.08, maquis: 0.9, grass_dry: 45, plane_tree: 0.06, fig: 0.08, carob: 0.04 };
 
 /** Small plants scattered only near the viewer. */
 export const NEAR_ONLY = new Set(['grass', 'grass_dry']);

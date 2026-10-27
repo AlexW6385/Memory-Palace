@@ -441,11 +441,14 @@ function phiale(el, { bag, col }) {
   col.circle(x, z, r + 0.1, y, y + 0.95);
 }
 
+export const byzantineElements = { sphere: sphereEl, arch_band: archBand, planar_wall: planarWallEl, arc_wall: arcWall, ribbed_dome: ribbedDome, square_ring: squareRing };
+export { column as byzantineColumn };
+
 registerStyle('byzantine', {
   column,
   trim: () => {},
   opening: () => {},
-  elements: { sphere: sphereEl, arch_band: archBand, planar_wall: planarWallEl, arc_wall: arcWall, ribbed_dome: ribbedDome, square_ring: squareRing },
+  elements: byzantineElements,
   objects: { doors, polykandelon, ambo, ciborium, synthronon, chancel_screen: chancelScreen, solea, phiale },
 });
 

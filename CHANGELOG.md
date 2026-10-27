@@ -2,6 +2,12 @@
 
 Newest first. What you can visit and what looks better, in plain words.
 
+## v5.4 — The Levant and the Dome of the Rock (2026-10-27)
+
+- **A new region, the Levant,** north of Byzantium over a pass: Mount Moriah with the esplanade, the Kidron valley and the Mount of Olives, olive groves on the slopes, cypresses, carobs and garrigue, a clear dry sky (sometimes the hot dusty sharav, sometimes a winter shower), and a town of pale stone houses with low domes on their flat roofs.
+- **The Dome of the Rock** as completed in 691/92: the octagon of walls with marble below and glass mosaic above, the four porches and doors, 36 arched windows; inside, the octagonal arcade of piers and columns tied by gilded beams, the circular arcade round the Rock, the gold drum with its sixteen windows, the gilded double dome; painted ceilings over the two ambulatories; the Rock itself behind a wooden screen. On its raised platform with four flights of stairs, and the **Dome of the Chain** beside it, with its eleven and six columns and its mihrab.
+- **Music:** inside, a single ornamented voice over a drone in a mode with a three-quarter-tone step; outside, the oud, the reed flute and the frame drum.
+
 ## v5.3 — Byzantium and Hagia Sophia (2026-10-27)
 
 - **A new region, Byzantium,** north of Greece over a mountain pass: the hills of Constantinople above the water, a grey sea-air climate with drizzle, sea mist and the north-east wind, cypresses and plane trees, and a town of tiled houses with upper storeys jutting over the streets.

@@ -63,6 +63,10 @@ export const MATERIALS = {
   brick:            { color: '#9b5e46', roughness: 0.9, kind: 'mudbrick', course: 0.09, block: 0.37 },
   stucco_warm:      { color: '#d9ccb4', roughness: 0.9, kind: 'smooth' },
   silver:           { color: '#cfd0d2', roughness: 0.22, metalness: 1, kind: 'metal' },
+  // Jerusalem limestone (meleke): pale, warm, in ashlar courses
+  limestone:        { color: '#d8c8a6', roughness: 0.85, kind: 'ashlar', course: 0.48, block: 0.95 },
+  ceiling_painted:  { color: '#4a3826', roughness: 0.6, kind: 'sectile', block: 0.9, colors: ['#5e2a20', '#1e2c4a', '#a8843a', '#2c2116'] },
+  mosaic_green:     { color: '#4f7a5c', roughness: 0.3, metalness: 0.2, kind: 'mosaic' },
   flame:            { color: '#000000', roughness: 1, kind: 'flame' },
   glass_lamp:       { color: '#b9c6b4', roughness: 0.08, kind: 'smooth' },
   timber:           { color: '#6e5038', roughness: 0.75, kind: 'wood' },

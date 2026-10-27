@@ -208,7 +208,7 @@ export class Music {
     const g = ctx.createGain();
     g.gain.value = level;
     // the kithara's gut strings over a wooden box sound brighter and drier than the harp
-    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = timbre === 'kithara' ? 5200 : 3200;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = timbre === 'kithara' ? 5200 : timbre === 'oud' ? 1900 : 3200;
     src.connect(lp); lp.connect(g); g.connect(this.layers.get(this.zone).gain);
     src.start(when);
   }
@@ -259,9 +259,42 @@ export class Music {
       const v = ctx.createOscillator(), vg = ctx.createGain();
       v.frequency.value = 4.8 + Math.random() * 0.6; vg.gain.setValueAtTime(0, when); vg.gain.linearRampToValueAtTime(f * 0.007, when + 0.6);
       v.connect(vg); vg.connect(o.frequency);
+      if (this.ornament) {
+        // melismatic ornament: slide up into the note, a turn around it before it settles
+        o.detune.setValueAtTime(det - 120, when);
+        o.detune.linearRampToValueAtTime(det, when + 0.12);
+        if (dur > 1.2 && Math.random() < 0.6) {
+          const t1 = when + dur * 0.45;
+          o.detune.setValueAtTime(det, t1); o.detune.linearRampToValueAtTime(det + 150, t1 + 0.12);
+          o.detune.linearRampToValueAtTime(det - 100, t1 + 0.26); o.detune.linearRampToValueAtTime(det, t1 + 0.38);
+        }
+      }
       o.connect(mix); o.start(when); o.stop(when + dur + 0.05); v.start(when); v.stop(when + dur + 0.05);
     }
     g.connect(this.layers.get(this.zone).gain);
+  }
+
+  /** The reed flute (ney): a breathy, nearly pure tone with a soft attack. */
+  flute(midi, when, dur, level) {
+    const ctx = this.ctx, f = mtof(midi), sr = ctx.sampleRate;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.exponentialRampToValueAtTime(level, when + 0.18);
+    g.gain.setValueAtTime(level * 0.85, when + dur * 0.7);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+    const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+    const v = ctx.createOscillator(), vg = ctx.createGain(); v.frequency.value = 4.2; vg.gain.value = f * 0.005;
+    v.connect(vg); vg.connect(o.frequency);
+    const og = ctx.createGain(); og.gain.value = 0.8; o.connect(og); og.connect(g);
+    // breath: band-passed noise around the note
+    const n = ctx.createBufferSource(), b = ctx.createBuffer(1, Math.floor(sr * (dur + 0.1)), sr), d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    n.buffer = b;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f * 2; bp.Q.value = 2.5;
+    const ng = ctx.createGain(); ng.gain.value = 0.35;
+    n.connect(bp); bp.connect(ng); ng.connect(g);
+    g.connect(this.layers.get(this.zone).gain);
+    o.start(when); o.stop(when + dur + 0.05); v.start(when); v.stop(when + dur + 0.05); n.start(when);
   }
 
   /** The semantron: a wooden board struck with a mallet, in a run that quickens. */
@@ -359,7 +392,9 @@ export class Music {
         const minDeg = Math.ceil((lo / 12) * sc.length), maxDeg = Math.floor((hi / 12) * sc.length);
         this.leadDeg = Math.max(minDeg, Math.min(maxDeg, this.leadDeg));
         const d = this.leadDeg, midi = S.tonic + Math.floor(d / sc.length) * 12 + sc[((d % sc.length) + sc.length) % sc.length];
+        this.ornament = !!Z.lead.ornament;
         if (Z.lead.timbre === 'voice') this.sing(midi, t, spb * (2 + Math.random() * 2.5), Z.lead.level);
+        else if (Z.lead.timbre === 'ney') this.flute(midi, t, spb * (1.5 + Math.random() * 2.5), Z.lead.level);
         else this.blow(midi, t, spb * (1.5 + Math.random() * 2), Z.lead.level);
       }
       if (Z.semantron && beat % Z.semantron.every === 0 && Math.random() < 0.5) this.semantron(t, Z.semantron.level);

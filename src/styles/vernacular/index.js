@@ -4,7 +4,7 @@
 // with a timber lintel; tower houses of two or three storeys and courtyard houses.
 
 import { registerStyle } from '../../core/build.js';
-import { box, rod, fromTriangles } from '../../core/geom.js';
+import { box, rod, fromTriangles, lathe } from '../../core/geom.js';
 
 function rng(seed) { let s = seed >>> 0 || 1; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
 
@@ -152,6 +152,44 @@ function houseTiled(el, { bag, col }) {
   bag.add('roof_tile', fromTriangles(tris));
 }
 
+/**
+ * house_domed: a stone house of the Levant — rooms vaulted in stone, each vault showing on the
+ * flat roof as a low dome; a parapet, small windows, a door with a stone lintel.
+ * { rect, y (floor), foot (lowest ground), storeys, front, seed }
+ */
+function houseDomed(el, { bag, col }) {
+  const rand = rng(el.seed || 1);
+  const [x0, z0, x1, z1] = el.rect, y = el.y, st = 3.6, H = el.storeys * st;
+  bag.add('limestone', box(x0 - 0.1, el.foot - 0.6, z0 - 0.1, x1 + 0.1, y + 0.3, z1 + 0.1));
+  bag.add('limestone', box(x0, y + 0.3, z0, x1, y + H, z1));
+  col.rect([x0, z0, x1, z1], el.foot - 0.6, y + H);
+  const t = 0.35, par = 0.9;
+  for (const r of [[x0, z0, x1, z0 + t], [x0, z1 - t, x1, z1], [x0, z0 + t, x0 + t, z1 - t], [x1 - t, z0 + t, x1, z1 - t]]) bag.add('limestone', box(r[0], y + H, r[1], r[2], y + H + par, r[3]));
+  // one dome over each vaulted room: the roof is divided into bays of about 4–5 m
+  const nx = Math.max(1, Math.round((x1 - x0) / 4.6)), nz = Math.max(1, Math.round((z1 - z0) / 4.6));
+  const bw = (x1 - x0) / nx, bd = (z1 - z0) / nz;
+  for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+    if (rand() < 0.25) continue;
+    const cx = x0 + (i + 0.5) * bw, cz = z0 + (j + 0.5) * bd, r = Math.min(bw, bd) * 0.42;
+    bag.add('plaster', lathe([[r, 0], [r * 0.85, r * 0.32], [r * 0.5, r * 0.55], [0.001, r * 0.63]], 10, null, cx, y + H, cz));
+  }
+  // openings on the street front
+  const f = el.front || 's';
+  const L = f === 's' || f === 'n' ? x1 - x0 : z1 - z0;
+  const open = (u, v0, w, h) => {
+    if (u + w > L - 0.3) return;
+    if (f === 's') bag.add('opening', box(x0 + u, y + v0, z1, x0 + u + w, y + v0 + h, z1 + 0.03));
+    if (f === 'n') bag.add('opening', box(x0 + u, y + v0, z0 - 0.03, x0 + u + w, y + v0 + h, z0));
+    if (f === 'e') bag.add('opening', box(x1, y + v0, z0 + u, x1 + 0.03, y + v0 + h, z0 + u + w));
+    if (f === 'w') bag.add('opening', box(x0 - 0.03, y + v0, z0 + u, x0, y + v0 + h, z0 + u + w));
+  };
+  open(0.8 + rand() * Math.max(0.2, L - 2.6), 0.3, 1.1, 2.2);
+  for (let s = 0; s < el.storeys; s++) {
+    const n = Math.max(1, Math.floor(L / 3.4));
+    for (let k = 0; k < n; k++) if (s > 0 || rand() < 0.4) open((k + 0.5) * L / n - 0.3, s * st + 2.0, 0.6, 0.9);
+  }
+}
+
 /** A low mud-brick wall (garden, animal pen). */
 function wallLow(el, { bag, col }) {
   const [x0, z0, x1, z1] = el.rect;
@@ -159,4 +197,4 @@ function wallLow(el, { bag, col }) {
   col.rect(el.rect, el.y - 0.5, el.y + el.h);
 }
 
-registerStyle('vernacular', { trim: () => {}, opening: () => {}, column: () => {}, elements: { house_egypt: houseEgypt, house_tiled: houseTiled, wall_low: wallLow }, objects: {} });
+registerStyle('vernacular', { trim: () => {}, opening: () => {}, column: () => {}, elements: { house_egypt: houseEgypt, house_tiled: houseTiled, house_domed: houseDomed, wall_low: wallLow }, objects: {} });

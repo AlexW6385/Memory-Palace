@@ -20,6 +20,7 @@ Coordinates: metres, +x east, +z south (north is −z), origin at the pylon gate
 | **Rome** | −560 … −1600 | The Pantheon | spring morning, ESE (az 118°, el 30°) | fair · cloudy · overcast · showers |
 | **Greece** (Attica) | −1600 … −2750 | The Parthenon on the Acropolis | noon, high in the south (az 196°, el 52°) | clear · fair · *meltemi* (north wind) |
 | **Byzantium** (Constantinople) | −2750 … −3950 | Hagia Sophia | late autumn morning, low in the south-east (az 142°, el 26°) | fair · cloudy · overcast · drizzle · sea mist · *poyraz* (north-east wind) |
+| **The Levant** (Jerusalem) | −3950 … −5150 | The Dome of the Rock | clear morning, east-south-east (az 112°, el 32°) | clear · fair · *sharav* (hot dusty haze) · winter shower |
 
 Climates are in `REGIONS[].climate`: sun, sky (turbidity, Rayleigh and Mie scattering, zenith and horizon radiance for the baker), haze (colour, density, height falloff), exposure, wind, and weather states with weights. A state sets cloud cover and density, the sun's strength under cloud, the haze, rain and wind. States are held for 2½–8 minutes and cross-fade over about 75 s. Cloud shadows drift over the ground with the wind; rain falls outdoors, and the ground darkens and pools while wet. `?weather=<id>` fixes a state (screenshots).
 
@@ -52,8 +53,17 @@ Climates are in `REGIONS[].climate`: sun, sky (turbidity, Rayleigh and Mie scatt
 - **Climate** (Climate of Istanbul): mild and often grey — frequent light rain, sea fog, the north-easterly *poyraz*; a morning sun low in the south-east.
 - **Ground:** green grass, brown earth, gardens and vineyards on the low ground; grey limestone where steep.
 - **Plants:** cypresses in groups, oriental plane trees by the water and the squares, figs, stone pines on the slopes, a few olives and holm oaks, oleanders, reeds at the shore. No trees inside the built-up quarters.
-- **Settlement:** quarters of town houses round the hill (`src/world/features/byzantium-town.js`): rubble and brick below, plastered above, upper storeys jettied over the street on timber brackets, hipped roofs of curved tiles; blocks between narrow streets.
+- **Settlement:** quarters of town houses round the hill (`src/world/features/towns.js`): rubble and brick below, plastered above, upper storeys jettied over the street on timber brackets, hipped roofs of curved tiles; blocks between narrow streets.
 - **Roads:** from the Greek plain over the pass of Parnes, round the third hill to the atrium's gate; from the square down to the harbour.
+
+### The Levant
+
+- **Landform:** **Mount Moriah**, a broad flat hill-top 30 m high standing for the esplanade of the Haram, its sides steep like the retaining walls, falling gently south to the old city; the **Kidron valley** east of it and the **Mount of Olives** beyond; the **western hill** and **Bezetha** to the west and north; the Judean ridge to the west, the hills of Moab across the water; the Thracian ridge (with its pass) to the south, the ridge of Samaria closing the north.
+- **Climate:** Mediterranean, dry and bright; the hot dusty *sharav*; rain only in winter.
+- **Ground:** grey limestone breaking through everywhere, red earth and dry grass between.
+- **Plants:** olive groves on the slopes, cypresses, Aleppo pines on the heights, carobs, low garrigue, dry grass, boulders.
+- **Settlement:** the town on the western hill and south of the Haram — cubic houses of pale limestone with flat roofs, each vaulted room showing as a low dome on the roof (`src/world/features/towns.js`, `house_domed`).
+- **Roads:** from Byzantium over the pass of the Thracian ridge, round the western hill to the Haram's west side.
 
 ## Loading and drawing
 
@@ -67,4 +77,5 @@ Climates are in `REGIONS[].climate`: sun, sky (turbidity, Rayleigh and Mie scatt
 2. Rome: insulae and streets, the Saepta and Baths of Agrippa as massing.
 3. Greece: the Propylaea, the Erechtheion and the altar of Athena on the Acropolis; the theatre of Dionysos on the south slope.
 4. Byzantium: the Hippodrome, the Mese with its colonnades, the Great Palace terraces, the sea walls.
-5. New regions as Phase 2 continues (Islam, Gothic Europe, China, Japan, India, …), each with its own basin, sky and planting.
+5. The Levant: the Aqsa mosque, the walls and gates of the Haram, the qanatir (later) on the platform.
+6. New regions as Phase 2 continues (Gothic Europe, China, Japan, India, …), each with its own basin, sky and planting.
