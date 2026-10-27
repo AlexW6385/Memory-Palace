@@ -7,8 +7,9 @@ import { MeshStandardNodeMaterial, DoubleSide, Color } from 'three/webgpu';
 import {
   Fn, float, vec2, vec3, positionWorld, normalWorld, normalView, positionView, abs, floor, fract, min, max,
   mix, smoothstep, hash, mx_noise_float, mx_fractal_noise_float, mx_worley_noise_float, dot, cross, normalize,
-  sign, select, time, sin, clamp, length, cameraPosition, uniform,
+  sign, select, time, sin, clamp, length, cameraPosition, uniform, attribute, reflect, pow, fwidth,
 } from 'three/tsl';
+import { ENV, cloudShadow } from './env.js';
 import { MATERIALS } from '../core/palette.js';
 import { GISpecularNode } from './gi.js';
 
@@ -208,18 +209,94 @@ function make(spec) {
       m.normalNode = bump(band.mul(-0.002).add(vein.mul(0.0003)), 1);
       break;
     }
+    case 'bark': {
+      const fiss = mx_worley_noise_float(vec3(P.x.mul(6), P.y.mul(spec.plates ? 1.2 : 0.8), P.z.mul(6)));
+      const n = mx_noise_float(P.mul(3.0));
+      m.colorNode = baseNode.mul(smoothstep(0.0, 0.35, fiss).mul(0.45).add(0.6)).mul(n.mul(0.12).add(1));
+      m.normalNode = bump(smoothstep(0.0, 0.35, fiss).mul(0.01), 1);
+      break;
+    }
+    case 'rock': {
+      const n = mx_fractal_noise_float(P.mul(1.2), 4, 2.0, 0.5), f = mx_noise_float(P.mul(9.0)).mul(detailFade());
+      const lichen = smoothstep(0.25, 0.5, mx_noise_float(P.mul(0.8).add(3))).mul(smoothstep(0.3, 0.9, normalWorld.y));
+      m.colorNode = mix(baseNode.mul(n.mul(0.25).add(1)), vec3(0.42, 0.42, 0.33), lichen.mul(0.35)).mul(f.mul(0.08).add(1));
+      m.normalNode = bump(n.mul(0.05).add(f.mul(0.004)), 1);
+      break;
+    }
     case 'terrain': {
-      const rock = new Color(spec.rock);
-      // rock where the ground is steep, and in patches over the tops of the hills
-      const patches = smoothstep(0.1, 0.45, mx_fractal_noise_float(P.mul(0.03), 3, 2.0, 0.5).add(smoothstep(18.0, 36.0, P.y).mul(0.6)));
-      const steep = clamp(float(1).sub(smoothstep(0.62, 0.82, normalWorld.y)).add(patches), 0, 1);
-      const big = mx_fractal_noise_float(P.mul(0.04), 4, 2.0, 0.5);
-      const mid = mx_fractal_noise_float(P.mul(0.5), 3, 2.0, 0.5);
-      const strata = mx_noise_float(vec3(P.x.mul(0.05), P.y.mul(1.4), P.z.mul(0.05)));
-      const earth = baseNode.mul(big.mul(0.25).add(1)).mul(mid.mul(0.12).add(1));
-      const stone = vec3(rock.r, rock.g, rock.b).mul(strata.mul(0.18).add(1)).mul(mid.mul(0.15).add(1));
-      m.colorNode = mix(earth, stone, steep);
-      m.normalNode = bump(mid.mul(0.03).add(strata.mul(steep).mul(0.05)), 1);
+      // ground cover comes per vertex from the region's rules (src/world/regions.js)
+      const g = attribute('ground', 'vec4'), g2 = attribute('ground2', 'vec4'), rd = attribute('road', 'float');
+      const C = (h) => { const c = new Color(h); return vec3(c.r, c.g, c.b); };
+      const fade = detailFade();
+      const big = mx_fractal_noise_float(P.mul(0.03), 4, 2.0, 0.5);
+      const mid = mx_fractal_noise_float(P.mul(0.35), 3, 2.0, 0.5);
+      const fine = mx_noise_float(P.mul(6.0)).mul(fade);
+      // sand: wind ripples across the wind, streaks along it
+      const wdir = normalize(vec2(0.8, 0.6));
+      const along = dot(P.xz, wdir), across = dot(P.xz, vec2(wdir.y.negate(), wdir.x));
+      const rphase = along.mul(48.0).add(mx_noise_float(vec3(P.x.mul(0.6), 0, P.z.mul(0.6))).mul(5.0));
+      // fade fine patterns before they alias (more than about a cycle per pixel)
+      const aaFade = (ph) => float(1).sub(smoothstep(0.25, 0.9, fwidth(ph)));
+      // ripples come and go in patches, and are strongest where the sand is loose
+      const patch = smoothstep(-0.15, 0.45, mx_noise_float(vec3(P.x.mul(0.07), 0, P.z.mul(0.07))));
+      const ripple = sin(rphase).mul(aaFade(rphase)).mul(patch);
+      const sand = C('#c8aa80').mul(big.mul(0.16).add(1)).mul(mx_noise_float(vec3(across.mul(0.08), 0, along.mul(0.6))).mul(0.06).add(1));
+      // grass: green to straw, in clumps
+      const clump = mx_worley_noise_float(P.mul(0.9));
+      const grass = mix(C('#66733f'), C('#ad9e6b'), clamp(g2.y.add(mid.mul(0.35)), 0, 1)).mul(smoothstep(0.0, 0.5, clump).mul(0.28).add(0.78));
+      // rock: grey limestone or buff sandstone, in strata
+      const strata = mx_noise_float(vec3(P.x.mul(0.04), P.y.mul(1.1), P.z.mul(0.04)));
+      const rock = mix(C('#9e9a91'), C('#b29470'), g2.z).mul(strata.mul(0.16).add(1)).mul(mid.mul(0.14).add(1));
+      // soil: brown, red in Attica, dark silt by the river in Egypt
+      let soil = mix(mix(C('#6e5845'), C('#94502e'), g2.w), C('#5b4a39'), g2.z.mul(0.7)).mul(mid.mul(0.15).add(1));
+      // fields: plots of crops in strips, separated by earth banks
+      // roads: pale beaten earth, with wheel ruts and footprints of dust
+      const roadCol = mix(C('#a08a6c'), C('#c2a982'), g2.z).mul(mid.mul(0.12).add(1)).mul(mx_noise_float(P.mul(1.7)).mul(0.08).add(1));
+      soil = mix(soil, roadCol, rd);
+      const fu = P.x.mul(0.98).add(P.z.mul(0.2)), fv = P.z.mul(0.98).sub(P.x.mul(0.2));
+      const row = floor(fv.div(38.0));
+      const fuS = fu.add(hash(row.mul(3.7)).mul(16.0));
+      const col = floor(fuS.div(15.0));
+      const id = hash(col.mul(12.9898).add(row.mul(78.233)));
+      const lu = fract(fuS.div(15.0)).mul(15.0), lv = fract(fv.div(38.0)).mul(38.0);
+      const edge = min(min(lu, float(15.0).sub(lu)), min(lv, float(38.0).sub(lv)));
+      const bank = float(1).sub(smoothstep(0.35, 0.9, edge));
+      const crop = select(id.lessThan(0.22), C('#b9a75a'), select(id.lessThan(0.44), C('#7d8f3e'), select(id.lessThan(0.62), C('#4c7230'),
+        select(id.lessThan(0.76), C('#64805f'), select(id.lessThan(0.88), C('#6f8a39'), C('#7a634a'))))));
+      const rph = lu.mul(Math.PI * 2 / 0.45);
+      const rows = sin(rph).mul(0.5).add(0.5).mul(aaFade(rph));
+      const fieldCol = mix(crop.mul(rows.mul(0.18).add(0.86)).mul(fine.mul(0.08).add(1)), soil, bank);
+      const wsum = g.x.add(g.y).add(g.z).add(g.w).add(g2.x).max(0.001);
+      let col3 = sand.mul(g.x).add(grass.mul(g.y)).add(rock.mul(g.z)).add(soil.mul(g.w)).add(fieldCol.mul(g2.x)).div(wsum);
+      col3 = col3.mul(fine.mul(0.06).add(1));
+      // rain: darker and glossier where the ground faces the sky; puddles in the low spots
+      const flat = smoothstep(0.75, 0.95, normalWorld.y);
+      const puddle = smoothstep(0.55, 0.75, mx_fractal_noise_float(P.mul(0.12), 2, 2.0, 0.5).mul(-1).add(0.5)).mul(ENV.wet).mul(flat).mul(float(1).sub(g.z));
+      const wet = ENV.wet.mul(flat.mul(0.6).add(0.4));
+      m.colorNode = col3.mul(float(1).sub(wet.mul(0.38))).mul(float(1).sub(puddle.mul(0.5)));
+      m.roughnessNode = float(0.95).sub(wet.mul(0.4)).sub(puddle.mul(0.5)).sub(g.z.mul(0.1));
+      const h = ripple.mul(0.0035).mul(g.x).add(mid.mul(0.04)).add(strata.mul(g.z).mul(0.08)).add(rows.mul(g2.x).mul(0.02)).add(bank.mul(g2.x).mul(0.05))
+        .add(float(1).sub(smoothstep(0.0, 0.5, clump)).mul(g.y).mul(0.015)).mul(float(1).sub(puddle));
+      m.normalNode = bump(h, 1);
+      break;
+    }
+    case 'river': {
+      // water: the sky mirrored at a grazing angle, the sun's glitter, a silty body beneath
+      const t = time.mul(0.6);
+      const flow = vec2(0.0, t.mul(0.9));
+      const w1 = mx_noise_float(vec3(P.x.mul(0.18).add(flow.x), P.z.mul(0.12).add(flow.y), t.mul(0.15)));
+      const w2 = mx_noise_float(vec3(P.x.mul(0.9), P.z.mul(0.7).add(flow.y.mul(2.0)), t.mul(0.4)));
+      const w3 = mx_noise_float(vec3(P.x.mul(3.1), P.z.mul(2.6).add(flow.y.mul(4.0)), t)).mul(detailFade());
+      const nrm = normalize(vec3(w1.mul(0.06).add(w2.mul(0.04)).add(w3.mul(0.03)), 1, w1.mul(0.05).add(w2.mul(0.035)).add(w3.mul(0.03))));
+      const v = normalize(P.sub(cameraPosition));
+      const r = reflect(v, nrm);
+      const fres = float(0.02).add(float(0.98).mul(pow(float(1).sub(max(dot(nrm, v.negate()), 0)), 5)));
+      const skyCol = mix(ENV.horizon, ENV.zenith, pow(clamp(r.y, 0, 1), 0.5)).mul(4.5);
+      const glint = pow(max(dot(r, ENV.sunDir), 0), 600).mul(ENV.sunColor).mul(6).mul(cloudShadow);
+      m.colorNode = baseNode.mul(float(1).sub(fres));
+      m.roughness = 1.0;
+      m.metalness = 0.0;
+      m.emissiveNode = skyCol.mul(fres).add(glint);
       break;
     }
     case 'water': {

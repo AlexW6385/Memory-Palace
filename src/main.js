@@ -4,6 +4,8 @@ import { Renderer } from './engine/renderer.js';
 import { World } from './engine/world.js';
 import { Controls } from './engine/controls.js';
 import { Music } from './engine/audio.js';
+import { Climate } from './engine/climate.js';
+import { Rain } from './engine/rain.js';
 import { MapView } from './ui/map.js';
 import { initLang, setLang, t, onLang } from './ui/i18n.js';
 
@@ -25,21 +27,29 @@ async function main() {
   const R = await new Renderer(canvas).init(settings.quality);
   const world = new World(R);
   await world.init();
+  const climate = new Climate(R);
+  const floraScale = { high: 1, medium: 0.7, low: 0.45 };
+  world.flora.scale = floraScale[settings.quality] ?? 1;
   const controls = new Controls(R.camera, canvas, world.collide);
   controls.sensitivity = settings.sensitivity;
   const music = new Music();
   music.setVolume(settings.music);
 
   // start at the first building's entrance, or at a pose given in the URL (x,y,z,yaw,pitch)
-  const first = world.plans.values().next().value;
+  const first = [...world.plans.values()].find((p) => !p.plan.feature && p.id === 'edfu') || [...world.plans.values()].find((p) => !p.plan.feature);
+  // arriving somewhere: the buildings and the ground around it are made before the view is shown
+  const arrive = async (x, z) => {
+    await Promise.all([world.ensureNear(x, z), world.terrain.ready(x, z, (p) => { status.textContent = `${t('loading')} ${Math.round(p * 100)}%`; }), world.flora.ready(x, z)]);
+    climate.update(x, z, 0);
+  };
   const goTo = async (rec) => {
     const [x, y, z, yaw] = world.entrance(rec.plan);
-    await world.ensureNear(x, z);
+    await arrive(x, z);
     controls.setPose(x, y, z, yaw, 0.04);
   };
   if (params.get('pose')) {
     const p = params.get('pose').split(',').map(Number);
-    await world.ensureNear(p[0], p[2]);
+    await arrive(p[0], p[2]);
     controls.setPose(p[0], p[1], p[2], p[3] || 0, p[4] || 0);
   } else await goTo(first);
 
@@ -92,23 +102,27 @@ async function main() {
   // settings
   const q = $('set-quality'), mv = $('set-music'), sv = $('set-sens'), lang = $('set-lang');
   q.value = settings.quality; mv.value = settings.music; sv.value = settings.sensitivity;
-  q.onchange = () => { settings.quality = q.value; R.setQuality(q.value); save(); };
+  q.onchange = () => { settings.quality = q.value; R.setQuality(q.value); world.flora.scale = floraScale[q.value] ?? 1; world.flora.dirty = true; save(); };
   mv.oninput = () => { settings.music = +mv.value; music.setVolume(settings.music); save(); };
   sv.oninput = () => { settings.sensitivity = +sv.value; controls.sensitivity = settings.sensitivity; save(); };
   lang.onchange = () => setLang(lang.value);
 
   // frame loop
-  const BASE_EXPOSURE = R.renderer.toneMappingExposure;
-  let exposure = BASE_EXPOSURE, snap = true;
+  let exposure = 0.55, snap = true;
   let last = performance.now();
   const frame = () => {
     const now = performance.now(), dt = (now - last) / 1000;
     last = now;
     controls.update(dt);
     const here = world.update(R.camera.position);
-    // eye adaptation: open up in dark rooms (at most ~2.6 stops), close down outdoors
-    const c = R.camera.position, amb = R.gi.ambientAt(c.x, c.y, c.z);
-    const target = BASE_EXPOSURE * Math.min(8, Math.max(1, Math.pow(R.gi.openAmbient() / Math.max(amb, 1e-4), 0.55)));
+    const c = R.camera.position;
+    const cl = climate.update(c.x, c.z, Math.min(dt, 0.25));
+    const outdoors = !here.room || here.room.kind === 'open';
+    rain.update(dt, cl.rain, outdoors);
+    music.ambience(cl.rain, cl.windy, !outdoors);
+    // eye adaptation: open up in dark rooms (at most ~3 stops), close down outdoors
+    const amb = R.gi.ambientAt(c.x, c.y, c.z);
+    const target = cl.exposure * Math.min(8, Math.max(1, Math.pow(R.gi.openAmbient() / Math.max(amb, 1e-4), 0.55)));
     exposure = snap ? target : exposure + (target - exposure) * (1 - Math.exp(-dt / (target > exposure ? 1.6 : 0.6)));
     snap = false;
     R.renderer.toneMappingExposure = exposure;
@@ -117,18 +131,20 @@ async function main() {
     stats.frames++; stats.ms = stats.ms * 0.9 + (performance.now() - now) * 0.1;
   };
   const stats = { frames: 0, ms: 0 };
+  const rain = new Rain(R.scene, R.camera);
   R.renderer.setAnimationLoop(frame);
 
   // hooks for the screenshot and walk-through tools
   window.palace = {
-    pose: async (x, y, z, yaw = 0, pitch = 0) => { await world.ensureNear(x, z); controls.setPose(x, y, z, yaw, pitch); snap = true; },
+    pose: async (x, y, z, yaw = 0, pitch = 0) => { await arrive(x, z); controls.setPose(x, y, z, yaw, pitch); snap = true; },
     settle: () => { snap = true; },
     camera: async (x, y, z, yaw = 0, pitch = 0) => {
-      await world.ensureNear(x, z, 900); controls.free = true; R.camera.position.set(x, y, z); R.camera.rotation.set(pitch, yaw, 0, 'YXZ'); },
+      await arrive(x, z); controls.free = true; R.camera.position.set(x, y, z); R.camera.rotation.set(pitch, yaw, 0, 'YXZ'); },
     entrance: (id) => goTo(world.plans.get(id)),
     walk: async (keys, ms) => { controls.enabled = true; for (const k of keys) controls.keys.add(k); await new Promise((r) => setTimeout(r, ms)); controls.keys.clear(); },
     feet: () => ({ ...controls.feet }),
-    world, renderer: R, controls, stats, music,
+    world, renderer: R, controls, stats, music, climate,
+    ground: (x, z) => world.collide.terrain(x, z),
     begin,
   };
   window.READY = true;

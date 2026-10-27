@@ -32,6 +32,11 @@ if (opt('pose') || opt('cam')) {
 } else {
   const all = JSON.parse(await readFile(join(ROOT, 'tools/viewpoints.json'), 'utf8'));
   const only = opt('only') ? opt('only').split(',') : null;
+  for (const v of all.world || []) {
+    if (opt('building') && opt('building') !== 'world') continue;
+    if (only && !only.includes(v.name)) continue;
+    views.push({ name: `world-${v.name}`, world: v.at, yaw: v.yaw, pitch: v.pitch, free: true, aboveGround: true });
+  }
   for (const b of BUILDINGS) {
     if (opt('building') && opt('building') !== b.id) continue;
     const { plan } = await b.load();
@@ -73,7 +78,7 @@ if (opt('eval')) console.log('eval:', await page.evaluate(opt('eval')));
 if (flag('begin')) { await page.evaluate(() => window.palace.begin()); await page.waitForTimeout(8000); console.log('after begin:', await page.evaluate(() => JSON.stringify(window.palace.stats))); }
 for (const v of views) {
   const t1 = Date.now();
-  await page.evaluate(([v]) => v.free ? window.palace.camera(v.world[0], v.world[1], v.world[2], v.yaw, v.pitch) : window.palace.pose(v.world[0], v.world[1], v.world[2], v.yaw, v.pitch), [v]);
+  await page.evaluate(([v]) => v.free ? window.palace.camera(v.world[0], v.aboveGround ? window.palace.ground(v.world[0], v.world[2]) + Math.max(1.7, v.world[1]) : v.world[1], v.world[2], v.yaw, v.pitch) : window.palace.pose(v.world[0], v.world[1], v.world[2], v.yaw, v.pitch), [v]);
   await page.waitForTimeout(wait);
   const file = join(out, `${v.name}.png`);
   await page.screenshot({ path: file, timeout: 600_000 });

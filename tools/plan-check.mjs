@@ -7,7 +7,7 @@
 import { BUILDINGS } from '../src/buildings/index.js';
 import { buildPlan, toWorld } from '../src/core/build.js';
 import { CollisionWorld } from '../src/core/collide.js';
-import { terrainHeight } from '../src/world/layout.js';
+import { terrainHeight, inRiver } from '../src/world/regions.js';
 
 const R = 0.3, STEP = 0.5, HEAD = 1.7, LOW = 0.25, CELL = 0.25;
 const ids = process.argv.slice(2);
@@ -19,6 +19,7 @@ for (const b of BUILDINGS) {
   const built = buildPlan(plan);
   const cw = new CollisionWorld();
   cw.terrain = terrainHeight;
+  cw.water = inRiver;
   cw.add(built.colliders);
   const problems = [];
 

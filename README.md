@@ -15,6 +15,8 @@ The name is meant in two senses. These buildings are the memory of civilizations
 - **The Parthenon** (Athens, 447–432 BC) on its Acropolis rock: the full Doric order, the pediments, the two-tier colonnade around the gold-and-ivory Athena Parthenos and the pool before her, and the treasury room with its four Ionic columns.
 - **The Pantheon** (Rome, c. AD 114–128): the portico of sixteen granite columns, the bronze doors, the rotunda of coloured marbles under the coffered dome and its open oculus.
 
+Each building stands in a **region** of its own — a basin of the same river valley with its landform, ground, plants, settlement and roads, and its own sky: time of day, haze, and weather that changes as you walk (drifting cloud shadows, dust, rain and wet ground, wind). Roads cross the ridges between regions over passes.
+
 More buildings, one from each major tradition, are next (see [DESIGN.md](DESIGN.md) §11).
 
 ## Controls
@@ -27,6 +29,7 @@ W A S D or arrows to walk, mouse to look (click to capture the mouse), Shift to 
 - **Plan is data, look is code.** A building is a plan of walls, openings, floors, roofs, columns and objects in metres (`src/buildings/<id>/plan.js`), drawn by the reusable vocabulary of its civilization (`src/styles/<civilization>/`: columns and capitals, torus and cornice, pylons, door frames, statues).
 - **Renderer:** three.js WebGPU (WebGL 2 fallback), procedural physically based materials aligned to each wall's real coursing, cascaded sun shadows, GTAO, bloom, AgX tone mapping, and eye adaptation.
 - **Baked light:** indirect light (sky, sun bounced off stone, oil lamps) is ray traced offline into an irradiance volume per building (`tools/bake.mjs` → `data/gi/`), loaded with the building.
+- **Landscape:** one height function for the whole valley, drawn as terrain chunks with levels of detail built in workers; ground cover and planting by region; trees, palms and grass instanced, with levels of detail and wind (`src/world/`, `src/engine/flora/`).
 - **Music:** synthesised in the browser from each building's score (`src/buildings/<id>/music.js`); it changes as you pass from open courts to halls to the sanctuary.
 
 Pure static ES modules — no build step, no server. three.js comes from a CDN.

@@ -2,7 +2,7 @@
 // plane elsewhere. Shared by the viewer and the baker.
 
 import { BufferGeometry, Float32BufferAttribute } from 'three';
-import { terrainHeight } from '../world/layout.js';
+import { terrainHeight } from '../world/regions.js';
 
 /** Heightfield patch over rect [x0, z0, x1, z1] with the given grid step (non-indexed, smooth normals). */
 export function terrainPatch([x0, z0, x1, z1], step = 2.5, height = terrainHeight) {

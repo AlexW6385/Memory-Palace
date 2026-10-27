@@ -3,7 +3,7 @@
 // the temple runs north toward −z. Metres, true scale.
 
 import { CAPITAL_TYPES } from '../../styles/egyptian/columns.js';
-import { SITES } from '../../world/layout.js';
+import { SITES } from '../../world/regions.js';
 
 const E = [];
 const add = (o) => (E.push(o), o);

@@ -14,7 +14,7 @@ A Corinthian temple portico (octastyle, three aisles) joined by a rectangular in
 
 ## 3. Orientation and site
 
-Façade faces north [stated: Wikipedia]. In our world: in the Roman district on the west bank between the Nile district and the Acropolis, its portico facing north onto a forecourt; the ancient forecourt was a colonnaded rectangular square and the portico was reached by seven steps (1.30 m) [stated: Wikipedia; archeoroma].
+Façade faces north [stated: Wikipedia]. In our world: on the plain of the Roman region (docs/world.md), the rotunda at (−20, −1080), its portico facing north onto its forecourt; the ancient forecourt was a long rectangular square closed by porticoes, and the portico was reached by seven steps (1.30 m) [stated: Wikipedia; archeoroma].
 
 ## 4. Plan and dimensions
 
@@ -73,7 +73,7 @@ Only the oculus and the open door: a 9 m disc of sun moving across the dome and 
 
 ## 10. Surroundings
 
-Forecourt with porticoes on three sides [stated]; L4.
+Forecourt with porticoes on three sides [stated: archeoroma; Wikipedia]. **Built (L2):** a travertine square 80 m wide reaching about 100 m north of the portico, closed by porticoes of granite Corinthian columns 7.6 m high in front of a back wall, with lean-to roofs, and a gateway in the north portico on the axis [inferred: proportions and order of the porticoes]. Around: the plain of the Campus Martius with stone pines, cypresses and holm oaks; hills to the south and north (docs/world.md). *L4: the streets and buildings of the Campus Martius.*
 
 ## 11. Music
 

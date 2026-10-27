@@ -3,9 +3,11 @@
 
 import * as THREE from 'three/webgpu';
 import { BUILDINGS } from '../buildings/index.js';
+import { FEATURES } from '../world/features/index.js';
 import { buildPlan, toWorld, subtractRects } from '../core/build.js';
-import { terrainPatch } from '../core/terrain-mesh.js';
-import { WORLD, LANDFORMS, terrainHeight, landformRect } from '../world/layout.js';
+import { Terrain } from './terrain.js';
+import { Flora } from './flora/index.js';
+import { WORLD, terrainHeight, inRiver } from '../world/regions.js';
 import { CollisionWorld } from '../core/collide.js';
 import { GeoBag, frustum, fromTriangles, quad } from '../core/geom.js';
 import { material, flameMaterial } from './materials.js';
@@ -21,6 +23,7 @@ export class World {
     this.scene = renderer.scene;
     this.collide = new CollisionWorld();
     this.collide.terrain = terrainHeight;
+    this.collide.water = inRiver;
     this.plans = new Map();           // id → { id, entry, plan, music }: every building, small
     this.buildings = new Map();       // id → { plan, music, group, built, gi }: those built so far
     this.loading = new Map();
@@ -29,7 +32,7 @@ export class World {
   /** Load every building's plan (small modules); geometry and light are built on demand. */
   async init() {
     this.addLand();
-    await Promise.all(BUILDINGS.map(async (entry) => {
+    await Promise.all([...BUILDINGS, ...FEATURES].map(async (entry) => {
       const mod = await entry.load();
       this.plans.set(entry.id, { id: entry.id, entry, plan: mod.plan, music: mod.music });
     }));
@@ -48,50 +51,17 @@ export class World {
   }
 
   addLand() {
-    const { bounds: [X0, Z0, X1, Z1], river: R } = WORLD;
-    const bag = new GeoBag();
-    const g = -0.02;
-    // open ground: a coarse plane around the landforms (which get fine patches) and the river
-    const holes = LANDFORMS.map(landformRect);
-    for (const side of [[X0, Z0, R.x0, Z1], [R.x1, Z0, X1, Z1]]) {
-      for (const r of subtractRects(side, holes)) {
-        const t = [];
-        quad(t, [r[0], g, r[1]], [r[0], g, r[3]], [r[2], g, r[3]], [r[2], g, r[1]]);
-        bag.add('ground', fromTriangles(t));
-      }
-    }
-    // the plain continues to the horizon beyond the walkable world
-    const F = 9000;
-    for (const r of [[-F, -F, F, Z0], [-F, Z1, F, F], [-F, Z0, X0, Z1], [X1, Z0, F, Z1]]) {
-      const t = [];
-      quad(t, [r[0], g - 0.05, r[1]], [r[0], g - 0.05, r[3]], [r[2], g - 0.05, r[3]], [r[2], g - 0.05, r[1]]);
-      bag.add('ground', fromTriangles(t));
-    }
-    for (const L of LANDFORMS) bag.add('terrain', terrainPatch(landformRect(L), 2.5, (x, z) => terrainHeight(x, z) + g));
-    const b = [];
-    quad(b, [R.x0, g, Z0], [R.x0, g, Z1], [R.x0 + R.bank, -R.depth, Z1], [R.x0 + R.bank, -R.depth, Z0]);
-    quad(b, [R.x0 + R.bank, -R.depth, Z0], [R.x0 + R.bank, -R.depth, Z1], [R.x1 - R.bank, -R.depth, Z1], [R.x1 - R.bank, -R.depth, Z0]);
-    quad(b, [R.x1 - R.bank, -R.depth, Z0], [R.x1 - R.bank, -R.depth, Z1], [R.x1, g, Z1], [R.x1, g, Z0]);
-    bag.add('silt', fromTriangles(b));
-    const w = [];
-    quad(w, [R.x0, R.water, Z0], [R.x0, R.water, Z1], [R.x1, R.water, Z1], [R.x1, R.water, Z0]);
-    bag.add('water', fromTriangles(w));
-    for (const { mat, geometry } of bag.merged()) {
-      const m = new THREE.Mesh(geometry, material(mat));
-      m.receiveShadow = true;
-      m.castShadow = mat === 'terrain';
-      this.scene.add(m);
-    }
-    // keep walkers on land: the river banks and the edge of the world
-    const edge = 2;
+    this.terrain = new Terrain(this.scene);
+    this.flora = new Flora(this.scene);
+    const [X0, Z0, X1, Z1] = WORLD.bounds, e = 2;
+    // the edge of the walkable world
     this.collide.add({
       floors: [],
       obstacles: [
-        { poly: [[R.x0 + 1, Z0], [R.x1 - 1, Z0], [R.x1 - 1, Z1], [R.x0 + 1, Z1]], y0: -10, y1: 50 },
-        { poly: [[X0 - edge, Z0], [X0, Z0], [X0, Z1], [X0 - edge, Z1]], y0: -10, y1: 50 },
-        { poly: [[X1, Z0], [X1 + edge, Z0], [X1 + edge, Z1], [X1, Z1]], y0: -10, y1: 50 },
-        { poly: [[X0, Z0 - edge], [X1, Z0 - edge], [X1, Z0], [X0, Z0]], y0: -10, y1: 50 },
-        { poly: [[X0, Z1], [X1, Z1], [X1, Z1 + edge], [X0, Z1 + edge]], y0: -10, y1: 50 },
+        { poly: [[X0 - e, Z0], [X0, Z0], [X0, Z1], [X0 - e, Z1]], y0: -50, y1: 400 },
+        { poly: [[X1, Z0], [X1 + e, Z0], [X1 + e, Z1], [X1, Z1]], y0: -50, y1: 400 },
+        { poly: [[X0, Z0 - e], [X1, Z0 - e], [X1, Z0], [X0, Z0]], y0: -50, y1: 400 },
+        { poly: [[X0, Z1], [X1, Z1], [X1, Z1 + e], [X0, Z1 + e]], y0: -50, y1: 400 },
       ],
     });
   }
@@ -128,7 +98,7 @@ export class World {
     const rec = { id: plan.id, plan, music: mod.music, group, built };
     this.buildings.set(plan.id, rec);
     // baked light for this building, if it has been baked
-    try { rec.gi = await this.r.gi.fetch(plan.id, `data/gi/${plan.id}.gi`); } catch (e) { console.warn(e); }
+    if (!plan.feature) try { rec.gi = await this.r.gi.fetch(plan.id, `data/gi/${plan.id}.gi`); } catch (e) { console.warn(e); }
     return rec;
   }
 
@@ -142,6 +112,7 @@ export class World {
   locate(x, y, z) {
     let best = null, bd = Infinity;
     for (const rec of this.buildings.values()) {
+      if (rec.plan.feature) continue;
       const [x0, z0, x1, z1] = World.worldBounds(rec.plan);
       const dx = Math.max(x0 - x, 0, x - x1), dz = Math.max(z0 - z, 0, z - z1);
       const d = Math.hypot(dx, dz);
@@ -167,7 +138,8 @@ export class World {
   update(pos) {
     // build what is coming into range, a little at a time
     const now = performance.now();
-    if (!this._next || now > this._next) { this._next = now + 1000; this.ensureNear(pos.x, pos.z); }
+    if (!this._next || now > this._next) { this._next = now + 500; this.ensureNear(pos.x, pos.z); this.terrain.update(pos.x, pos.z); }
+    this.flora.update(pos.x, pos.z);
     const here = this.locate(pos.x, pos.y, pos.z);
     if (here.building?.gi) this.r.gi.use(here.building.gi);
     return here;

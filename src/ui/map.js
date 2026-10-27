@@ -2,8 +2,8 @@
 // building (or its name in the list) to go to its entrance. Drag to pan, wheel or pinch to zoom.
 
 import { tr, t } from './i18n.js';
-import { WORLD } from '../engine/world.js';
-import { LANDFORMS } from '../world/layout.js';
+import { WORLD } from '../world/regions.js';
+import { terrainHeight, riverCenter, regionWeights, REGIONS } from '../world/regions.js';
 
 export class MapView {
   constructor(world, onJump) {
@@ -24,6 +24,7 @@ export class MapView {
   renderList() {
     this.list.innerHTML = '';
     for (const rec of this.world.plans.values()) {
+      if (rec.plan.feature) continue;
       const li = document.createElement('li');
       const b = document.createElement('button');
       b.innerHTML = `<span class="name"></span><span class="era"></span>`;
@@ -58,17 +59,11 @@ export class MapView {
     if (!v) return;
     g.fillStyle = '#2f281f';
     g.fillRect(0, 0, cv.width, cv.height);
-    // river
-    const R = WORLD.river;
-    const [ra] = this.toScreen(R.x0, 0), [rb] = this.toScreen(R.x1, 0);
-    g.fillStyle = '#28434a';
-    g.fillRect(ra, 0, rb - ra, cv.height);
-    // hills: their tops and the foot of their slopes
-    for (const L of LANDFORMS) {
-      const [a, b] = this.toScreen(L.center[0] - L.half[0], L.center[1] - L.half[1]), [c, d] = this.toScreen(L.center[0] + L.half[0], L.center[1] + L.half[1]);
-      g.fillStyle = 'rgba(160, 150, 130, 0.35)';
-      g.beginPath(); g.roundRect?.(a, b, c - a, d - b, L.round * v.s); g.fill();
-    }
+    // the land: a shaded relief drawn once, then placed under the current view
+    const relief = this.relief();
+    const [ax, ay] = this.toScreen(relief.rect[0], relief.rect[1]), [bx, by] = this.toScreen(relief.rect[2], relief.rect[3]);
+    g.imageSmoothingEnabled = true;
+    g.drawImage(relief.canvas, ax, ay, bx - ax, by - ay);
     // floors (light) then obstacles (dark), per building
     for (const rec of this.world.buildings.values()) {
       g.fillStyle = 'rgba(214, 190, 150, 0.22)';
@@ -86,6 +81,7 @@ export class MapView {
     }
     // buildings not yet built: their outline; then every name
     for (const rec of this.world.plans.values()) {
+      if (rec.plan.feature) continue;
       if (!this.world.buildings.has(rec.id)) {
         const b = this.world.constructor.worldBounds(rec.plan);
         const [a, c] = this.toScreen(b[0], b[1]), [d, e2] = this.toScreen(b[2], b[3]);
@@ -101,6 +97,7 @@ export class MapView {
     // district names, above the buildings of each district
     const groups = new Map();
     for (const rec of this.world.plans.values()) {
+      if (rec.plan.feature) continue;
       const e = this.world.entrance(rec.plan);
       const k = rec.plan.district;
       if (!groups.has(k)) groups.set(k, []);
@@ -123,6 +120,35 @@ export class MapView {
       g.beginPath(); g.moveTo(0, -k); g.lineTo(k * 0.6, k * 0.7); g.lineTo(0, k * 0.35); g.lineTo(-k * 0.6, k * 0.7); g.closePath(); g.fill();
       g.restore();
     }
+  }
+
+  /** Shaded relief of the world (hill shading lit from the north-west, region tints, the river). */
+  relief() {
+    if (this._relief) return this._relief;
+    const rect = [WORLD.bounds[0] - 200, WORLD.bounds[1] - 200, WORLD.bounds[2] + 200, WORLD.bounds[3] + 200];
+    const S = 8, W = Math.round((rect[2] - rect[0]) / S), H = Math.round((rect[3] - rect[1]) / S);
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const g = cv.getContext('2d'), img = g.createImageData(W, H);
+    const h = new Float32Array((W + 1) * (H + 1));
+    for (let j = 0; j <= H; j++) for (let i = 0; i <= W; i++) h[j * (W + 1) + i] = terrainHeight(rect[0] + i * S, rect[1] + j * S);
+    const tint = { nile: [196, 170, 128], rome: [150, 152, 112], greece: [170, 140, 110] };
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+      const x = rect[0] + i * S, z = rect[1] + j * S, y = h[j * (W + 1) + i];
+      const dx = h[j * (W + 1) + i + 1] - y, dz = h[(j + 1) * (W + 1) + i] - y;
+      const shade = Math.max(0.35, Math.min(1.25, 0.9 - (dx * 0.7 + dz * 0.7) / S * 0.9));
+      const w = regionWeights(x, z);
+      let c = [0, 0, 0];
+      REGIONS.forEach((r, k) => { for (let q = 0; q < 3; q++) c[q] += w[k] * tint[r.id][q]; });
+      const lift = Math.min(1, y / 120) * 30;
+      c = c.map((v) => v * shade + lift);
+      if (Math.abs(x - riverCenter(z)) < WORLD.river.width / 2) c = [52, 82, 92];
+      const o = (j * W + i) * 4;
+      img.data[o] = c[0]; img.data[o + 1] = c[1]; img.data[o + 2] = c[2]; img.data[o + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    this._relief = { canvas: cv, rect };
+    return this._relief;
   }
 
   _bind() {

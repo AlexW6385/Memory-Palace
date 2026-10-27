@@ -1,52 +1,59 @@
 # The world — layout dossier
 
-The world is one continuous, walkable landscape: a planned city of civilizations along a river. It is designed, not generated; this document records the plan and the reasons. Coordinates: metres, +x east, +z south (north is −z), origin at the pylon gate of Edfu.
+The world is one continuous, walkable landscape: a river valley whose west bank is divided into **regions**, one per civilization, each a small world of its own — its landform, ground, plants, water, settlement, roads, and its own sky (time of day, climate and weather). It is designed, not generated; this document records the plan and the reasons. All of it lives in code as data: `src/world/regions.js` (regions, climates, landforms, roads, ground cover), `src/world/flora-rules.js` (planting), `src/world/features/` (towns and other non-dossier features).
+
+Coordinates: metres, +x east, +z south (north is −z), origin at the pylon gate of Edfu.
 
 ## Principle
 
-- **A river runs through it.** The first civilizations grew on rivers, and a river gives the whole world an axis, a direction of flow (from the oldest to the newest) and a natural reason for each district's approach. The river runs north–south east of the first district, as the Nile runs past Edfu.
-- **Districts by civilization, in order of time along the river**, so that walking downstream is walking forward in history. Each district keeps its buildings' true orientation and its own ground, paving and vegetation.
-- **Joins are architecture.** Between districts: processional ways, bridges, quays, gardens and courts that belong to one side or the other (an avenue of sphinxes, a Roman road, a Chinese spirit way), never neutral corridors.
-- **Vistas.** Major buildings are sited so that a later building can be seen from an earlier one along an axis or across water (World L3).
+- **A river runs through it,** north–south, meandering gently (`riverCenter(z)`), 300 m wide. The first civilizations grew on rivers; the river gives the world an axis.
+- **Regions are basins on the west bank,** stacked along the river, closed by natural boundaries: ridge spurs that come down from the western uplands to the river, escarpments, mountains. You cannot see from one region into the next; you pass from one to the other over a **pass** in the spur, or along the riverside below the spur's end.
+- **Each region keeps its own sky.** Its sun is fixed (so its buildings' light can be baked) and chosen for the character of the place; its weather changes over minutes, drawn from its real climate. Crossing a spur, the climate blends from one region to the next over about 140 m.
+- **Joins are architecture or landscape,** never neutral corridors: a processional way, a road over a pass, a riverside path.
+- **Each building's surroundings** (settlement, planting, roads) belong to its dossier (§10); the region gives them their ground.
 
-## Districts (planned)
+## Regions
 
-| District | Where | Buildings (first) | Status |
-|---|---|---|---|
-| **Nile** (Egypt) | west bank, x −400…170, z −600…400 | Temple of Horus, Edfu (Ptolemaic); later: its mammisi; a New Kingdom temple (Luxor or Karnak hypostyle); a rock-cut or pyramid complex at the desert edge to the west | Edfu built |
-| Mesopotamia / Persia | upstream (north), both banks | ziggurat (Ur), Persepolis Apadana | planned |
-| **Greece** | downstream (north) of the Nile district on the west bank: the Acropolis, centre (−180, −560) | The Parthenon (built); later: Propylaea, Erechtheion, a theatre on the south slope | Parthenon built |
-| **Rome** | on the west bank between the Nile district and the Acropolis, the Pantheon at (40, −300) facing north onto its forecourt | The Pantheon (built); later: a forum, a bath complex, the Colosseum | Pantheon built |
-| Byzantium and Islam | across the river (east bank), joined by a bridge | Hagia Sophia, a hypostyle mosque, a Persian four-iwan mosque | planned |
-| Medieval Europe | downstream on the west bank | Romanesque abbey, Gothic cathedral | planned |
-| South and East Asia | east bank, downstream | Hindu temple (Nagara or Dravida), Chinese hall complex, Japanese temple | planned |
-| Americas | a separate highland plateau reached by a causeway | Mesoamerican pyramid-temple | planned |
-| Renaissance to Modern | furthest downstream, around a harbour | Renaissance church, Baroque palace hall, iron-and-glass station, early Modern | planned |
+| Region | Extent (z) | Building | Sun (time of day) | Weather cycle |
+|---|---|---|---|---|
+| **Nile** (Egypt) | +1250 … −560 | Temple of Horus, Edfu | late afternoon, low in the WSW (az 248°, el 24°), warm | clear and hazy · high cloud · dust |
+| **Rome** | −560 … −1600 | The Pantheon | spring morning, ESE (az 118°, el 30°) | fair · cloudy · overcast · showers |
+| **Greece** (Attica) | −1600 … −2750 | The Parthenon on the Acropolis | noon, high in the south (az 196°, el 52°) | clear · fair · *meltemi* (north wind) |
 
-The order of building will favour breadth (one building per tradition early, Phase 2) while the layout above keeps space for each.
+Climates are in `REGIONS[].climate`: sun, sky (turbidity, Rayleigh and Mie scattering, zenith and horizon radiance for the baker), haze (colour, density, height falloff), exposure, wind, and weather states with weights. A state sets cloud cover and density, the sun's strength under cloud, the haze, rain and wind. States are held for 2½–8 minutes and cross-fade over about 75 s. Cloud shadows drift over the ground with the wind; rain falls outdoors, and the ground darkens and pools while wet. `?weather=<id>` fixes a state (screenshots).
 
-## The Nile district (built, World L1)
+### Nile
 
-- **Ground:** open desert-edge ground at y ≈ 0; the temple's paving and floors at their dossier levels.
-- **The river:** x 190…520 (330 m wide), banks sloping 22 m to a bed 3.2 m down, water at −2.3 m. Edfu stands about 190 m west of the river, its pylon facing south along the bank. (The real temple is about 1 km from today's Nile; we bring the river closer so the district reads as a river city. [decision])
-- **Palms** line the forecourt and the outside of the enclosure, with groves to the west and south.
-- **World edge:** ±1200 m, closed by a low invisible margin; the river cannot be entered.
+- **Landform:** the flat flood plain of the river; the **western desert escarpment** rising 72 m about 470–560 m west of the river's west bank, as the Nile valley's cliffs close the valley at Edfu; the **eastern escarpment** across the river; a field of transverse **dunes** banked against the western cliffs; the **town mound** (Tell Edfu) just west of the temple, 5.5 m high here (365 × 168 m; it now rises 10–15 m above the temple threshold, after centuries more of occupation — Yale/ISAC Tell Edfu Project).
+- **Ground:** the cultivated strip along each bank as far as the flood reached (plots of wheat, barley, clover, flax and beans between earth banks), desert sand beyond, dark silt at the water's edge, limestone on the cliffs.
+- **Plants:** date palms in groves along the water and the field edges, doum palms among them (the branching palm of Upper Egypt), sycamore figs by the fields, acacias and tamarisks at the desert's edge, papyrus and reeds along the bank, halfa grass on the sand, boulders at the foot of the cliffs.
+- **Settlement:** the town of Behdet around its temple — blocks of mud-brick tower houses and courtyard houses on the mound to the west, a quarter to the east between the temple and the fields, houses south by the processional way (`src/world/features/edfu-town.js`).
+- **Roads:** the processional way from the river quay to the pylon; the road north along the town to the pass.
 
-## The Greek district (built, World L1)
+### Rome
 
-- **The Acropolis:** a limestone plateau (rounded rectangle 300 × 140 m, top at 40 m) with cliffs of about 60° on the north, east and south, and a long slope of about 12° on the west where the way up climbs, as the Panathenaic way climbed from the west. The real rock rises about 70 m above the Agora; we keep 40 m so that the climb stays a walk of a minute or two (decision in DESIGN.md §10). Rock shows on the slopes and in patches on the top.
-- **The Parthenon** stands on the south side of the top, its long axis east–west, entrance east, as in Athens. Its east front faces the length of the plateau, so the first full view on arriving from the west is the north colonnade and then the east front.
-- **Terrain** is one height function (`src/world/layout.js`) used by the viewer, the walker (open ground steeper than about 40° cannot be climbed) and the light baker.
+- **Landform:** the plain of the Campus Martius by the river (the Tiber here); hills around it — a Capitoline-like crag to the south with a cliff, Quirinal and Pincian ridges to the north-west and north, the Janiculum across the river.
+- **Ground:** meadow and beaten earth; tufa on the steep slopes.
+- **Plants:** stone pines in groves, cypresses, holm oaks on the hills, oleanders, reeds by the river, grass.
+- **Settlement:** the Pantheon's forecourt with porticoes on three sides (in its plan). *Later: streets of insulae, the Saepta, the Baths of Agrippa.*
+- **Roads:** from the southern pass round the rotunda into the forecourt through the gateway of its north portico, and on to the northern pass.
 
-## Rome (built, World L1)
+### Greece
 
-- **The Pantheon** stands on the plain at (40, −300), its portico facing north onto a travertine forecourt (80 × 59 m, the ancient colonnaded square: porticoes L4), seven steps up to the portico. From its forecourt the Acropolis rises to the north-west; Edfu's pylon is seen to the south.
+- **Landform:** the **Acropolis** — a limestone plateau 300 × 140 m, its top at 40 m, cliffs on three sides and the long slope on the west where the Panathenaic way climbs (the real rock rises about 70 m; 40 m keeps the climb a walk); the Areopagus and the Mouseion hill beside it; Aigaleo to the west, Parnes closing the north, Hymettus across the river.
+- **Ground:** red earth (terra rossa) with dry grass; grey limestone on the slopes and in patches on the rock.
+- **Plants:** olive groves in rows on the plain, Aleppo pines on the hill slopes, cypresses, low maquis (lentisk and kermes oak), dry grass, boulders.
+- **Roads:** from the northern pass across the plain to the foot of the Acropolis, up the west slope and along the top to the Parthenon's east front.
 
-## Loading
+## Loading and drawing
 
-Every building's plan is small and loaded at start (for the map); its geometry and baked light are built when the visitor comes within 650 m of it (`LOAD_RADIUS` in `src/engine/world.js`).
+- **Terrain:** one height function; drawn as tiles of 512 m, the near ones split into chunks of 256 m whose grid follows the distance (2, 4, 8 m; 16 and 32 m far away), built in workers; skirts hide the seams.
+- **Plants:** scattered deterministically per cell in a worker — trees and shrubs in cells of 128 m out to the far view, grass in cells of 16 m within 64 m — and drawn as instanced meshes per species, variant and level of detail; they sway with the wind.
+- **Buildings and features** are built when the visitor comes within 650 m.
 
-## Next steps for the world
+## Next steps
 
-1. World L2: the Nile district's quay and processional way from the river to the forecourt; the mammisi; mud-brick town houses around the temple mound (L4 of Edfu).
-2. Second district (Greece) with a road from the Nile district.
+1. Edfu: the quay and its stair at the river; the mammisi; dovecotes and granaries in the town; life in the streets (L4).
+2. Rome: insulae and streets, the Saepta and Baths of Agrippa as massing.
+3. Greece: the Propylaea, the Erechtheion and the altar of Athena on the Acropolis; the theatre of Dionysos on the south slope.
+4. New regions as Phase 2 continues (Byzantium, Islam, Gothic Europe, China, Japan, India, …), each with its own basin, sky and planting.

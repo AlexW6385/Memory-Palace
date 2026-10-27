@@ -51,6 +51,36 @@ export class Music {
     this.timer = setInterval(() => this.tick(), 90);
   }
 
+  /**
+   * Weather you can hear: rain (filtered noise with drops) and wind (slowly swelling band noise).
+   * rain, wind: 0…1; indoors muffles both.
+   */
+  ambience(rain, wind, indoors) {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    if (!this.amb) {
+      const sr = ctx.sampleRate, n = sr * 4, b = ctx.createBuffer(1, n, sr), d = b.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      const noise = () => { const s = ctx.createBufferSource(); s.buffer = b; s.loop = true; s.start(); return s; };
+      const rainG = ctx.createGain(); rainG.gain.value = 0;
+      const rHP = ctx.createBiquadFilter(); rHP.type = 'highpass'; rHP.frequency.value = 700;
+      const rLP = ctx.createBiquadFilter(); rLP.type = 'lowpass'; rLP.frequency.value = 6000;
+      noise().connect(rHP); rHP.connect(rLP); rLP.connect(rainG);
+      const windG = ctx.createGain(); windG.gain.value = 0;
+      const wBP = ctx.createBiquadFilter(); wBP.type = 'bandpass'; wBP.frequency.value = 380; wBP.Q.value = 0.7;
+      const lfo = ctx.createOscillator(), lfoG = ctx.createGain(); lfo.frequency.value = 0.09; lfoG.gain.value = 220;
+      lfo.connect(lfoG); lfoG.connect(wBP.frequency); lfo.start();
+      noise().connect(wBP); wBP.connect(windG);
+      const muffle = ctx.createBiquadFilter(); muffle.type = 'lowpass'; muffle.frequency.value = 18000;
+      rainG.connect(muffle); windG.connect(muffle); muffle.connect(this.makeup);
+      this.amb = { rainG, windG, muffle };
+    }
+    const t = ctx.currentTime, a = this.amb;
+    a.rainG.gain.setTargetAtTime(rain * 0.09, t, 1.5);
+    a.windG.gain.setTargetAtTime(0.004 + wind * 0.05, t, 2.5);
+    a.muffle.frequency.setTargetAtTime(indoors ? 900 : 18000, t, 0.8);
+  }
+
   /** Current output level (RMS, 0…1). */
   level() {
     if (!this.analyser) return 0;

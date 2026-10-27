@@ -12,8 +12,7 @@
 import { Data3DTexture, HalfFloatType, RGBAFormat, LinearFilter, ClampToEdgeWrapping, DataUtils } from 'three/webgpu';
 import { Fn, vec3, float, uniform, texture3D, positionWorld, normalWorld, reflectVector, clamp, min, max, mix, smoothstep } from 'three/tsl';
 import { LightingNode } from 'three/webgpu';
-import { SUN_DIR, SUN_COLOR, SUN_INTENSITY, skyRadiance } from '../core/light.js';
-import { albedo } from '../core/palette.js';
+import { Color } from 'three/webgpu';
 
 export const HEADER_BYTES = 36;
 const half = (h) => DataUtils.fromHalfFloat(h);
@@ -22,27 +21,6 @@ function blank() {
   const t = new Data3DTexture(new Uint16Array(4), 1, 1, 1);
   t.format = RGBAFormat; t.type = HalfFloatType; t.needsUpdate = true;
   return t;
-}
-
-/** Hemisphere stand-in: irradiance from the open sky above and sunlit ground below. */
-export function hemisphere() {
-  // integrate the sky over the upper hemisphere (cosine-weighted, horizontal surface)
-  const sky = [0, 0, 0];
-  const N = 24;
-  let wsum = 0;
-  for (let i = 0; i < N; i++) {
-    for (let j = 0; j < N * 2; j++) {
-      const th = ((i + 0.5) / N) * Math.PI / 2, ph = ((j + 0.5) / (2 * N)) * Math.PI * 2;
-      const d = [Math.sin(th) * Math.cos(ph), Math.cos(th), Math.sin(th) * Math.sin(ph)];
-      const L = skyRadiance(d), w = Math.cos(th) * Math.sin(th);
-      for (let k = 0; k < 3; k++) sky[k] += L[k] * w;
-      wsum += w;
-    }
-  }
-  for (let k = 0; k < 3; k++) sky[k] = (sky[k] / wsum) * Math.PI;
-  const a = albedo('ground');
-  const ground = [0, 1, 2].map((k) => a[k] * (SUN_COLOR[k] * SUN_INTENSITY * SUN_DIR[1] + sky[k]));
-  return { sky, ground };
 }
 
 export class GIVolume {
@@ -55,9 +33,10 @@ export class GIVolume {
     this.uIntensity = uniform(1);
     this.current = null;
     this.cache = new Map();
-    const h = hemisphere();
-    this.skyE = vec3(...h.sky);
-    this.groundE = vec3(...h.ground);
+    // outdoor fallback, set by the climate: irradiance from the sky above and the ground below
+    this.skyE = uniform(new Color(0.5, 0.55, 0.65));
+    this.groundE = uniform(new Color(0.4, 0.35, 0.3));
+    this._open = 0.5;
   }
 
   async fetch(id, url) {
@@ -127,13 +106,13 @@ export class GIVolume {
     return L;
   }
 
-  openAmbient() {
-    if (this._open === undefined) {
-      const h = hemisphere();
-      const lum = (c) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-      this._open = (lum(h.sky) + lum(h.ground)) / 2;
-    }
-    return this._open;
+  openAmbient() { return this._open; }
+
+  setHemisphere(sky, ground) {
+    this.skyE.value.setRGB(...sky);
+    this.groundE.value.setRGB(...ground);
+    const lum = (c) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    this._open = (lum(sky) + lum(ground)) / 2;
   }
 
   /** TSL irradiance at the current fragment, for the surface normal (diffuse) or any direction. */

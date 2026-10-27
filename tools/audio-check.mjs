@@ -23,7 +23,7 @@ await page.goto(`http://127.0.0.1:${srv.address().port}/index.html?quality=low`)
 await page.waitForFunction('window.READY === true', null, { timeout: 600_000 });
 await page.click('#btn-enter');                       // the real gesture path
 let failed = 0;
-const plans = await page.evaluate(() => [...window.palace.world.plans.values()].map((p) => ({ id: p.id, rooms: p.plan.rooms.map((r) => r.kind) })));
+const plans = await page.evaluate(() => [...window.palace.world.plans.values()].filter((p) => !p.plan.feature).map((p) => ({ id: p.id, rooms: p.plan.rooms.map((r) => r.kind) })));
 for (const p of plans) {
   await page.evaluate((id) => window.palace.entrance(id), p.id);
   // frames are slow in software rendering: wait until the music has taken up this building

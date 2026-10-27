@@ -294,5 +294,67 @@
       "yaw": -2.6,
       "pitch": -0.42
     }
+  ],
+  "world": [
+    {
+      "name": "nile-valley",
+      "at": [
+        120,
+        1.7,
+        180
+      ],
+      "yaw": 2.6,
+      "pitch": -0.05
+    },
+    {
+      "name": "nile-from-escarpment",
+      "at": [
+        -470,
+        6,
+        60
+      ],
+      "yaw": -1.45,
+      "pitch": -0.12
+    },
+    {
+      "name": "south-pass",
+      "at": [
+        -170,
+        1.7,
+        -470
+      ],
+      "yaw": 0,
+      "pitch": 0.02
+    },
+    {
+      "name": "rome-plain",
+      "at": [
+        -60,
+        1.7,
+        -880
+      ],
+      "yaw": 0.2,
+      "pitch": 0.02
+    },
+    {
+      "name": "greece-plain",
+      "at": [
+        -470,
+        1.7,
+        -1950
+      ],
+      "yaw": -1.4,
+      "pitch": 0.06
+    },
+    {
+      "name": "aerial-valley",
+      "at": [
+        300,
+        220,
+        700
+      ],
+      "yaw": 0.25,
+      "pitch": -0.35
+    }
   ]
 }

@@ -18,7 +18,7 @@ Octastyle peripteral Doric temple: 8 columns on the ends, 17 on the flanks (46 i
 ## 3. Orientation and site
 
 - Long axis east–west, main entrance at the east. [stated: type; Wikipedia]
-- On the south side of the Acropolis rock. In our world the Acropolis is a rock plateau 300 × 140 m, 40 m above the plain, with cliffs on three sides and the way up from the west (docs/world.md). [The real rock rises about 70 m; we keep 40 m so the climb stays walkable — decision in DESIGN.md §10.]
+- On the south side of the Acropolis rock. In our world the Acropolis is a rock plateau 300 × 140 m, 40 m above the plain, with cliffs on three sides and the way up from the west, in the Greek region (docs/world.md); the temple's origin is at (−165, −2122). [The real rock rises about 70 m; we keep 40 m so the climb stays walkable — decision in DESIGN.md §10.]
 
 ## 4. Plan and dimensions
 
@@ -93,7 +93,7 @@ Post and lintel in marble: architraves (epistyle) of three parallel beams spanni
 
 ## 10. Surroundings
 
-The Acropolis plateau (docs/world.md): later the Propylaea at the west, the Erechtheion to the north, the altar of Athena east. *L4.*
+The Acropolis plateau and the plain of Attica (docs/world.md): olive groves in rows on the plain, Aleppo pines and maquis on the hills, cypresses; the road from the west climbs the slope and runs along the top to the east front [inferred: Panathenaic way]. *Later: the Propylaea at the west, the Erechtheion to the north, the altar of Athena east (L4).*
 
 ## 11. Music
 

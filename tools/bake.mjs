@@ -16,9 +16,8 @@ import { MeshBVH } from 'three-mesh-bvh';
 import { BUILDINGS } from '../src/buildings/index.js';
 import { buildPlan, toWorld } from '../src/core/build.js';
 import { albedo } from '../src/core/palette.js';
-import { SUN_DIR, SUN_COLOR, SUN_INTENSITY, skyRadiance } from '../src/core/light.js';
-import { terrainPatch } from '../src/core/terrain-mesh.js';
-import { terrainHeight } from '../src/world/layout.js';
+import { buildChunk } from '../src/world/terrain-grid.js';
+import { REGION, SITES, sunDirection, skyRadiance as skyRadianceOf } from '../src/world/regions.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const MAGIC = 0x4947504D;
@@ -39,11 +38,23 @@ async function scene(id) {
   const [bx0, bz0, bx1, bz1] = plan.bounds;
   const c0 = toWorld(plan, bx0, bz0), c1 = toWorld(plan, bx1, bz1);
   const gx0 = Math.min(c0[0], c1[0]) - 300, gx1 = Math.max(c0[0], c1[0]) + 300, gz0 = Math.min(c0[2], c1[2]) - 300, gz1 = Math.max(c0[2], c1[2]) + 300;
-  const ground = terrainPatch([gx0, gz0, gx1, gz1], 3, (x, z) => terrainHeight(x, z) - 0.02);
-  const gp = ground.attributes.position.array, ga = albedo('ground');
-  for (let i = 0; i < gp.length; i++) pos.push(gp[i]);
-  for (let t = 0; t < gp.length / 9; t++) alb.push(...ga);
-  return { plan, built, pos: new Float32Array(pos), alb: new Float32Array(alb), lights: built.lights };
+  // the ground, as the viewer draws it, with the albedo of its cover (sand, fields, grass, rock, soil)
+  const C = buildChunk([gx0, gz0, gx1, gz1], 3);
+  const cov = { sand: [0.54, 0.4, 0.22], grass: [0.16, 0.18, 0.08], rock: [0.4, 0.37, 0.32], soil: [0.15, 0.1, 0.06], fields: [0.15, 0.2, 0.07] };
+  const vAlb = (v) => {
+    const g = C.ground, g2 = C.ground2, w = [g[v * 4], g[v * 4 + 1], g[v * 4 + 2], g[v * 4 + 3], g2[v * 4]];
+    const keys = ['sand', 'grass', 'rock', 'soil', 'fields'], tot = w.reduce((a, b) => a + b, 0) || 1;
+    return [0, 1, 2].map((k) => keys.reduce((a, key, i) => a + cov[key][k] * w[i], 0) / tot);
+  };
+  const vertsTop = (C.position.length / 3);
+  for (let i = 0; i < C.index.length; i += 3) {
+    const [a, b, c] = [C.index[i], C.index[i + 1], C.index[i + 2]];
+    for (const v of [a, b, c]) pos.push(C.position[v * 3], C.position[v * 3 + 1] - 0.02, C.position[v * 3 + 2]);
+    const A = vAlb(a);
+    alb.push(...A);
+  }
+  const climate = REGION[SITES[id]?.region || 'nile'].climate;
+  return { plan, built, pos: new Float32Array(pos), alb: new Float32Array(alb), lights: built.lights, climate };
 }
 
 function grid(plan, spacing) {
@@ -58,7 +69,9 @@ function grid(plan, spacing) {
 // ── worker: trace probes for a range of z slices ─────────────────────────────
 
 function workerMain() {
-  const { pos, alb, lights, G, rays, zs, prev, pass } = workerData;
+  const { pos, alb, lights, G, rays, zs, prev, pass, climate } = workerData;
+  const SUN_DIR = sunDirection(climate), SUN_COLOR = climate.sun.color, SUN_INTENSITY = climate.sun.intensity;
+  const skyRadiance = (d) => skyRadianceOf(climate, d);
   const geo = new BufferGeometry();
   geo.setAttribute('position', new Float32BufferAttribute(new Float32Array(pos), 3));
   const bvh = new MeshBVH(geo, { targetLeafSize: 8 });
@@ -69,7 +82,7 @@ function workerMain() {
   const sray = new Ray(new Vector3(), new Vector3());
   const sun = new Vector3(...SUN_DIR);
   const sunE = SUN_COLOR.map((c) => c * SUN_INTENSITY);
-  const ga = albedo('ground');
+  const ga = [0.4, 0.33, 0.24];
   const sky0 = skyRadiance([0, 1, 0]);
   const groundL = [0, 1, 2].map((k) => ga[k] * (sunE[k] * SUN_DIR[1] + Math.PI * sky0[k]) / Math.PI);
   // fibonacci directions
@@ -199,7 +212,7 @@ async function runPass(S, G, rays, threads, prev, pass) {
   const t0 = Date.now();
   const runChunk = (zs) => new Promise((ok, fail) => {
     const w = new Worker(fileURLToPath(import.meta.url), {
-      workerData: { pos: S.pos.buffer.slice(0), alb: S.alb.buffer.slice(0), lights: S.lights, G, rays, zs, prev, pass },
+      workerData: { pos: S.pos.buffer.slice(0), alb: S.alb.buffer.slice(0), lights: S.lights, G, rays, zs, prev, pass, climate: S.climate },
     });
     w.on('message', (m) => {
       if (m.progress) {

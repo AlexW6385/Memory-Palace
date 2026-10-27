@@ -2,7 +2,7 @@
 // +z south, origin at the centre of the rotunda, y = 0 at the forecourt paving; the portico
 // faces north (−z). Metres, true scale.
 
-import { SITES } from '../../world/layout.js';
+import { SITES } from '../../world/regions.js';
 
 const E = [];
 const add = (o) => (E.push(o), o);
@@ -18,6 +18,27 @@ const CORNICE1 = F + 12.7;                      // the first interior cornice
 // ── forecourt, steps, floors ──────────────────────────────────────────────────
 add({ t: 'floor', rect: [-40, -110, 40, -51.2], y: 0, mat: 'travertine' });
 add({ t: 'stair', rect: [-17.1, -51.2, 17.1, -49.1], dir: 's', y0: 0, y1: F, riser: 0.186, mat: 'marble' });
+// the forecourt was a long square closed by porticoes (dossier §3, §10: colonnades on three
+// sides; their order and size inferred): granite Corinthian columns 7.6 m high in front of a
+// back wall, under a lean-to roof; a gateway in the north portico on the axis
+{
+  const PH = 7.6, PD = 0.8, BACK = 46, IN = 39.5, N0 = -150;
+  add({ t: 'floor', rect: [-BACK, N0, BACK, -110], y: 0, mat: 'travertine' });
+  add({ t: 'floor', rect: [-BACK, -110, -40, -51.2], y: 0, mat: 'travertine' });
+  add({ t: 'floor', rect: [40, -110, BACK, -51.2], y: 0, mat: 'travertine' });
+  for (const s of [-1, 1]) {
+    for (let z = N0 + 10.5; z < -53; z += 3.8) column(s * IN, z, 0, PH, PD, { shaftMat: 'granite_grey' });
+    add({ t: 'beam', a: [s * IN, N0 + 6.6], b: [s * IN, -53], y: PH, w: 1.0, h: 1.1, mat: 'marble' });
+    add({ t: 'wall', a: [s * (BACK - 0.5), N0], b: [s * (BACK - 0.5), -51.2], th: 1.0, y0: 0, y1: PH + 2.4, openings: [], mat: 'stucco' });
+    add({ t: 'slab', rect: [Math.min(s * (IN - 0.6), s * BACK), N0 + 6, Math.max(s * (IN - 0.6), s * BACK), -51.2], y0: PH + 1.1, y1: PH + 1.5, mat: 'gilt_bronze', holes: [] });
+  }
+  // north portico, with the gateway on the axis
+  const NZ = N0 + 6.6;
+  for (let x = -IN; x <= IN + 0.01; x += 3.95) if (Math.abs(x) > 4.5) column(x, NZ, 0, PH, PD, { shaftMat: 'granite_grey' });
+  add({ t: 'beam', a: [-IN, NZ], b: [IN, NZ], y: PH, w: 1.0, h: 1.1, mat: 'marble' });
+  add({ t: 'wall', a: [-BACK, N0 + 0.5], b: [BACK, N0 + 0.5], th: 1.0, y0: 0, y1: PH + 2.4, openings: [{ at: BACK, w: 7.2, h: PH, y0: 0 }], mat: 'stucco' });
+  add({ t: 'slab', rect: [-BACK, N0, BACK, NZ + 0.6], y0: PH + 1.1, y1: PH + 1.5, mat: 'gilt_bronze', holes: [] });
+}
 add({ t: 'floor', rect: [-17.1, -49.1, 17.1, -20], y: F, mat: 'marble_floor', th: F + 0.3 });
 add({ t: 'floor', rect: [-R - 5.2, -R - 1.0, R + 5.2, R + 5.6], y: F, mat: 'opus_sectile', th: F + 0.3 });
 
@@ -103,7 +124,8 @@ add({ t: 'pediment_roof_z', rect: [-17.1, FZ - 1.6, 17.1, BZ0], y: ET + EH, rise
 // ── rooms and walks ───────────────────────────────────────────────────────────
 const room = (id, rect, y, kind) => ({ id, rect, y, kind });
 const rooms = [
-  room('forecourt', [-38, -108, 38, -54], 0, 'open'),
+  room('forecourt', [-38, -140, 38, -54], 0, 'open'),
+  room('porticoes', [-45, -148, -40, -55], 0, 'open'),
   room('portico', [-16.5, -47, 16.5, -34.5], F, 'open'),
   room('rotunda', [-15, -15, 15, 15], F, 'hall'),
   room('apse', [-4, 22.5, 4, 25.5], F, 'hall'),
@@ -111,7 +133,7 @@ const rooms = [
   room('niche-west', [-25.5, -3, -22.5, 3], F, 'hall'),
 ];
 const walks = [
-  [[0, -95], [0, -52], [0, -48.5], [0, -36], [0, -27.5], [0, -24.5], [0, -18], [0, 0], [16, 0], [23.5, 0], [16, 0], [0, 16], [0, 23.5], [0, 16], [-16, 0], [-23.5, 0], [-16, 0], [0, 0]],
+  [[0, -165], [0, -146], [0, -95], [-42.5, -100], [-42.5, -60], [-30, -60], [0, -52], [0, -48.5], [0, -36], [0, -27.5], [0, -24.5], [0, -18], [0, 0], [16, 0], [23.5, 0], [16, 0], [0, 16], [0, 23.5], [0, 16], [-16, 0], [-23.5, 0], [-16, 0], [0, 0]],
   [[0, -40.5], [-8.8, -40.5], [-8.8, -37.2], [-8.8, -40.5], [-13.3, -40.5], [-13.3, -36.2], [-16.3, -40.0]],
 ];
 walks.forEach((w, i) => { w.y0 = [0, F][i]; });
@@ -123,8 +145,8 @@ export const pantheon = {
   style: 'roman',
   district: 'rome',
   ...SITES.pantheon,
-  entrance: { at: [0, -100], facing: 's' },
-  bounds: [-42, -112, 42, 32],
+  entrance: { at: [0, -160], facing: 's' },
+  bounds: [-48, -165, 48, 32],
   bakeBounds: [-42, -60, 42, 32],
   bakeTop: 48,
   bakeSpacing: 1.5,

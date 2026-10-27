@@ -3,13 +3,13 @@
 // indirect light, bloom, AgX tone mapping.
 
 import * as THREE from 'three/webgpu';
-import { pass, mrt, normalView, screenUV, context, float, renderOutput } from 'three/tsl';
+import { pass, mrt, normalView, screenUV, context, float, renderOutput, fog, vec3, vec4, min } from 'three/tsl';
 import { ao } from 'three/addons/tsl/display/GTAONode.js';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { smaa } from 'three/addons/tsl/display/SMAANode.js';
 import { CSMShadowNode } from 'three/addons/csm/CSMShadowNode.js';
 import { SkyMesh } from 'three/addons/objects/SkyMesh.js';
-import { SUN_DIR, SUN_COLOR, SUN_INTENSITY } from '../core/light.js';
+import { ENV, cloudShadow, fogFactor, fogColor } from './env.js';
 import { GIVolume } from './gi.js';
 import { useGI } from './materials.js';
 
@@ -30,7 +30,7 @@ export class Renderer {
     await r.init();
     this.webgpu = r.backend.isWebGPUBackend === true;
     r.toneMapping = THREE.AgXToneMapping;
-    r.toneMappingExposure = 0.95;
+    r.toneMappingExposure = 0.55;          // set each frame from the climate and the eye's adaptation
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFShadowMap;
 
@@ -41,16 +41,14 @@ export class Renderer {
     // sky
     const sky = this.sky = new SkyMesh();
     sky.scale.setScalar(3500);
-    sky.turbidity.value = 3.2;
-    sky.rayleigh.value = 1.1;
-    sky.mieCoefficient.value = 0.004;
-    sky.mieDirectionalG.value = 0.82;
-    sky.cloudCoverage.value = 0.12;
-    sky.sunPosition.value.set(...SUN_DIR).multiplyScalar(1000);
+    sky.material.fog = false;
     scene.add(sky);
+    // haze: denser near the ground, glowing toward the sun; parameters come from the climate
+    scene.fogNode = fog(fogColor, fogFactor);
+    this.sunDir = [0, 1, 0];
 
     // sun
-    const sun = this.sun = new THREE.DirectionalLight(new THREE.Color(...SUN_COLOR), SUN_INTENSITY);
+    const sun = this.sun = new THREE.DirectionalLight(0xffffff, 3);
     sun.castShadow = true;
     sun.shadow.bias = -0.0004;
     sun.shadow.normalBias = 0.04;
@@ -102,9 +100,14 @@ export class Renderer {
     scenePass.contextNode = context({
       getAO: (input, { material }) => (material.transparent ? input : (input !== null ? input.mul(aoValue) : aoValue)),
       getGI: (input, { material }) => (material.transparent ? input : (input !== null ? input.add(gi) : gi)),
+      // the sun is dimmed where the shadows of the clouds pass
+      getShadow: ({ light, shadowColorNode }) => (light === this.sun ? shadowColorNode.mul(cloudShadow) : shadowColorNode),
     });
     const color = scenePass.getTextureNode('output');
-    let out = renderOutput(color.add(bloom(color, 0.12, 0.35, 1.1)));
+    // the sun's disc is thousands of times brighter than the sky: clamp it before the bloom, or its
+    // glow floods half the picture when one looks toward a low sun
+    const glowSrc = vec4(min(color.rgb, vec3(5)), 1);
+    let out = renderOutput(color.add(bloom(glowSrc, 0.1, 0.3, 1.2)));
     if (Q.aa) out = smaa(out);
     this.pipeline.outputColorTransform = false;
     this.pipeline.outputNode = out;
@@ -124,7 +127,8 @@ export class Renderer {
   update() {
     const c = this.camera.position;
     this.sky.position.copy(c);
-    this.sun.position.set(c.x + SUN_DIR[0] * 400, c.y + SUN_DIR[1] * 400, c.z + SUN_DIR[2] * 400);
+    const d = this.sunDir;
+    this.sun.position.set(c.x + d[0] * 400, c.y + d[1] * 400, c.z + d[2] * 400);
     this.sun.target.position.copy(c);
   }
 

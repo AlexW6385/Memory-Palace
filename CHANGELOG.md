@@ -2,6 +2,16 @@
 
 Newest first. What you can visit and what looks better, in plain words.
 
+## v5.2 — Regions, sky and weather (2026-10-26)
+
+Every building now stands in a small world of its own.
+
+- **Three regions along one river**, each a basin between ridges, crossed by roads over passes: **the Nile** (flood plain with fields, palm groves, papyrus and reeds at the water, a desert escarpment and dunes, and the mud-brick town of Edfu on its mound around the temple), **Rome** (a plain among hills with stone pines, cypresses, holm oaks and oleanders, and the Pantheon's forecourt closed by granite porticoes), **Greece** (olive groves in rows, Aleppo pines and maquis on the hills, red earth and dry grass, the Acropolis rising over the plain).
+- **Each region has its own sky:** its own time of day (Egyptian late afternoon, a Roman spring morning, an Attic noon), haze and light, and **weather that changes** every few minutes — clouds whose shadows drift over the ground, dust in Egypt, showers in Rome with wet ground and puddles, the meltemi in Greece. Crossing a pass, the sky changes with the land.
+- **Lower, more natural exposure**, and baked light in every building matched to its region's sun.
+- **Plants that move:** trees, palms, shrubs and grass sway in the wind, harder when it blows.
+- **Music fixed** (it could stay silent after entering); rain and wind can now be heard.
+
 ## v5.1 — The Parthenon and the Pantheon (2026-10-26)
 
 - **The Pantheon** (Rome, c. AD 114–128) at true scale: the portico of sixteen granite Corinthian columns in three aisles, grey in front and pink behind; the bronze doors; the rotunda, a sphere of 43.3 m with seven niches between giallo antico and pavonazzetto columns, eight aediculae with porphyry columns, the floor of porphyry, granite and marble circles and squares; the dome of 140 coffers, each stepped back four times, and the open oculus throwing its disc of sun across them. Outside, the step rings and the gilt-bronze roof.

@@ -2,7 +2,7 @@
 // Local coordinates: +x east, +z south, origin at the centre of the stylobate, y = 0 at the
 // foot of the krepis (the rock of the Acropolis). Metres, true scale.
 
-import { SITES } from '../../world/layout.js';
+import { SITES } from '../../world/regions.js';
 
 const E = [];
 const add = (o) => (E.push(o), o);

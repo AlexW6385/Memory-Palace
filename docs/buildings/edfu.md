@@ -123,9 +123,13 @@ Floor levels rise by steps at each doorway: court 0.00, pronaos +0.45, hypostyle
 
 ## 10. Surroundings
 
-- Paved forecourt before the pylon; the town of mud-brick houses around the temple mound [stated: town built over the temple]. *L4: the houses.*
-- Date palms in the forecourt periphery and toward the river [inferred, characteristic of the site today and in antiquity].
-- The mammisi south-west of the pylon. *Later.*
+The Nile region of the world (docs/world.md) is the temple's setting.
+
+- **The town of Behdet** [stated: the town mound lies "just a few meters west" of the temple, 365 m N–S × 168 m E–W, now 10–15 m above the temple threshold; parts of the town lie south and east of the temple — Yale/ISAC Tell Edfu Project, https://egyptology.yale.edu/node/379]. In 57 BC the mound was lower [inferred]; we make it 5.5 m. Houses of the Graeco-Roman types [stated: tower houses of two or more storeys reached by a central stair, and houses with courtyards — UCL Digital Egypt, Karanis; Egyptian Streets, "Living as an Egyptian during Greco-Roman times"]: mud brick, flat roofs of palm trunks behind parapets, small windows high up, doors with timber lintels [inferred: type]. Laid out in blocks between straight streets [inferred from the planned towns of the period].
+- **Flood plain and fields** between the town and the river; date and doum palms, sycamore figs, acacias and tamarisks; papyrus and reeds at the water's edge [inferred: the vegetation of Upper Egypt in antiquity and today].
+- **The processional way** from the river to the pylon, on which the god's barque came and went at the feasts (the Feast of the Beautiful Meeting, when Hathor of Dendera arrived by river) [stated: type; feast — general].
+- **The desert** west of the valley behind its escarpment; dunes banked against it [inferred: setting of Edfu between the Nile and the Western Desert].
+- *Later (L4):* the quay and its stair, the mammisi south-west of the pylon, dovecotes and granaries, people and animals.
 
 ## 11. Music
 
