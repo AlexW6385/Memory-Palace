@@ -14,6 +14,7 @@ The name is meant in two senses. These buildings are the memory of civilizations
 
 - **The Parthenon** (Athens, 447–432 BC) on its Acropolis rock: the full Doric order, the pediments, the two-tier colonnade around the gold-and-ivory Athena Parthenos and the pool before her, and the treasury room with its four Ionic columns.
 - **The Pantheon** (Rome, c. AD 114–128): the portico of sixteen granite columns, the bronze doors, the rotunda of coloured marbles under the coffered dome and its open oculus.
+- **Hagia Sophia** (Constantinople, 532–537, dome rebuilt 562): the dome on its ring of forty windows over pendentives, semidomes and exedrae, galleries, gold mosaic and marble, the chancel and ambo, the narthexes and the atrium — in a city of tiled houses on the hills above the water.
 
 Each building stands in a **region** of its own — a basin of the same river valley with its landform, ground, plants, settlement and roads, and its own sky: time of day, haze, and weather that changes as you walk (drifting cloud shadows, dust, rain and wet ground, wind). Roads cross the ridges between regions over passes.
 

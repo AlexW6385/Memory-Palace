@@ -73,6 +73,28 @@ export const REGIONS = [
     },
     ground: 'greece',
   },
+  {
+    id: 'byzantium', name: { en: 'Byzantium', zh: '拜占庭' },
+    z: [-3950, -2750], center: [-120, -3300],
+    climate: {
+      // a late autumn morning on the Bosphorus: the sun low in the south-east, sea air, often grey;
+      // the poyraz blows from the north-east (Climate of Istanbul: cloudy, frequent light rain, fog)
+      sun: { az: 142, el: 26, color: [1.0, 0.87, 0.72], intensity: 3.0 },
+      sky: { turbidity: 3.8, rayleigh: 1.3, mie: 0.005, mieG: 0.8, zenith: [0.1, 0.14, 0.24], horizon: [0.3, 0.31, 0.32] },
+      fog: { color: [0.58, 0.62, 0.66], density: 0.0005, height: 0.012 },
+      exposure: 0.6,
+      wind: [-0.6, 0.6],
+      weather: [
+        { id: 'fair', weight: 3, clouds: 0.35, cloudDensity: 0.5, sun: 1.0, fog: 1.0 },
+        { id: 'cloudy', weight: 3, clouds: 0.66, cloudDensity: 0.6, sun: 0.7, fog: 1.4 },
+        { id: 'overcast', weight: 2, clouds: 0.92, cloudDensity: 0.75, sun: 0.35, fog: 1.9 },
+        { id: 'drizzle', weight: 1.5, clouds: 0.95, cloudDensity: 0.8, sun: 0.28, fog: 2.4, rain: 0.45 },
+        { id: 'sea-mist', weight: 1, clouds: 0.5, cloudDensity: 0.4, sun: 0.55, fog: 5, fogColor: [0.7, 0.72, 0.74] },
+        { id: 'poyraz', weight: 1.5, clouds: 0.5, cloudDensity: 0.55, sun: 0.85, fog: 0.8, windy: 1 },
+      ],
+    },
+    ground: 'byzantium',
+  },
 ];
 
 export const REGION = Object.fromEntries(REGIONS.map((r) => [r.id, r]));
@@ -113,7 +135,7 @@ export function skyRadiance(climate, d) {
 
 /** Walkable extent; the landscape continues beyond it to the mountains. */
 export const WORLD = {
-  bounds: [-1150, -2680, 1050, 1180],
+  bounds: [-1150, -3880, 1050, 1180],
   river: { width: 300, bank: 24, depth: 3.4, water: -2.3 },
   far: 700,                                       // how far beyond the bounds the terrain is drawn
 };
@@ -129,7 +151,17 @@ export const SITES = {
   edfu: { origin: [0, 0], yaw: 0, base: 0, region: 'nile', pad: [-48, -140, 48, 32] },
   pantheon: { origin: [-20, -1080], yaw: 0, base: 0, region: 'rome', pad: [-48, -152, 48, 32] },
   parthenon: { origin: [-165, -2122], yaw: 0, base: 40, region: 'greece', pad: [-46, -26, 50, 26] },
+  'hagia-sophia': { origin: [-60, -3300], yaw: 0, base: 24, region: 'byzantium', pad: [-100, -42, 48, 100] },
 };
+
+/** Built-up quarters (towns), where the houses stand and no trees are planted. */
+export const TOWNS = [
+  { id: 'constantinople', region: 'byzantium', rects: [[-260, -3470, 60, -3360], [-430, -3355, -185, -3150], [-250, -3190, 75, -3080], [80, -3330, 190, -3160]] },
+];
+export function inTown(x, z) {
+  for (const t of TOWNS) for (const r of t.rects) if (x > r[0] - 3 && x < r[2] + 3 && z > r[1] - 3 && z < r[3] + 3) return true;
+  return false;
+}
 
 // ── landforms ────────────────────────────────────────────────────────────────
 
@@ -163,10 +195,19 @@ export const LANDFORMS = [
   { kind: 'hill', id: 'areopagus', center: [-420, -2075], radius: [55, 35], height: 14 },
   { kind: 'hill', id: 'mouseion', center: [-360, -1890], radius: [120, 80], height: 28 },
   { kind: 'ridge', id: 'aigaleo', points: [[-1300, -1700], [-950, -1900], [-880, -2250], [-1000, -2600], [-1300, -2900]], height: 140, width: 260, rock: 10 },
-  { kind: 'ridge', id: 'parnes', points: [[-1900, -2950], [-700, -2900], [0, -2880], [700, -2950]], height: 190, width: 300, rock: 12 },
+  // ── Parnes: the spur between Greece and Byzantium ──
+  { kind: 'ridge', id: 'parnes', points: [[-1900, -2950], [-700, -2900], [-250, -2880], [60, -2860], [150, -2855]], height: 190, width: 300, endTaper: [80, 220], rock: 12,
+    passes: [{ at: -420, depth: 0.94, width: 95 }] },
   { kind: 'ridge', id: 'hymettus', points: [[650, -1750], [760, -2150], [720, -2600]], height: 150, width: 220, rock: 10 },
+  { kind: 'ridge', id: 'east-parnes', points: [[640, -2860], [900, -2900], [1500, -2950]], height: 160, width: 260, rock: 10 },
+  // ── Byzantium: hills of the city above the water; the Asian shore across it ──
+  { kind: 'mesa', id: 'first-hill', center: [-60, -3290], half: [125, 92], round: 45, top: 24, steep: 75, gentle: { dir: [1, 0], run: 150 }, rock: 2 },
+  { kind: 'hill', id: 'second-hill', center: [-400, -3430], radius: [170, 130], height: 30 },
+  { kind: 'hill', id: 'third-hill', center: [-350, -3130], radius: [140, 115], height: 36 },
+  { kind: 'hill', id: 'asian-shore', center: [800, -3320], radius: [190, 420], height: 70 },
+  { kind: 'ridge', id: 'thrace', points: [[-1900, -4060], [-600, -4010], [0, -3995], [900, -4060]], height: 150, width: 300, rock: 9 },
   // ── the world's rim ──
-  { kind: 'ridge', id: 'west-uplands', points: [[-1500, 1800], [-1450, 400], [-1500, -1000], [-1550, -2400]], height: 120, width: 400, rock: 8 },
+  { kind: 'ridge', id: 'west-uplands', points: [[-1500, 1800], [-1450, 400], [-1500, -1000], [-1550, -2400], [-1550, -3300], [-1600, -4200]], height: 120, width: 400, rock: 8 },
   { kind: 'dunes', id: 'south-erg', polygon: [[-600, 1150], [1100, 1150], [1100, 1900], [-600, 1900]], height: 9, wavelength: 110, dir: [0.7, 0.7] },
 ];
 
@@ -322,7 +363,8 @@ export function terrainHeight(x, z) {
     const [x0, z0, x1, z1] = p.rect;
     const dx = Math.max(x0 - p.margin - x, 0, x - x1 - p.margin), dz = Math.max(z0 - p.margin - z, 0, z - z1 - p.margin);
     const d = Math.hypot(dx, dz);
-    if (d < p.blend) h = p.base + (h - p.base) * smooth(0, 1, d / p.blend);
+    // just below the base inside the pad, so that paving laid at the base never fights the ground
+    if (d < p.blend) h = p.base - 0.12 * (1 - smooth(0, 1, d / 6)) + (h - p.base) * smooth(0, 1, d / p.blend);
   }
   const R = WORLD.river, c = riverCenter(z);
   const e = Math.abs(x - c) - R.width / 2;               // > 0 outside the channel
@@ -354,6 +396,10 @@ export const ROADS = [
   { id: 'rome-south', width: 7, points: [[-170, -620], [-130, -820], [-100, -1000], [-90, -1150], [-70, -1250], [-20, -1250]] },
   { id: 'rome-north', width: 7, points: [[-20, -1250], [-20, -1236], [-20, -1250], [-130, -1330], [-250, -1470], [-330, -1600], [-330, -1680]] },
   // Greece: across the plain to the foot of the Acropolis, up its west slope and along the top
+  // Byzantium: from the Greek way north over the pass of Parnes, round the third hill to the
+  // atrium of Hagia Sophia; from its square down to the harbour
+  { id: 'greece-north', width: 7, points: [[-420, -2105], [-430, -2300], [-420, -2560], [-420, -2860], [-405, -3020], [-260, -3205], [-170, -3292], [-150, -3300]] },
+  { id: 'harbour', width: 6, points: [[-30, -3215], [60, -3215], [160, -3245], [232, -3258]], paved: 1 },
   { id: 'greece-way', width: 7, points: [[-330, -1680], [-420, -1850], [-500, -2010], [-520, -2100], [-420, -2105], [-330, -2105], [-240, -2085], [-150, -2085], [-110, -2108]] },
 ];
 
@@ -422,6 +468,14 @@ const GROUND = {
     const rock = steep * 0.8;
     const soil = Math.max(0, 0.18 + 0.25 * m) * (1 - rock);
     return { grass: Math.max(0, 1 - rock - soil), soil, rock, sand: 0, fields: 0, dry: 0.25 + 0.25 * n, warmth: 0.35, red: 0.1 };
+  },
+  byzantium(x, z, h, steep) {
+    const n = fbm(x * 0.015 + 3, z * 0.015), m = fbm(x * 0.05 + 2, z * 0.05);
+    const rock = steep * 0.75;
+    // gardens and vineyards on the low ground outside the city
+    const fields = (1 - smooth(4, 12, h)) * smooth(0.0, 0.35, fbm(x * 0.006 + 5, z * 0.006)) * 0.8 * (1 - rock);
+    const soil = Math.max(0, 0.15 + 0.25 * m) * (1 - rock - fields);
+    return { grass: Math.max(0, 1 - rock - soil - fields), soil, rock, sand: 0, fields, dry: 0.18 + 0.2 * n, warmth: 0.25, red: 0.15 };
   },
   greece(x, z, h, steep) {
     const n = fbm(x * 0.02, z * 0.02), m = fbm(x * 0.07 + 9, z * 0.07);

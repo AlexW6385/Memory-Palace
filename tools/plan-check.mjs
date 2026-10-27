@@ -28,8 +28,8 @@ for (const b of BUILDINGS) {
   const a = toWorld(plan, bx0, bz0), c = toWorld(plan, bx1, bz1);
   const X0 = Math.min(a[0], c[0]), Z0 = Math.min(a[2], c[2]), X1 = Math.max(a[0], c[0]), Z1 = Math.max(a[2], c[2]);
   const nx = Math.ceil((X1 - X0) / CELL), nz = Math.ceil((Z1 - Z0) / CELL);
-  const ground = new Float32Array(nx * nz).fill(NaN);
-  const seen = new Uint8Array(nx * nz);
+  // several storeys can share a cell: each cell keeps the floor heights reached in it
+  const levels = new Map();
   const idx = (i, j) => j * nx + i;
   const cx = (i) => X0 + (i + 0.5) * CELL, cz = (j) => Z0 + (j + 0.5) * CELL;
   const e = plan.entrance.at, ew = toWorld(plan, e[0], e[1]);
@@ -38,22 +38,23 @@ for (const b of BUILDINGS) {
   const visit = (i, j, fromY) => {
     if (i < 0 || j < 0 || i >= nx || j >= nz) return;
     const k = idx(i, j);
-    if (seen[k]) return;
     const x = cx(i), z = cz(j);
     const g = cw.groundAt(x, z, fromY + STEP);
     if (!Number.isFinite(g) || g < fromY - 2.0) return;           // no falling off cliffs
+    const L = levels.get(k);
+    if (L && L.some((h) => Math.abs(h - g) < 0.3)) return;
     if (cw.blockedAt(x, z, R, g + LOW, g + HEAD)) return;
-    seen[k] = 1; ground[k] = g;
+    if (L) L.push(g); else levels.set(k, [g]);
     stack.push([i, j, g]);
   };
   visit(si, sj, (plan.base || 0) + (plan.entrance.y || 0));
-  if (!seen[idx(si, sj)]) problems.push(`entrance at ${ew.map((v) => v.toFixed(1))} is not walkable`);
+  if (!levels.has(idx(si, sj))) problems.push(`entrance at ${ew.map((v) => v.toFixed(1))} is not walkable`);
   while (stack.length) {
     const [i, j, g] = stack.pop();
     visit(i + 1, j, g); visit(i - 1, j, g); visit(i, j + 1, g); visit(i, j - 1, g);
   }
   let reach = 0;
-  for (let k = 0; k < seen.length; k++) reach += seen[k];
+  for (const L of levels.values()) reach += L.length;
 
   const reachableIn = (rect, y) => {
     const p = toWorld(plan, rect[0], rect[1]), q = toWorld(plan, rect[2], rect[3]);
@@ -61,7 +62,8 @@ for (const b of BUILDINGS) {
     for (let i = Math.max(0, Math.floor((x0 - X0) / CELL)); i <= Math.min(nx - 1, Math.floor((x1 - X0) / CELL)); i++) {
       for (let j = Math.max(0, Math.floor((z0 - Z0) / CELL)); j <= Math.min(nz - 1, Math.floor((z1 - Z0) / CELL)); j++) {
         const k = idx(i, j);
-        if (seen[k] && (y === undefined || Math.abs(ground[k] - (y + (plan.base || 0))) < 0.35)) return true;
+        const L = levels.get(k);
+        if (L && (y === undefined || L.some((h) => Math.abs(h - (y + (plan.base || 0))) < 0.35))) return true;
       }
     }
     return false;
@@ -91,7 +93,7 @@ for (const b of BUILDINGS) {
   for (const o of obs) {
     const mx = (o.bb[0] + o.bb[2]) / 2, mz = (o.bb[1] + o.bb[3]) / 2;
     const g = cw.groundAt(mx, mz, o.y0 + 0.06);
-    if (o.y0 <= g + 0.06) continue;
+    if (o.y0 <= g + 0.15) continue;           // the ground of a pad lies 12 cm below the base
     if (obs.some((q) => q !== o && touch(o, q) && q.y0 <= o.y0 + 1e-3 && q.y1 >= o.y0 - 0.06)) continue;
     problems.push(`obstacle at (${mx.toFixed(1)}, ${mz.toFixed(1)}) floats at y=${o.y0.toFixed(2)}`);
   }

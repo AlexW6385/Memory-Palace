@@ -52,6 +52,7 @@ export class Renderer {
     sun.castShadow = true;
     sun.shadow.bias = -0.0004;
     sun.shadow.normalBias = 0.04;
+    sun.shadow.normalBias = 0.04;
     sun.shadow.camera.near = 1;
     sun.shadow.camera.far = 900;
     scene.add(sun, sun.target);
@@ -75,7 +76,7 @@ export class Renderer {
     r.setPixelRatio(Math.min(devicePixelRatio, Q.pixelRatio));
     sun.shadow.mapSize.set(Q.shadowMap, Q.shadowMap);
     if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
-    const csm = new CSMShadowNode(sun, { cascades: Q.cascades, maxFar: 320, mode: 'practical', lightMargin: 120 });
+    const csm = new CSMShadowNode(sun, { cascades: Q.cascades, maxFar: 320, mode: 'practical', lightMargin: 200 });
     csm.fade = true;
     sun.shadow.shadowNode = csm;
     this.buildPipeline();

@@ -209,6 +209,75 @@ function make(spec) {
       m.normalNode = bump(band.mul(-0.002).add(vein.mul(0.0003)), 1);
       break;
     }
+    case 'mosaic': {
+      // gold (or coloured) glass tesserae about 3.5 cm, each set at its own small angle, so that
+      // each catches the light differently; grey grout between them. Faded with distance.
+      const q = P.div(0.035), cell = floor(q), f = fract(q);
+      const id = hash(cell.x.mul(12.9898).add(cell.y.mul(78.233)).add(cell.z.mul(37.719)));
+      const id2 = hash(cell.x.mul(4.898).add(cell.y.mul(7.23)).add(cell.z.mul(97.71)));
+      const fw = fwidth(q.x).add(fwidth(q.y)).add(fwidth(q.z));
+      const aa = float(1).sub(smoothstep(0.25, 0.7, fw));
+      const e = min(min(min(f.x, float(1).sub(f.x)), min(f.y, float(1).sub(f.y))), min(f.z, float(1).sub(f.z)));
+      const grout = float(1).sub(smoothstep(0.05, 0.14, e)).mul(aa);
+      const big = mx_fractal_noise_float(P.mul(0.4), 3, 2.0, 0.5);
+      const col = baseNode.mul(mix(float(1), id.mul(0.5).add(0.75), aa)).mul(big.mul(0.1).add(1));
+      m.colorNode = mix(col, vec3(0.32, 0.3, 0.27), grout.mul(0.7));
+      m.metalnessNode = float(spec.metalness ?? 1).mul(float(1).sub(grout.mul(0.9)));
+      m.roughnessNode = mix(float(spec.roughness), id2.mul(0.35).add(0.12), aa).add(grout.mul(0.5));
+      // the tilt of each tessera: a per-cell slope in the bump
+      m.normalNode = bump(f.x.mul(id.sub(0.5)).add(f.y.mul(id2.sub(0.5))).add(f.z.mul(id.sub(id2))).mul(0.004).mul(aa).sub(grout.mul(0.0015)), 1);
+      break;
+    }
+    case 'veined': {
+      // marble revetment: slabs sawn from one block and opened like a book, so that the veins of
+      // each pair mirror each other; the slab's marble varies through the given colours
+      const C = spec.colors.map((c) => { const k = new Color(c); return vec3(k.r, k.g, k.b); });
+      const { u, v } = wallUV();
+      const bw = spec.block, bh = spec.course;
+      const cu = floor(u.div(bw)), cv = floor(v.div(bh));
+      const fu = fract(u.div(bw)), lv = fract(v.div(bh));
+      const odd = fract(cu.mul(0.5)).mul(2);
+      const lu = mix(fu, float(1).sub(fu), odd);
+      const slab = hash(cv.mul(7.13).add(floor(cu.div(2)).mul(3.71)));
+      const nb = C.length - 1;
+      let body = C[0];
+      for (let i = 1; i < nb; i++) body = select(slab.greaterThan(i / nb), C[i], body);
+      const w1 = mx_fractal_noise_float(vec3(lu.mul(2.2), lv.mul(1.4), slab.mul(17.0)), 4, 2.0, 0.5);
+      const w2 = mx_noise_float(vec3(lu.mul(0.9).add(w1.mul(0.8)), lv.mul(1.5), slab.mul(5.0)));
+      const vw = max(fwidth(w2).mul(1.5), 0.018);
+      const vein = float(1).sub(smoothstep(0.0, vw, abs(w2))).mul(0.45).mul(smoothstep(-0.2, 0.3, w1));
+      const d = min(min(lu, float(1).sub(lu)).mul(bw), min(lv, float(1).sub(lv)).mul(bh));
+      const joint = float(1).sub(smoothstep(0.0015, 0.005, d));
+      const cloud = mx_fractal_noise_float(vec3(lu.mul(4.0), lv.mul(4.0), slab.mul(3.0)), 3, 2.0, 0.5);
+      let col = mix(body.mul(cloud.mul(0.07).add(1)), C[nb], vein.clamp(0, 1).mul(0.6));
+      col = mix(col, col.mul(0.55), joint);
+      m.colorNode = col;
+      m.roughnessNode = float(spec.roughness).add(joint.mul(0.3));
+      m.normalNode = bump(joint.mul(-0.0015), 1);
+      break;
+    }
+    case 'tiles': {
+      // roof of curved tiles (imbrex and tegula): channels down the slope, courses across it
+      const n = normalWorld;
+      const alongX = abs(n.x).lessThan(abs(n.z));
+      const u = select(alongX, P.x, P.z);
+      const ph = u.mul(Math.PI * 2 / 0.42);
+      const row = floor(P.y.div(0.24));
+      const lv = fract(P.y.div(0.24));
+      const id = hash(floor(u.div(0.42)).mul(3.1).add(row.mul(17.7)));
+      const aa = float(1).sub(smoothstep(0.25, 0.9, fwidth(ph)));
+      const ch = sin(ph).mul(aa);
+      const lap = float(1).sub(smoothstep(0.0, 0.18, lv)).mul(aa);
+      const stain = mx_fractal_noise_float(P.mul(0.3), 3, 2.0, 0.5);
+      m.colorNode = baseNode.mul(id.sub(0.5).mul(0.3).mul(aa).add(1)).mul(ch.mul(0.1).add(1)).mul(lap.mul(-0.35).add(1)).mul(stain.mul(0.2).add(1));
+      m.normalNode = bump(ch.mul(0.02).add(lv.mul(0.012).mul(aa)), 1);
+      break;
+    }
+    case 'flame': {
+      m.colorNode = vec3(0, 0, 0);
+      m.emissiveNode = vec3(6.0, 3.2, 1.0).mul(sin(time.mul(9.0).add(P.x.mul(13.0))).mul(0.08).add(1));
+      break;
+    }
     case 'bark': {
       const fiss = mx_worley_noise_float(vec3(P.x.mul(6), P.y.mul(spec.plates ? 1.2 : 0.8), P.z.mul(6)));
       const n = mx_noise_float(P.mul(3.0));

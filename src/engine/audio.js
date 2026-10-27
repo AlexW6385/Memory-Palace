@@ -44,6 +44,11 @@ export class Music {
     this.bus = ctx.createGain();
     this.bus.connect(this.dry);
     this.bus.connect(this.reverb);
+    // a second, very long reverberation for great domed spaces (Hagia Sophia rings ~12 s)
+    this.longReverb = ctx.createConvolver();
+    this.longReverb.buffer = this.impulse(12, 3.2);
+    this.wetLong = ctx.createGain(); this.wetLong.gain.value = 0;
+    this.bus.connect(this.longReverb); this.longReverb.connect(this.wetLong); this.wetLong.connect(this.master);
     // a meter for the tests: RMS of what reaches the speakers
     this.analyser = ctx.createAnalyser();
     this.analyser.fftSize = 2048;
@@ -122,7 +127,8 @@ export class Music {
     if (!this.layers.has(zone)) this.layers.set(zone, this.makeLayer(score, zone));
     const Z = score.zones[zone] || {};
     this.wet.gain.setTargetAtTime((Z.reverb ?? 0.4) * 0.9, t, 1.5);
-    this.dry.gain.setTargetAtTime(1 - (Z.reverb ?? 0.4) * 0.5, t, 1.5);
+    this.dry.gain.setTargetAtTime(1 - (Z.reverb ?? 0.4) * 0.5 - (Z.reverbLong ?? 0) * 0.25, t, 1.5);
+    this.wetLong.gain.setTargetAtTime((Z.reverbLong ?? 0) * 0.8, t, 2.0);
   }
 
   fadeOut(l) {
@@ -228,6 +234,58 @@ export class Music {
     bp.connect(lp); lp.connect(g); g.connect(this.layers.get(this.zone).gain);
   }
 
+  /** A sung note: two voices a few cents apart through the formants of a vowel. */
+  sing(midi, when, dur, level) {
+    const ctx = this.ctx, f = mtof(midi);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.exponentialRampToValueAtTime(level, when + 0.22);
+    g.gain.setValueAtTime(level, when + dur * 0.75);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+    const vowels = [[730, 1090, 2440], [570, 840, 2410], [530, 1840, 2480], [300, 870, 2240]];
+    const V = vowels[Math.floor(Math.random() * vowels.length)];
+    const mix = ctx.createGain(); mix.gain.value = 1;
+    V.forEach((fq, i) => {
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = fq; bp.Q.value = 7 + i * 3;
+      const ag = ctx.createGain(); ag.gain.value = [1.6, 0.8, 0.35][i];
+      mix.connect(bp); bp.connect(ag); ag.connect(g);
+    });
+    const body = ctx.createBiquadFilter(); body.type = 'lowpass'; body.frequency.value = Math.max(400, f * 2.5);
+    const bg = ctx.createGain(); bg.gain.value = 0.5;
+    mix.connect(body); body.connect(bg); bg.connect(g);
+    for (const det of [-7, 6]) {
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = det;
+      const v = ctx.createOscillator(), vg = ctx.createGain();
+      v.frequency.value = 4.8 + Math.random() * 0.6; vg.gain.setValueAtTime(0, when); vg.gain.linearRampToValueAtTime(f * 0.007, when + 0.6);
+      v.connect(vg); vg.connect(o.frequency);
+      o.connect(mix); o.start(when); o.stop(when + dur + 0.05); v.start(when); v.stop(when + dur + 0.05);
+    }
+    g.connect(this.layers.get(this.zone).gain);
+  }
+
+  /** The semantron: a wooden board struck with a mallet, in a run that quickens. */
+  semantron(when, level) {
+    const ctx = this.ctx, sr = ctx.sampleRate;
+    let t = when;
+    for (let i = 0; i < 9; i++) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      const pitch = i % 3 === 2 ? 520 : 690;
+      o.frequency.setValueAtTime(pitch, t);
+      g.gain.setValueAtTime(level, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+      const n = ctx.createBufferSource(), b = ctx.createBuffer(1, Math.floor(sr * 0.03), sr), d = b.getChannelData(0);
+      for (let k = 0; k < d.length; k++) d[k] = (Math.random() * 2 - 1) * Math.exp(-k / (sr * 0.004));
+      n.buffer = b;
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = pitch * 2.2; bp.Q.value = 3;
+      const ng = ctx.createGain(); ng.gain.value = level * 0.6;
+      o.connect(g); n.connect(bp); bp.connect(ng);
+      g.connect(this.layers.get(this.zone).gain); ng.connect(this.layers.get(this.zone).gain);
+      o.start(t); o.stop(t + 0.1); n.start(t);
+      t += 0.42 - i * 0.03;
+    }
+  }
+
   sistrum(when, level) {
     const ctx = this.ctx, sr = ctx.sampleRate;
     const n = Math.floor(sr * 0.9), b = ctx.createBuffer(1, n, sr), d = b.getChannelData(0);
@@ -301,8 +359,10 @@ export class Music {
         const minDeg = Math.ceil((lo / 12) * sc.length), maxDeg = Math.floor((hi / 12) * sc.length);
         this.leadDeg = Math.max(minDeg, Math.min(maxDeg, this.leadDeg));
         const d = this.leadDeg, midi = S.tonic + Math.floor(d / sc.length) * 12 + sc[((d % sc.length) + sc.length) % sc.length];
-        this.blow(midi, t, spb * (1.5 + Math.random() * 2), Z.lead.level);
+        if (Z.lead.timbre === 'voice') this.sing(midi, t, spb * (2 + Math.random() * 2.5), Z.lead.level);
+        else this.blow(midi, t, spb * (1.5 + Math.random() * 2), Z.lead.level);
       }
+      if (Z.semantron && beat % Z.semantron.every === 0 && Math.random() < 0.5) this.semantron(t, Z.semantron.level);
       if (Z.sistrum && beat % Z.sistrum.every === Z.sistrum.every - 1 && Math.random() < 0.7) this.sistrum(t, Z.sistrum.level);
       if (Z.drum) {
         const p = Z.drum.pattern, v = p[beat % p.length];

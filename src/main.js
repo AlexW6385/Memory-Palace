@@ -116,8 +116,9 @@ async function main() {
     controls.update(dt);
     const here = world.update(R.camera.position);
     const c = R.camera.position;
-    const cl = climate.update(c.x, c.z, Math.min(dt, 0.25));
     const outdoors = !here.room || here.room.kind === 'open';
+    climate.indoors += ((outdoors ? 0 : 1) - climate.indoors) * Math.min(1, dt / 1.5);
+    const cl = climate.update(c.x, c.z, Math.min(dt, 0.25));
     rain.update(dt, cl.rain, outdoors);
     music.ambience(cl.rain, cl.windy, !outdoors);
     // eye adaptation: open up in dark rooms (at most ~3 stops), close down outdoors

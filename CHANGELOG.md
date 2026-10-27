@@ -2,6 +2,13 @@
 
 Newest first. What you can visit and what looks better, in plain words.
 
+## v5.3 — Byzantium and Hagia Sophia (2026-10-27)
+
+- **A new region, Byzantium,** north of Greece over a mountain pass: the hills of Constantinople above the water, a grey sea-air climate with drizzle, sea mist and the north-east wind, cypresses and plane trees, and a town of tiled houses with upper storeys jutting over the streets.
+- **Hagia Sophia** as rebuilt in 562, at true scale: the great dome floating on its ring of forty windows over four pendentives, the two semidomes and four exedrae with porphyry and green marble columns, the galleries (climb the ramp tower), the tympana full of windows, the apse with the clergy's tiers, the silver chancel and ciborium, the ambo, rings of oil lamps, the two narthexes and the Imperial Door, the atrium with its fountain. Gold mosaic on every vault, walls of book-matched marble.
+- **Byzantine chant**: voices over a held drone, ringing for twelve seconds under the dome; the wooden semantron outside.
+- Fixes: the sun's glare no longer floods the picture; leaves and grass are no longer black against the light; gentler sand ripples; redder Attic earth.
+
 ## v5.2 — Regions, sky and weather (2026-10-26)
 
 Every building now stands in a small world of its own.

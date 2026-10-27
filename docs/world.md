@@ -19,6 +19,7 @@ Coordinates: metres, +x east, +z south (north is −z), origin at the pylon gate
 | **Nile** (Egypt) | +1250 … −560 | Temple of Horus, Edfu | late afternoon, low in the WSW (az 248°, el 24°), warm | clear and hazy · high cloud · dust |
 | **Rome** | −560 … −1600 | The Pantheon | spring morning, ESE (az 118°, el 30°) | fair · cloudy · overcast · showers |
 | **Greece** (Attica) | −1600 … −2750 | The Parthenon on the Acropolis | noon, high in the south (az 196°, el 52°) | clear · fair · *meltemi* (north wind) |
+| **Byzantium** (Constantinople) | −2750 … −3950 | Hagia Sophia | late autumn morning, low in the south-east (az 142°, el 26°) | fair · cloudy · overcast · drizzle · sea mist · *poyraz* (north-east wind) |
 
 Climates are in `REGIONS[].climate`: sun, sky (turbidity, Rayleigh and Mie scattering, zenith and horizon radiance for the baker), haze (colour, density, height falloff), exposure, wind, and weather states with weights. A state sets cloud cover and density, the sun's strength under cloud, the haze, rain and wind. States are held for 2½–8 minutes and cross-fade over about 75 s. Cloud shadows drift over the ground with the wind; rain falls outdoors, and the ground darkens and pools while wet. `?weather=<id>` fixes a state (screenshots).
 
@@ -45,6 +46,15 @@ Climates are in `REGIONS[].climate`: sun, sky (turbidity, Rayleigh and Mie scatt
 - **Plants:** olive groves in rows on the plain, Aleppo pines on the hill slopes, cypresses, low maquis (lentisk and kermes oak), dry grass, boulders.
 - **Roads:** from the northern pass across the plain to the foot of the Acropolis, up the west slope and along the top to the Parthenon's east front.
 
+### Byzantium
+
+- **Landform:** the city's hills above the water (the river stands for the Bosphorus): the **first hill**, a broad flat-topped rise 24 m high, falling gently east to the harbour, where Hagia Sophia stands with its atrium and the Augustaion square; the **second** and **third hills** to the west; the hills of the **Asian shore** across the water; Parnes (with its pass) to the south, the Thracian ridge closing the north.
+- **Climate** (Climate of Istanbul): mild and often grey — frequent light rain, sea fog, the north-easterly *poyraz*; a morning sun low in the south-east.
+- **Ground:** green grass, brown earth, gardens and vineyards on the low ground; grey limestone where steep.
+- **Plants:** cypresses in groups, oriental plane trees by the water and the squares, figs, stone pines on the slopes, a few olives and holm oaks, oleanders, reeds at the shore. No trees inside the built-up quarters.
+- **Settlement:** quarters of town houses round the hill (`src/world/features/byzantium-town.js`): rubble and brick below, plastered above, upper storeys jettied over the street on timber brackets, hipped roofs of curved tiles; blocks between narrow streets.
+- **Roads:** from the Greek plain over the pass of Parnes, round the third hill to the atrium's gate; from the square down to the harbour.
+
 ## Loading and drawing
 
 - **Terrain:** one height function; drawn as tiles of 512 m, the near ones split into chunks of 256 m whose grid follows the distance (2, 4, 8 m; 16 and 32 m far away), built in workers; skirts hide the seams.
@@ -56,4 +66,5 @@ Climates are in `REGIONS[].climate`: sun, sky (turbidity, Rayleigh and Mie scatt
 1. Edfu: the quay and its stair at the river; the mammisi; dovecotes and granaries in the town; life in the streets (L4).
 2. Rome: insulae and streets, the Saepta and Baths of Agrippa as massing.
 3. Greece: the Propylaea, the Erechtheion and the altar of Athena on the Acropolis; the theatre of Dionysos on the south slope.
-4. New regions as Phase 2 continues (Byzantium, Islam, Gothic Europe, China, Japan, India, …), each with its own basin, sky and planting.
+4. Byzantium: the Hippodrome, the Mese with its colonnades, the Great Palace terraces, the sea walls.
+5. New regions as Phase 2 continues (Islam, Gothic Europe, China, Japan, India, …), each with its own basin, sky and planting.

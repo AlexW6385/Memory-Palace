@@ -132,7 +132,7 @@ export class MapView {
     const g = cv.getContext('2d'), img = g.createImageData(W, H);
     const h = new Float32Array((W + 1) * (H + 1));
     for (let j = 0; j <= H; j++) for (let i = 0; i <= W; i++) h[j * (W + 1) + i] = terrainHeight(rect[0] + i * S, rect[1] + j * S);
-    const tint = { nile: [196, 170, 128], rome: [150, 152, 112], greece: [170, 140, 110] };
+    const tint = { nile: [196, 170, 128], rome: [150, 152, 112], greece: [170, 140, 110], byzantium: [140, 150, 120] };
     for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
       const x = rect[0] + i * S, z = rect[1] + j * S, y = h[j * (W + 1) + i];
       const dx = h[j * (W + 1) + i + 1] - y, dz = h[(j + 1) * (W + 1) + i] - y;

@@ -2,7 +2,7 @@
 // Pure; the viewer scatters from these deterministically, cell by cell. The reasoning for each
 // region's planting is in its building's dossier (§10, surroundings) and docs/world.md.
 
-import { REGIONS, regionWeights, riverCenter, WORLD, SITES, fbm, nearRoad } from './regions.js';
+import { REGIONS, regionWeights, riverCenter, WORLD, SITES, fbm, nearRoad, inTown } from './regions.js';
 
 const smooth = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
 
@@ -53,6 +53,20 @@ const RULES = {
     grass: ({ g }) => 70 * g.grass,
     boulder: ({ ny, g }) => (ny < 0.85 ? 0.3 * g.rock : 0),
   },
+  byzantium: {
+    // gardens of the city: cypresses (in groups, by churches and tombs), plane trees by the
+    // squares and the water, figs and vines, stone pines on the slopes, Judas trees omitted (L3)
+    cypress: ({ x, z }) => 0.05 * smooth(0.15, 0.45, fbm(x * 0.012 + 8, z * 0.012)),
+    plane_tree: ({ x, z, w }) => (w < 4 ? 0 : 0.03 * smooth(0.1, 0.5, fbm(x * 0.008 + 2, z * 0.008)) + (w < 60 ? 0.03 : 0)),
+    fig: ({ x, z, g }) => 0.05 * smooth(0.0, 0.4, fbm(x * 0.02 + 1, z * 0.02)) + 0.03 * g.fields,
+    stone_pine: ({ x, z, h, ny }) => (ny > 0.75 ? 0.05 * smooth(-0.1, 0.35, fbm(x * 0.006 + 6, z * 0.006)) + (h > 15 ? 0.03 : 0) : 0),
+    olive: ({ x, z, h, ny }) => (ny > 0.85 && h < 18 ? 0.12 * smooth(0.1, 0.4, fbm(x * 0.005 + 3, z * 0.005)) : 0),
+    holm_oak: ({ h, ny }) => (ny > 0.7 ? 0.05 * smooth(10, 30, h) : 0),
+    oleander: ({ x, z }) => 0.04 * smooth(0.2, 0.5, fbm(x * 0.02 + 4, z * 0.02)),
+    reeds: ({ w }) => (w > -4 && w < 7 ? 2.2 : 0),
+    grass: ({ g }) => 80 * g.grass,
+    boulder: ({ ny, g }) => (ny < 0.85 ? 0.25 * g.rock : 0),
+  },
   greece: {
     // olive groves in rows on the plain, patchy
     olive: ({ x, z, h, ny }) => (ny > 0.85 && h < 30 ? 0.55 * smooth(-0.15, 0.2, fbm(x * 0.004 + 7, z * 0.004)) : 0),
@@ -71,6 +85,8 @@ export const ROWS = { olive: 9 };
 export function densities(x, z, place) {
   if (inSite(x, z) || inClear(x, z) || nearRoad(x, z)) return null;
   const W = regionWeights(x, z), out = {};
+  // in a town only grass grows between the houses
+  if (inTown(x, z)) { const g = (place.g?.grass || 0) * 40; return g > 0 ? { grass: g } : null; }
   REGIONS.forEach((r, i) => {
     if (W[i] < 0.02) return;
     for (const [sp, f] of Object.entries(RULES[r.id] || {})) out[sp] = (out[sp] || 0) + W[i] * Math.max(0, f(place));
@@ -80,7 +96,7 @@ export function densities(x, z, place) {
 
 /** The largest density each species can reach (for rejection sampling). */
 export const MAX_DENSITY = { date_palm: 1.2, doum_palm: 0.15, sycamore_fig: 0.06, acacia: 0.08, tamarisk: 0.16, papyrus: 2.2, reeds: 3, halfa: 0.25, boulder: 0.7,
-  stone_pine: 0.17, cypress: 0.03, holm_oak: 0.14, oleander: 0.21, grass: 70, olive: 0.55, aleppo_pine: 0.08, maquis: 0.9, grass_dry: 45 };
+  stone_pine: 0.17, cypress: 0.05, holm_oak: 0.14, oleander: 0.21, grass: 80, olive: 0.55, aleppo_pine: 0.08, maquis: 0.9, grass_dry: 45, plane_tree: 0.06, fig: 0.08 };
 
 /** Small plants scattered only near the viewer. */
 export const NEAR_ONLY = new Set(['grass', 'grass_dry']);

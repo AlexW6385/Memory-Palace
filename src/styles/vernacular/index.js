@@ -4,7 +4,7 @@
 // with a timber lintel; tower houses of two or three storeys and courtyard houses.
 
 import { registerStyle } from '../../core/build.js';
-import { box, rod } from '../../core/geom.js';
+import { box, rod, fromTriangles } from '../../core/geom.js';
 
 function rng(seed) { let s = seed >>> 0 || 1; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
 
@@ -75,6 +75,83 @@ function houseEgypt(el, { bag, col }) {
   }
 }
 
+/**
+ * house_tiled: a Byzantine town house (Constantinople, 6th century) — rubble and brick below,
+ * plastered above, an upper storey jettied over the street on timber brackets (the maenianum),
+ * a hipped roof of curved tiles. { rect, y (floor), foot (lowest ground), storeys, front, seed }
+ */
+function houseTiled(el, { bag, col }) {
+  const rand = rng(el.seed || 1);
+  const [x0, z0, x1, z1] = el.rect, y = el.y, st = 3.2, H = el.storeys * st;
+  bag.add('brick', box(x0 - 0.1, el.foot - 0.6, z0 - 0.1, x1 + 0.1, y + 0.4, z1 + 0.1));
+  bag.add('brick', box(x0, y + 0.4, z0, x1, y + st, z1));
+  bag.add(el.plaster ? 'stucco_warm' : 'brick', box(x0, y + st, z0, x1, y + H, z1));
+  col.rect([x0, z0, x1, z1], el.foot - 0.6, y + H);
+  // the jetty: the upper storeys project over the street on the front
+  const f = el.front || 's', J = el.storeys > 1 && rand() < 0.65 ? 0.9 : 0;
+  let R = [x0, z0, x1, z1];
+  if (J) {
+    const jr = f === 's' ? [x0, z1, x1, z1 + J] : f === 'n' ? [x0, z0 - J, x1, z0] : f === 'e' ? [x1, z0, x1 + J, z1] : [x0 - J, z0, x0, z1];
+    bag.add('stucco_warm', box(jr[0], y + st + 0.25, jr[1], jr[2], y + H, jr[3]));
+    bag.add('timber', box(jr[0], y + st, jr[1], jr[2], y + st + 0.25, jr[3]));
+    const along = f === 's' || f === 'n';
+    const L = along ? x1 - x0 : z1 - z0;
+    for (let k = 0; k <= Math.floor(L / 1.6); k++) {
+      const u = Math.min(L - 0.15, 0.15 + k * 1.6);
+      const a = along ? [x0 + u, y + st - 0.6, f === 's' ? z1 : z0] : [f === 'e' ? x1 : x0, y + st - 0.6, z0 + u];
+      const b = along ? [x0 + u, y + st, f === 's' ? z1 + J : z0 - J] : [f === 'e' ? x1 + J : x0 - J, y + st, z0 + u];
+      bag.add('timber', rod(a, b, 0.08, 4));
+    }
+    R = [Math.min(x0, jr[0]), Math.min(z0, jr[1]), Math.max(x1, jr[2]), Math.max(z1, jr[3])];
+  }
+  // openings: a door below, small windows with timber lintels above, on the front and sides
+  const opening = (side, u, v0, w, h) => {
+    const t = 0.03;
+    const len = side === 's' || side === 'n' ? R[2] - R[0] : R[3] - R[1];
+    if (u + w > len - 0.3) return;
+    if (side === 's') bag.add('opening', box(R[0] + u, y + v0, R[3], R[0] + u + w, y + v0 + h, R[3] + t));
+    if (side === 'n') bag.add('opening', box(R[0] + u, y + v0, R[1] - t, R[0] + u + w, y + v0 + h, R[1]));
+    if (side === 'e') bag.add('opening', box(R[2], y + v0, R[1] + u, R[2] + t, y + v0 + h, R[1] + u + w));
+    if (side === 'w') bag.add('opening', box(R[0] - t, y + v0, R[1] + u, R[0], y + v0 + h, R[1] + u + w));
+  };
+  const Lf = f === 's' || f === 'n' ? R[2] - R[0] : R[3] - R[1];
+  // the door is in the ground storey's wall, under the jetty
+  const du = 0.8 + rand() * Math.max(0.2, Lf - 2.6);
+  if (f === 's') bag.add('opening', box(x0 + du, y + 0.4, z1, x0 + du + 1.1, y + 2.6, z1 + 0.03));
+  if (f === 'n') bag.add('opening', box(x0 + du, y + 0.4, z0 - 0.03, x0 + du + 1.1, y + 2.6, z0));
+  if (f === 'e') bag.add('opening', box(x1, y + 0.4, z0 + du, x1 + 0.03, y + 2.6, z0 + du + 1.1));
+  if (f === 'w') bag.add('opening', box(x0 - 0.03, y + 0.4, z0 + du, x0, y + 2.6, z0 + du + 1.1));
+  for (let s = 1; s < el.storeys; s++) {
+    const n = Math.max(1, Math.floor(Lf / 2.6));
+    for (let k = 0; k < n; k++) opening(f, (k + 0.5) * Lf / n - 0.35, s * st + 1.0, 0.7, 1.1);
+  }
+  // the hipped roof
+  const o = 0.45, ex0 = R[0] - o, ez0 = R[1] - o, ex1 = R[2] + o, ez1 = R[3] + o, ye = y + H;
+  const wx = ex1 - ex0, wz = ez1 - ez0, rise = Math.min(wx, wz) / 2 * Math.tan(22 * Math.PI / 180);
+  bag.add('timber', box(ex0, ye - 0.12, ez0, ex1, ye, ez1));
+  const tris = [];
+  if (wx >= wz) {
+    const r0 = [ex0 + wz / 2, ye + rise, (ez0 + ez1) / 2], r1 = [ex1 - wz / 2, ye + rise, (ez0 + ez1) / 2];
+    tris.push(ex0, ye, ez0, ...r0, ...r1, ex0, ye, ez0, ...r1, ex1, ye, ez0);           // north slope
+    tris.push(ex1, ye, ez1, ...r1, ...r0, ex1, ye, ez1, ...r0, ex0, ye, ez1);           // south slope
+    tris.push(ex0, ye, ez1, ...r0, ex0, ye, ez0);                                        // west hip
+    tris.push(ex1, ye, ez0, ...r1, ex1, ye, ez1);                                        // east hip
+  } else {
+    const r0 = [(ex0 + ex1) / 2, ye + rise, ez0 + wx / 2], r1 = [(ex0 + ex1) / 2, ye + rise, ez1 - wx / 2];
+    tris.push(ex1, ye, ez0, ...r0, ...r1, ex1, ye, ez0, ...r1, ex1, ye, ez1);
+    tris.push(ex0, ye, ez1, ...r1, ...r0, ex0, ye, ez1, ...r0, ex0, ye, ez0);
+    tris.push(ex0, ye, ez0, ...r0, ex1, ye, ez0);
+    tris.push(ex1, ye, ez1, ...r1, ex0, ye, ez1);
+  }
+  // make every face point up
+  for (let i = 0; i < tris.length; i += 9) {
+    const ux = tris[i + 3] - tris[i], uz = tris[i + 5] - tris[i + 2];
+    const vx = tris[i + 6] - tris[i], vz = tris[i + 8] - tris[i + 2];
+    if (uz * vx - ux * vz < 0) for (let k = 0; k < 3; k++) { const t = tris[i + 3 + k]; tris[i + 3 + k] = tris[i + 6 + k]; tris[i + 6 + k] = t; }
+  }
+  bag.add('roof_tile', fromTriangles(tris));
+}
+
 /** A low mud-brick wall (garden, animal pen). */
 function wallLow(el, { bag, col }) {
   const [x0, z0, x1, z1] = el.rect;
@@ -82,4 +159,4 @@ function wallLow(el, { bag, col }) {
   col.rect(el.rect, el.y - 0.5, el.y + el.h);
 }
 
-registerStyle('vernacular', { trim: () => {}, opening: () => {}, column: () => {}, elements: { house_egypt: houseEgypt, wall_low: wallLow }, objects: {} });
+registerStyle('vernacular', { trim: () => {}, opening: () => {}, column: () => {}, elements: { house_egypt: houseEgypt, house_tiled: houseTiled, wall_low: wallLow }, objects: {} });

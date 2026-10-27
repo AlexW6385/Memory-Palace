@@ -49,6 +49,7 @@ class RegionWeather {
 export class Climate {
   constructor(renderer) {
     this.R = renderer;
+    this.indoors = 0;              // 0 outdoors … 1 under a roof (set by the frame loop)
     this.weather = REGIONS.map((r, i) => new RegionWeather(r, 7919 * (i + 1) + (Date.now() / 3.6e6 | 0)));
     this.hemi = REGIONS.map((r) => hemisphere(r.climate));
     this.state = null;
@@ -97,7 +98,8 @@ export class Climate {
     ENV.zenith.value.setRGB(...a.zen);
     ENV.horizon.value.setRGB(...a.hor);
     ENV.fogColor.value.setRGB(...a.fogColor);
-    ENV.fogDensity.value = a.fog;
+    // under a roof the haze is the room's own dust and smoke, far thinner than the weather outside
+    ENV.fogDensity.value = a.fog * (1 - 0.8 * (this.indoors || 0));
     ENV.fogFalloff.value = a.falloff;
     ENV.clouds.value = a.clouds;
     ENV.wind.value.set(a.wind[0], a.wind[1]);
