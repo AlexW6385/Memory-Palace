@@ -2,6 +2,12 @@
 
 Newest first. What you can visit and what looks better, in plain words.
 
+## v5.9 — India and the Great Stupa at Sanchi (2026-10-27)
+
+- **A new region, India,** north of Heian Japan over the pass of Mount Hira: the plain of Malwa with its red-brown earth, fields and palmyra palms, great banyans, teak and neem on the hills, a village of limewashed houses under clay tiles, and a warm, hazy winter afternoon.
+- **The Great Stupa at Sanchi** as completed in the 1st century CE, on its flat-topped hill: climb the road to the south gateway past Ashoka's polished pillar with its lions; walk round the dome between the stone railing and the drum, then up the double stairway to the terrace and round again under the great white dome, with its square railing and triple parasol on top. The four gateways stand at the cardinal points, each of two posts with animal capitals and three architraves with curled ends. Nearby: Stupa 3 with its single gateway and a monastery of cells round a court.
+- **Music:** a drone of tonic and fifth, a plucked string in a slow pentatonic mode, chant near the stupa.
+
 ## v5.8 — Heian Japan and the Phoenix Hall (2026-10-27)
 
 - **A new region, Heian Japan,** north of Tang China over the pass of Mount Wutai: the green plain of Uji by the river, wooded hills of red pines and cryptomerias, maples in autumn red, bamboo groves, rice fields, a village of timber houses under bark and thatch roofs, and a soft autumn morning with mist on the water.
