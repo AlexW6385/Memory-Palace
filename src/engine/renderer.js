@@ -1,9 +1,9 @@
 // Renderer: three.js WebGPU (WebGL 2 backend when WebGPU is missing), physically based
-// materials, cascaded sun shadows, GTAO on indirect light, baked irradiance volumes for
-// indirect light, bloom, AgX tone mapping.
+// materials, cascaded sun shadows, baked irradiance volumes for indirect light, GTAO from the
+// same scene pass (one pass draws colour and normals), bloom, AgX tone mapping.
 
 import * as THREE from 'three/webgpu';
-import { pass, mrt, normalView, screenUV, context, float, renderOutput, fog, vec3, vec4, min } from 'three/tsl';
+import { pass, context, renderOutput, fog, vec3, vec4, min, mix, luminance, smoothstep } from 'three/tsl';
 import { ao } from 'three/addons/tsl/display/GTAONode.js';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { smaa } from 'three/addons/tsl/display/SMAANode.js';
@@ -87,26 +87,28 @@ export class Renderer {
 
   buildPipeline() {
     const { scene, camera, Q } = this;
-    const scenePass = pass(scene, camera);
-    let aoValue = float(1);
-    if (Q.ao) {
-      const prePass = pass(scene, camera);
-      prePass.setMRT(mrt({ output: normalView }));
-      const aoPass = ao(prePass.getTextureNode('depth'), prePass.getTextureNode(), camera);
-      aoPass.resolutionScale = 0.5;
-      aoPass.distanceExponent.value = 1.0;
-      aoPass.radius.value = 0.9;
-      aoPass.thickness.value = 1.0;
-      aoValue = aoPass.getTextureNode().sample(screenUV).r;
-    }
+    // one scene pass: every material is compiled and drawn once per frame (a separate normal
+    // pre-pass for the ambient occlusion doubled both the shaders to compile and the drawing);
+    // the occlusion reads the depth alone and rebuilds the normals from it
+    const scenePass = this.scenePass = pass(scene, camera);
     const gi = this.giNode;
     scenePass.contextNode = context({
-      getAO: (input, { material }) => (material.transparent ? input : (input !== null ? input.mul(aoValue) : aoValue)),
       getGI: (input, { material }) => (material.transparent ? input : (input !== null ? input.add(gi) : gi)),
       // the sun is dimmed where the shadows of the clouds pass
       getShadow: ({ light, shadowColorNode }) => (light === this.sun ? shadowColorNode.mul(cloudShadow) : shadowColorNode),
     });
-    const color = scenePass.getTextureNode('output');
+    let color = scenePass.getTextureNode('output');
+    if (Q.ao) {
+      const aoPass = ao(scenePass.getTextureNode('depth'), null, camera);
+      aoPass.resolutionScale = 0.5;
+      aoPass.distanceExponent.value = 1.0;
+      aoPass.radius.value = 0.9;
+      aoPass.thickness.value = 1.0;
+      // occlusion darkens the shaded and half-lit parts; in full sun it is mostly hidden
+      const a = aoPass.getTextureNode().r;
+      const lit = smoothstep(0.6, 3.0, luminance(color.rgb));
+      color = vec4(color.rgb.mul(mix(a, mix(1, a, 0.35), lit)), color.a);
+    }
     // the sun's disc is thousands of times brighter than the sky: clamp it before the bloom, or its
     // glow floods half the picture when one looks toward a low sun
     const glowSrc = vec4(min(color.rgb, vec3(5)), 1);
@@ -140,8 +142,44 @@ export class Renderer {
     this.pipeline.render();
   }
 
-  /** Compile all materials before showing the scene, so entering does not stutter. */
+  /**
+   * Compile the pipelines an object needs, in the background, as the scene pass will draw it (its
+   * render target, outputs and lighting context), so that it does not stall the frame in which it
+   * first appears. The pass is set up by drawing one frame of the empty sky first.
+   */
+  async compile(object) {
+    const r = this.renderer, P = this.scenePass;
+    if (!this._primed) {
+      this._primed = true;
+      const shown = this.scene.children.filter((c) => c !== this.sky && c.visible);
+      for (const c of shown) c.visible = false;
+      this.update();
+      this.pipeline.render();
+      for (const c of shown) c.visible = true;
+    }
+    const rt = r.getRenderTarget(), mrtNow = r.getMRT(), ctx = r.contextNode;
+    r.setRenderTarget(P.renderTarget);
+    if (P.contextNode) r.contextNode = P._contextNodeCache?.context || context({ ...ctx.getFlowContextData(), ...P.contextNode.getFlowContextData() });
+    try { await r.compileAsync(object, this.camera, this.scene); } finally {
+      r.setRenderTarget(rt); r.setMRT(mrtNow); r.contextNode = ctx;
+    }
+  }
+
+  /**
+   * Before showing the scene: compile what the camera sees now (so the first frames do not
+   * stall); then, in the background, the rest of what is in the scene (behind the visitor).
+   */
   async warmup() {
-    await this.renderer.compileAsync(this.scene, this.camera);
+    const cam = this.camera;
+    cam.updateMatrixWorld();
+    const frustum = new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    const hidden = [];
+    this.scene.traverse((o) => {
+      if (!o.isMesh || !o.visible || o === this.sky) return;
+      if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+      if (!frustum.intersectsObject(o)) { o.visible = false; hidden.push(o); }
+    });
+    try { await this.compile(this.scene); } finally { for (const o of hidden) o.visible = true; }
+    if (hidden.length) this.compile(this.scene).catch(() => {});
   }
 }

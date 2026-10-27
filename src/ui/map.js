@@ -4,7 +4,7 @@
 
 import { tr, t } from './i18n.js';
 import { WORLD } from '../world/regions.js';
-import { terrainHeight, riverCenter, regionWeights, REGIONS, inRiver } from '../world/regions.js';
+import { terrainHeight, riverAt, regionWeights, REGIONS, inRiver } from '../world/regions.js';
 
 export class MapView {
   constructor(world, onJump, onGo) {
@@ -150,7 +150,7 @@ export class MapView {
       REGIONS.forEach((r, k) => { for (let q = 0; q < 3; q++) c[q] += w[k] * tint[r.id][q]; });
       const lift = Math.min(1, y / 120) * 30;
       c = c.map((v) => v * shade + lift);
-      if (Math.abs(x - riverCenter(z)) < WORLD.river.width / 2) c = [52, 82, 92];
+      if (inRiver(x, z)) c = [52, 82, 92];
       const o = (j * W + i) * 4;
       img.data[o] = c[0]; img.data[o + 1] = c[1]; img.data[o + 2] = c[2]; img.data[o + 3] = 255;
     }
@@ -214,7 +214,7 @@ export class MapView {
     const [X0, Z0, X1, Z1] = WORLD.bounds;
     if (x < X0 + 5 || x > X1 - 5 || z < Z0 + 5 || z > Z1 - 5) return;
     let gx = x;
-    if (inRiver(gx, z)) { const c = riverCenter(z), half = WORLD.river.width / 2 + 6; gx = x < c ? c - half : c + half; }
+    if (inRiver(gx, z)) { const r = riverAt(gx, z), half = r.w / 2 + 6; gx = x < r.c ? r.c - half : r.c + half; }
     this.onGo?.(gx, z);
   }
 }

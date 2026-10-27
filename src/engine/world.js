@@ -14,8 +14,10 @@ import { material, flameMaterial } from './materials.js';
 
 export { WORLD };
 
-/** Buildings closer than this (m, to their bounds) are built and lit. */
+/** Buildings closer than this (m, to their bounds) are built and lit; those further than
+ *  UNLOAD_RADIUS are taken down again, so that memory does not grow as the visitor travels. */
 export const LOAD_RADIUS = 650;
+export const UNLOAD_RADIUS = 1100;
 
 export class World {
   constructor(renderer) {
@@ -29,10 +31,12 @@ export class World {
     this.loading = new Map();
   }
 
-  /** Load every building's plan (small modules); geometry and light are built on demand. */
+  /** Load every building's plan (small modules); geometry and light are built on demand. A
+   *  feature (a town, a bridge) gives only its bounds here: its plan is made when it is wanted. */
   async init() {
     this.addLand();
-    await Promise.all([...BUILDINGS, ...FEATURES].map(async (entry) => {
+    for (const entry of FEATURES) this.plans.set(entry.id, { id: entry.id, entry, plan: { id: entry.id, feature: true, origin: [0, 0], yaw: 0, base: 0, bounds: entry.bounds, rooms: [] } });
+    await Promise.all(BUILDINGS.map(async (entry) => {
       const mod = await entry.load();
       this.plans.set(entry.id, { id: entry.id, entry, plan: mod.plan, music: mod.music });
     }));
@@ -42,6 +46,18 @@ export class World {
   static distance(plan, x, z) {
     const [x0, z0, x1, z1] = World.worldBounds(plan);
     return Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(z0 - z, 0, z - z1));
+  }
+
+  /** Take down the buildings far from (x, z): their geometry, their colliders. */
+  unloadFar(x, z, radius = UNLOAD_RADIUS) {
+    for (const [id, rec] of this.buildings) {
+      if (World.distance(rec.plan, x, z) < radius) continue;
+      this.scene.remove(rec.group);
+      rec.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+      this.collide.remove(rec.built.colliders);
+      this.buildings.delete(id);
+      this.loading.delete(id);
+    }
   }
 
   /** Build every building within `radius` of (x, z); resolves when they are in the scene. */
@@ -93,10 +109,14 @@ export class World {
       built.lights.forEach((l, i) => inst.setMatrixAt(i, m4.makeTranslation(l.at[0], l.at[1] + 0.02, l.at[2])));
       group.add(inst);
     }
+    // compile its materials' pipelines in the background before it appears, so that it does not
+    // stall the frame in which it is first drawn
+    try { await this.r.renderer.compileAsync(group, this.r.camera, this.scene); } catch (e) { /* drawn anyway */ }
     this.scene.add(group);
     this.collide.add(built.colliders);
     const rec = { id: plan.id, plan, music: mod.music, group, built };
     this.buildings.set(plan.id, rec);
+    if (plan.feature) this.plans.get(entry.id).plan = plan;
     // baked light for this building, if it has been baked
     if (!plan.feature) try { rec.gi = await this.r.gi.fetch(plan.id, `data/gi/${plan.id}.gi`); } catch (e) { console.warn(e); }
     return rec;
@@ -138,7 +158,7 @@ export class World {
   update(pos) {
     // build what is coming into range, a little at a time
     const now = performance.now();
-    if (!this._next || now > this._next) { this._next = now + 500; this.ensureNear(pos.x, pos.z); this.terrain.update(pos.x, pos.z); }
+    if (!this._next || now > this._next) { this._next = now + 500; this.unloadFar(pos.x, pos.z); this.ensureNear(pos.x, pos.z); this.terrain.update(pos.x, pos.z); }
     this.flora.update(pos.x, pos.z);
     const here = this.locate(pos.x, pos.y, pos.z);
     if (here.building?.gi) this.r.gi.use(here.building.gi);

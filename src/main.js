@@ -12,7 +12,10 @@ import { initLang, setLang, t, onLang } from './ui/i18n.js';
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 
-const settings = load('mp.settings', { quality: 'high', music: 0.6, sensitivity: 1 });
+// the default picture quality follows the machine: 'high' only on machines with many cores and
+// much memory (a laptop with 8 cores and 8 GB starts at 'medium'; the setting can be changed)
+const strong = (navigator.hardwareConcurrency || 4) >= 10 && (navigator.deviceMemory || 8) >= 8;
+const settings = load('mp.settings', { quality: strong ? 'high' : 'medium', music: 0.6, sensitivity: 1 });
 if (params.get('quality')) settings.quality = params.get('quality');
 
 function load(k, d) { try { return { ...d, ...JSON.parse(localStorage.getItem(k) || '{}') }; } catch { return d; } }
@@ -76,11 +79,16 @@ async function main() {
   const canvas = $('view');
   if (!navigator.gpu) { $('notice').textContent = t('no-webgpu'); $('notice').hidden = false; setTimeout(() => { $('notice').hidden = true; }, 12000); }
 
+  // timings of the start, in the console (and kept for the next visit's estimate)
+  const T0 = performance.now(), times = {};
+  const mark = (k) => { times[k] = Math.round(performance.now() - T0); };
   progress.set('start', 0.15);
   const R = await new Renderer(canvas).init(settings.quality);
+  mark('renderer');
   progress.set('start', 0.7);
   const world = new World(R);
   await world.init();
+  mark('plans');
   progress.set('start', 1);
   const climate = new Climate(R);
   const floraScale = { high: 1, medium: 0.7, low: 0.45 };
@@ -94,15 +102,18 @@ async function main() {
   const first = [...world.plans.values()].find((p) => !p.plan.feature && p.id === 'edfu') || [...world.plans.values()].find((p) => !p.plan.feature);
   // arriving somewhere: the buildings and the ground near it are made before the view is shown;
   // the far land and plants keep coming in afterwards
+  // only what is close is waited for (the buildings within sight, the ground and the plants
+  // round the visitor's feet); everything further comes in while walking
   const arrive = async (x, z, report = null) => {
-    const near = [...world.plans.values()].filter((p) => World.distance(p.plan, x, z) < 300);
+    world.unloadFar(x, z);                            // what is far from the new place is let go first
+    const near = [...world.plans.values()].filter((p) => World.distance(p.plan, x, z) < 220);
     let built = 0;
     const buildings = Promise.all(near.map((p) => world.loadBuilding(p.entry).then(() => { built++; report?.('build', built / near.length); })));
     if (!near.length) report?.('build', 1);
     await Promise.all([
-      buildings,
-      world.terrain.ready(x, z, (f) => report?.('land', f)),
-      world.flora.ready(x, z, (f) => report?.('plants', f)),
+      buildings.then(() => mark('buildings')),
+      world.terrain.ready(x, z, (f) => report?.('land', f), 260).then(() => mark('land')),
+      world.flora.ready(x, z, (f) => report?.('plants', f), 140).then(() => mark('plants')),
     ]);
     world.ensureNear(x, z);                           // the rest within range, in the background
     climate.update(x, z, 0);
@@ -123,6 +134,8 @@ async function main() {
   progress.shaderT0 = performance.now();
   world.update(R.camera.position);
   await R.warmup();
+  mark('shaders');
+  console.info('[memory palace] start (ms):', JSON.stringify(times));
   progress.set('shaders', 1);
   progress.finish();
 
