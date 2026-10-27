@@ -143,43 +143,15 @@ export class Renderer {
   }
 
   /**
-   * Compile the pipelines an object needs, in the background, as the scene pass will draw it (its
-   * render target, outputs and lighting context), so that it does not stall the frame in which it
-   * first appears. The pass is set up by drawing one frame of the empty sky first.
-   */
-  async compile(object) {
-    const r = this.renderer, P = this.scenePass;
-    if (!this._primed) {
-      this._primed = true;
-      const shown = this.scene.children.filter((c) => c !== this.sky && c.visible);
-      for (const c of shown) c.visible = false;
-      this.update();
-      this.pipeline.render();
-      for (const c of shown) c.visible = true;
-    }
-    const rt = r.getRenderTarget(), mrtNow = r.getMRT(), ctx = r.contextNode;
-    r.setRenderTarget(P.renderTarget);
-    if (P.contextNode) r.contextNode = P._contextNodeCache?.context || context({ ...ctx.getFlowContextData(), ...P.contextNode.getFlowContextData() });
-    try { await r.compileAsync(object, this.camera, this.scene); } finally {
-      r.setRenderTarget(rt); r.setMRT(mrtNow); r.contextNode = ctx;
-    }
-  }
-
-  /**
-   * Before showing the scene: compile what the camera sees now (so the first frames do not
-   * stall); then, in the background, the rest of what is in the scene (behind the visitor).
+   * Make ready what is round the viewer before it is shown: draw a frame looking each of four
+   * ways (behind the loading screen or the travel fade), so that the pipelines of everything near
+   * are compiled exactly as the scene pass uses them, then wait for the GPU to finish.
    */
   async warmup() {
-    const cam = this.camera;
-    cam.updateMatrixWorld();
-    const frustum = new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
-    const hidden = [];
-    this.scene.traverse((o) => {
-      if (!o.isMesh || !o.visible || o === this.sky) return;
-      if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
-      if (!frustum.intersectsObject(o)) { o.visible = false; hidden.push(o); }
-    });
-    try { await this.compile(this.scene); } finally { for (const o of hidden) o.visible = true; }
-    if (hidden.length) this.compile(this.scene).catch(() => {});
+    const cam = this.camera, yaw = cam.rotation.y;
+    for (let k = 0; k < 4; k++) { cam.rotation.y = yaw + k * Math.PI / 2; cam.updateMatrixWorld(); this.render(); }
+    cam.rotation.y = yaw; cam.updateMatrixWorld();
+    const device = this.renderer.backend?.device;
+    if (device) await device.queue.onSubmittedWorkDone();
   }
 }

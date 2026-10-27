@@ -21,7 +21,7 @@ The name is meant in two senses. These buildings are the memory of civilizations
 - **The Great Stupa at Sanchi** (1st century BCE – 1st century CE): the white dome on its hill, walked round between the stone railing and the drum and again on the terrace, entered through four carved gateways, by Ashoka's lion pillar.
 - **Hagia Sophia** (Constantinople, 532–537, dome rebuilt 562): the dome on its ring of forty windows over pendentives, semidomes and exedrae, galleries, gold mosaic and marble, the chancel and ambo, the narthexes and the atrium — in a city of tiled houses on the hills above the water.
 
-Each building stands in a **region** of its own — a basin of the same river valley with its landform, ground, plants, settlement and roads, and its own sky: time of day, haze, and weather that changes as you walk (drifting cloud shadows, dust, rain and wet ground, wind). Roads cross the ridges between regions over passes.
+Each building stands in a **region** of its own — with its landform, river, ground, plants, settlement and roads, and its own sky: time of day, haze, and weather that changes as you walk (drifting cloud shadows, dust, rain and wet ground, wind). The regions lie side by side in a patch of land, the Nile in the middle and the others round it in a spiral by age, so the world grows outward as regions are added; roads cross the mountain ridges between them over passes and the rivers on stone bridges.
 
 More buildings, one from each major tradition, are next (see [DESIGN.md](DESIGN.md) §11).
 

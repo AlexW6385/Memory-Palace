@@ -109,9 +109,6 @@ export class World {
       built.lights.forEach((l, i) => inst.setMatrixAt(i, m4.makeTranslation(l.at[0], l.at[1] + 0.02, l.at[2])));
       group.add(inst);
     }
-    // compile its materials' pipelines in the background before it appears, so that it does not
-    // stall the frame in which it is first drawn
-    try { await this.r.renderer.compileAsync(group, this.r.camera, this.scene); } catch (e) { /* drawn anyway */ }
     this.scene.add(group);
     this.collide.add(built.colliders);
     const rec = { id: plan.id, plan, music: mod.music, group, built };

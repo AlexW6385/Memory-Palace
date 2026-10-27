@@ -573,10 +573,17 @@ function edgeHeight(x, z, river) {
   const [gx, gz] = cellAt(x, z), [cx, cz] = cellCenter(gx, gz);
   const lx = x - cx, lz = z - cz, inside = HAS(gx, gz);
   // far from every edge inside a cell there is nothing to add
-  if (inside && Math.min(CW / 2 - Math.abs(lx), CH / 2 - Math.abs(lz)) > EDGE.width * 2.6) return 0;
+  if (inside && Math.min(CW / 2 - Math.abs(lx), CH / 2 - Math.abs(lz)) > EDGE.width * 3.2) return 0;
   const n = 1 + 0.18 * fbm(x * 0.012, z * 0.012), rock = 9 * fbm(x * 0.05, z * 0.05);
-  const wob = EDGE.width * (1 + 0.25 * fbm(x * 0.004 + 3, z * 0.004));
-  const profile = (d) => Math.exp(-((d / wob) ** 2) * 2.2);
+  // a mountain ridge, not a wall: its height and breadth wander along it, spurs run off its
+  // flanks, its crest is broken
+  const spur = 1 + 0.35 * fbm(x * 0.009 + 11, z * 0.009);
+  const crest = 1 + 0.3 * (1 - 2 * Math.abs(fbm(x * 0.007 + 5, z * 0.007 + 2)));
+  const ridge = (d, along, H) => {
+    const hv = H * (0.6 + 0.65 * (0.5 + 0.5 * fbm(along * 0.0024 + 17, H * 0.01)));
+    const w = EDGE.width * (0.8 + 0.7 * (0.5 + 0.5 * fbm(along * 0.003 + 29, 3)));
+    return hv * Math.exp(-((d * spur / w) ** 2) * 2.2) * crest;
+  };
   const gorge = smooth(70, 260, Math.abs(x - river.c));
   if (!inside) {
     // beyond the world: mountains rising away from the nearest cell
@@ -585,29 +592,30 @@ function edgeHeight(x, z, river) {
       const [qx, qz] = cellCenter(...r.cell);
       D = Math.min(D, Math.hypot(Math.max(Math.abs(x - qx) - CW / 2, 0), Math.max(Math.abs(z - qz) - CH / 2, 0)));
     }
-    const h = EDGE.rim * (1 + 0.25 * smooth(0, 500, D) + D / 1600) * n + rock * 1.4;
+    const h = EDGE.rim * (1 + 0.25 * smooth(0, 500, D) + D / 1600) * n * (0.85 + 0.35 * fbm(x * 0.003 + 7, z * 0.003)) * crest + rock * 1.4;
     // a river leaving the world north or south keeps its gorge
     const alongCol = Math.abs(lx) < CW / 2 && gx >= GX[0] && gx <= GX[1];
     return Math.max(0, alongCol ? h * Math.max(gorge, smooth(0, 900, D) * 0.6) : h);
   }
-  let h = 0;
+  let h = 0, pass = 0;
   // the east–west edges (ridges running north–south)
   {
     const s = Math.sign(lx) || 1, d = CW / 2 - Math.abs(lx), other = HAS(gx + s, gz);
     const ex = cx + s * CW / 2;
-    let e = (other ? EDGE.height : EDGE.rim) * profile(d) * n;
-    if (other) for (const [px, pz] of PASSES) if (Math.abs(px - ex) < 1) e *= 1 - 0.93 * Math.exp(-((z - pz) ** 2) / 5000);
+    let e = ridge(d, z, other ? EDGE.height : EDGE.rim) * n;
+    if (other) for (const [px, pz] of PASSES) if (Math.abs(px - ex) < 1) { const p = Math.exp(-((z - pz) ** 2) / 9800); e *= 1 - 0.93 * p; pass = Math.max(pass, p); }
     h = Math.max(h, e);
   }
   // the north–south edges (ridges running east–west), cut by the river's gorge
   {
     const s = Math.sign(lz) || 1, d = CH / 2 - Math.abs(lz), other = HAS(gx, gz + s);
     const ez = cz + s * CH / 2;
-    let e = (other ? EDGE.height : EDGE.rim) * profile(d) * n * gorge;
-    if (other) for (const [px, pz] of PASSES) if (Math.abs(pz - ez) < 1) e *= 1 - 0.93 * Math.exp(-((x - px) ** 2) / 5000);
+    let e = ridge(d, x, other ? EDGE.height : EDGE.rim) * n * gorge;
+    if (other) for (const [px, pz] of PASSES) if (Math.abs(pz - ez) < 1) { const p = Math.exp(-((x - px) ** 2) / 9800); e *= 1 - 0.93 * p; pass = Math.max(pass, p); }
     h = Math.max(h, e);
   }
-  return Math.max(0, h + rock * (h / EDGE.height) * 0.6);
+  // the saddle of a pass is smooth ground, not broken rock
+  return Math.max(0, h + rock * (h / EDGE.height) * 1.2 * (1 - pass));
 }
 
 /** Building pads: the ground is flattened to the site's base around each building. */

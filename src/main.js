@@ -159,7 +159,20 @@ async function main() {
 
   // going somewhere from the map: to a building's entrance, or to any point of the land
   const toast = (msg) => { const n = $('notice'); n.textContent = msg; n.hidden = !msg; };
-  const travel = async (fn) => { closePanels(); toast(t('travelling')); try { await fn(); } finally { toast(''); } };
+  // travelling: the view fades out, the new place is made ready (ground, plants, buildings, their
+  // shaders), and the view fades in there
+  const fade = $('fade');
+  const travel = async (fn) => {
+    closePanels(); toast(t('travelling'));
+    fade.hidden = false; requestAnimationFrame(() => fade.classList.add('on'));
+    try {
+      await fn();
+      world.update(R.camera.position);
+      await R.warmup();
+    } finally {
+      toast(''); fade.classList.remove('on'); setTimeout(() => { fade.hidden = true; }, 400);
+    }
+  };
   const mapView = new MapView(world, (rec) => travel(() => goTo(rec)), (x, z) => travel(async () => {
     await arrive(x, z);
     const y = world.collide.groundAt(x, z, world.collide.terrain(x, z) + 2);
