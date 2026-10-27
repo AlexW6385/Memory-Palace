@@ -7,4 +7,5 @@ export const FEATURES = [
   { id: 'paris-town', region: 'francia', load: async () => { await import('../../styles/vernacular/index.js'); return { plan: (await import('./towns.js')).plan('paris', 'house_timber', 1248) }; } },
   { id: 'tang-village-town', region: 'tang', load: async () => { await import('../../styles/vernacular/index.js'); return { plan: (await import('./towns.js')).plan('tang-village', 'house_china', 857) }; } },
   { id: 'uji-town', region: 'heian', load: async () => { await import('../../styles/vernacular/index.js'); return { plan: (await import('./towns.js')).plan('uji', 'house_japan', 1053) }; } },
+  { id: 'sanchi-village-town', region: 'india', load: async () => { await import('../../styles/vernacular/index.js'); return { plan: (await import('./towns.js')).plan('sanchi-village', 'house_india', 50) }; } },
 ];

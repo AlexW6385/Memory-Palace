@@ -175,6 +175,26 @@ export const REGIONS = [
     },
     ground: 'heian',
   },
+  {
+    id: 'india', name: { en: 'India', zh: '印度' },
+    z: [-9950, -8750], center: [-150, -9350],
+    climate: {
+      // a winter afternoon in Malwa: the sun in the south-west, warm and dry, a dusty haze on the
+      // plain; now and then high cloud, rarely a winter shower
+      sun: { az: 228, el: 32, color: [1.0, 0.86, 0.68], intensity: 3.3 },
+      sky: { turbidity: 4.0, rayleigh: 1.4, mie: 0.0048, mieG: 0.8, zenith: [0.1, 0.14, 0.25], horizon: [0.32, 0.29, 0.25] },
+      fog: { color: [0.64, 0.58, 0.5], density: 0.00045, height: 0.01 },
+      exposure: 0.56,
+      wind: [-0.4, 0.2],
+      weather: [
+        { id: 'clear', weight: 4, clouds: 0.1, cloudDensity: 0.35, sun: 1.0, fog: 1.0 },
+        { id: 'haze', weight: 3, clouds: 0.15, cloudDensity: 0.3, sun: 0.78, fog: 2.6, fogColor: [0.7, 0.62, 0.5] },
+        { id: 'high-cloud', weight: 2, clouds: 0.4, cloudDensity: 0.35, sun: 0.9, fog: 1.1 },
+        { id: 'shower', weight: 0.6, clouds: 0.9, cloudDensity: 0.8, sun: 0.35, fog: 1.8, rain: 0.6 },
+      ],
+    },
+    ground: 'india',
+  },
 ];
 
 export const REGION = Object.fromEntries(REGIONS.map((r) => [r.id, r]));
@@ -215,7 +235,7 @@ export function skyRadiance(climate, d) {
 
 /** Walkable extent; the landscape continues beyond it to the mountains. */
 export const WORLD = {
-  bounds: [-1150, -8680, 1050, 1180],
+  bounds: [-1150, -9880, 1050, 1180],
   river: { width: 300, bank: 24, depth: 3.4, water: -2.3 },
   far: 700,                                       // how far beyond the bounds the terrain is drawn
 };
@@ -236,6 +256,7 @@ export const SITES = {
   'sainte-chapelle': { origin: [40, -5750], yaw: 0, base: 1.5, region: 'francia', pad: [-40, -32, 52, 46] },
   'foguang-east-hall': { origin: [-260, -6950], yaw: 0, base: 8, region: 'tang', pad: [-118, -48, 34, 48] },
   'byodo-in-phoenix-hall': { origin: [120, -8180], yaw: 0, base: 1.5, region: 'heian', pad: [-60, -78, 100, 78] },
+  'sanchi-great-stupa': { origin: [-150, -9350], yaw: 0, base: 40, region: 'india', pad: [-70, -72, 92, 72] },
 };
 
 /**
@@ -251,6 +272,7 @@ export const PONDS = [
 /** Built-up quarters (towns), where the houses stand and no trees are planted. */
 export const TOWNS = [
   { id: 'constantinople', region: 'byzantium', rects: [[-260, -3470, 60, -3360], [-430, -3355, -185, -3150], [-250, -3190, 75, -3080], [80, -3330, 190, -3160]] },
+  { id: 'sanchi-village', region: 'india', rects: [[-460, -9140, -320, -9040], [-60, -9110, 60, -9020], [-520, -9420, -420, -9300]] },
   { id: 'uji', region: 'heian', rects: [[-160, -8420, -20, -8320], [-180, -8070, -40, -7990], [180, -7990, 240, -7880]] },
   { id: 'tang-village', region: 'tang', rects: [[-560, -7080, -430, -6990], [-560, -6920, -430, -6840], [-640, -7020, -575, -6900]] },
   { id: 'paris', region: 'francia', rects: [[-160, -5850, -50, -5700], [-120, -5690, 0, -5600], [-40, -5880, 120, -5815], [-300, -5640, -150, -5540]] },
@@ -337,7 +359,16 @@ export const LANDFORMS = [
   { kind: 'hill', id: 'uji-west', center: [-330, -8230], radius: [210, 330], height: 62 },
   { kind: 'hill', id: 'daikichi', center: [-120, -8560], radius: [180, 130], height: 40 },
   { kind: 'hill', id: 'asahi', center: [720, -8150], radius: [170, 320], height: 95 },
-  { kind: 'ridge', id: 'hira', points: [[-1900, -8880], [-600, -8860], [0, -8850], [900, -8870], [1500, -8900]], height: 230, width: 330, rock: 12 },
+  // Mount Hira: the spur between Heian Japan and India
+  { kind: 'ridge', id: 'hira', points: [[-1900, -8880], [-600, -8860], [0, -8850], [150, -8845]], height: 230, width: 330, endTaper: [80, 220], rock: 12,
+    passes: [{ at: -200, depth: 0.93, width: 100 }] },
+  { kind: 'ridge', id: 'east-hira', points: [[640, -8860], [900, -8880], [1500, -8900]], height: 200, width: 300, rock: 10 },
+  // ── India: the flat-topped hill of Sanchi on the plain of Malwa, the hills of Udayagiri, the Vindhyas ──
+  { kind: 'mesa', id: 'sanchi-hill', center: [-150, -9350], half: [150, 125], round: 45, top: 40, steep: 34, gentle: { dir: [0, 1], run: 170 }, rock: 4 },
+  { kind: 'hill', id: 'udayagiri', center: [-560, -9200], radius: [130, 90], height: 34 },
+  { kind: 'hill', id: 'nagauri', center: [-420, -9650], radius: [180, 120], height: 42 },
+  { kind: 'ridge', id: 'east-india', points: [[650, -8900], [740, -9400], [700, -10000]], height: 110, width: 260, rock: 8 },
+  { kind: 'ridge', id: 'vindhya', points: [[-1900, -10080], [-600, -10060], [0, -10050], [900, -10070], [1500, -10090]], height: 220, width: 330, rock: 12 },
   { kind: 'ridge', id: 'moab', points: [[620, -4000], [700, -4600], [640, -5300]], height: 160, width: 260, rock: 10 },
   // ── the world's rim ──
   { kind: 'ridge', id: 'west-uplands', points: [[-1500, 1800], [-1450, 400], [-1500, -1000], [-1550, -2400], [-1550, -3300], [-1600, -4200], [-1600, -5400], [-1600, -6600], [-1600, -7800]], height: 120, width: 400, rock: 8 },
@@ -571,6 +602,9 @@ export const ROADS = [
   // Heian Japan: from the Tang village north over the pass of Wutai, down to the plain of Uji and
   // along the hills to the north shore of the pond
   { id: 'tang-north', width: 6, points: [[-430, -6900], [-470, -7150], [-490, -7400], [-480, -7620], [-420, -7850], [-260, -8030], [-60, -8100], [60, -8110], [100, -8112]] },
+  // India: from the plain of Uji north over the pass of Hira, across the plain of Malwa and up the
+  // gentle south slope of the hill of Sanchi to the stupa's south gateway
+  { id: 'heian-north', width: 6, points: [[-60, -8100], [10, -8300], [20, -8560], [-120, -8720], [-200, -8850], [-210, -9000], [-170, -9120], [-150, -9220], [-150, -9318]] },
   { id: 'greece-way', width: 7, points: [[-330, -1680], [-420, -1850], [-500, -2010], [-520, -2100], [-420, -2105], [-330, -2105], [-240, -2085], [-150, -2085], [-110, -2108]] },
 ];
 
@@ -678,6 +712,15 @@ const GROUND = {
     const fields = (1 - smooth(4, 10, h)) * smooth(-0.05, 0.3, fbm(x * 0.005 + 7, z * 0.005)) * 0.85 * (1 - rock);
     const soil = Math.max(0, 0.08 + 0.2 * m) * (1 - rock - fields);
     return { grass: Math.max(0, 1 - rock - soil - fields), soil, rock, sand: 0, fields, dry: 0.2 + 0.2 * n, warmth: 0.3, red: 0.05 };
+  },
+  india(x, z, h, steep) {
+    const n = fbm(x * 0.014 + 1, z * 0.014), m = fbm(x * 0.05 + 8, z * 0.05);
+    // red-brown soil and dry grass, sandstone breaking out on the hills, fields of wheat and gram
+    // on the plain
+    const rock = Math.max(steep * 0.8, smooth(25, 45, h) * smooth(0.0, 0.4, m) * 0.4);
+    const fields = (1 - smooth(3, 9, h)) * smooth(-0.05, 0.3, fbm(x * 0.005 + 2, z * 0.005)) * 0.8 * (1 - rock);
+    const soil = Math.max(0, 0.35 + 0.25 * n) * (1 - rock - fields);
+    return { grass: Math.max(0, 1 - rock - soil - fields), soil, rock, sand: 0, fields, dry: 0.7, warmth: 0.75, red: 0.45 };
   },
   greece(x, z, h, steep) {
     const n = fbm(x * 0.02, z * 0.02), m = fbm(x * 0.07 + 9, z * 0.07);
