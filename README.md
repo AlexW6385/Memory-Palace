@@ -23,7 +23,7 @@ More buildings, one from each major tradition, are next (see [DESIGN.md](DESIGN.
 
 ## Controls
 
-W A S D or arrows to walk, mouse to look (click to capture the mouse), Shift to run, M for the map, Esc to pause. On a phone: left thumb on the stick to walk, drag anywhere to look. The map jumps to any building's entrance.
+W A S D or arrows to walk, mouse to look (click to capture the mouse), Shift to run, M for the map, Esc to pause. On a phone: left thumb on the stick to walk, drag anywhere to look. Click to look around (the world opens by itself once loaded). On the map, click anywhere to go there, or a building to go to its entrance.
 
 ## How it is made
 

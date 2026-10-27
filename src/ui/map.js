@@ -1,14 +1,16 @@
-// The map: districts, the river, every building's footprint and the visitor. Click a
-// building (or its name in the list) to go to its entrance. Drag to pan, wheel or pinch to zoom.
+// The map: districts, the river, every building's footprint and the visitor. Click anywhere on
+// the land to go there; click a building (or its name in the list) to go to its entrance. Drag to
+// pan, wheel or pinch to zoom.
 
 import { tr, t } from './i18n.js';
 import { WORLD } from '../world/regions.js';
-import { terrainHeight, riverCenter, regionWeights, REGIONS } from '../world/regions.js';
+import { terrainHeight, riverCenter, regionWeights, REGIONS, inRiver } from '../world/regions.js';
 
 export class MapView {
-  constructor(world, onJump) {
+  constructor(world, onJump, onGo) {
     this.world = world;
     this.onJump = onJump;
+    this.onGo = onGo;
     this.canvas = document.getElementById('map-canvas');
     this.list = document.getElementById('map-list');
     this.view = null;
@@ -18,6 +20,7 @@ export class MapView {
   open(player) {
     this.player = player;
     this.renderList();
+    this.fit(); this.draw();
     requestAnimationFrame(() => { this.fit(); this.draw(); });
   }
 
@@ -39,11 +42,8 @@ export class MapView {
   fit() {
     const cv = this.canvas, r = cv.getBoundingClientRect();
     cv.width = r.width * devicePixelRatio; cv.height = r.height * devicePixelRatio;
-    let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
-    for (const rec of this.world.plans.values()) {
-      const b = this.world.constructor.worldBounds(rec.plan);
-      x0 = Math.min(x0, b[0]); z0 = Math.min(z0, b[1]); x1 = Math.max(x1, b[2]); z1 = Math.max(z1, b[3]);
-    }
+    // the whole walkable world
+    let [x0, z0, x1, z1] = WORLD.bounds;
     if (this.player) { x0 = Math.min(x0, this.player.x); x1 = Math.max(x1, this.player.x); z0 = Math.min(z0, this.player.z); z1 = Math.max(z1, this.player.z); }
     if (!Number.isFinite(x0)) { x0 = -100; z0 = -100; x1 = 100; z1 = 100; }
     const pad = 40, w = x1 - x0 + pad * 2, h = z1 - z0 + pad * 2;
@@ -111,6 +111,14 @@ export class MapView {
       const [px, py] = this.toScreen(x, z);
       g.fillText(t('districts')[k] || k, px, py - 70 * devicePixelRatio);
     }
+    // where a click would take the visitor
+    if (this.hover) {
+      const [hx, hy] = this.hover, k = 7 * devicePixelRatio;
+      g.strokeStyle = 'rgba(243, 234, 217, 0.9)'; g.lineWidth = 1.5 * devicePixelRatio;
+      g.beginPath(); g.arc(hx, hy, k, 0, Math.PI * 2); g.moveTo(hx - k * 1.8, hy); g.lineTo(hx - k * 0.6, hy); g.moveTo(hx + k * 0.6, hy); g.lineTo(hx + k * 1.8, hy);
+      g.moveTo(hx, hy - k * 1.8); g.lineTo(hx, hy - k * 0.6); g.moveTo(hx, hy + k * 0.6); g.lineTo(hx, hy + k * 1.8); g.stroke();
+      g.lineWidth = 1;
+    }
     // the visitor
     if (this.player) {
       const [px, py] = this.toScreen(this.player.x, this.player.z), a = this.player.yaw;
@@ -126,7 +134,7 @@ export class MapView {
   relief() {
     if (this._relief) return this._relief;
     const rect = [WORLD.bounds[0] - 200, WORLD.bounds[1] - 200, WORLD.bounds[2] + 200, WORLD.bounds[3] + 200];
-    const S = 8, W = Math.round((rect[2] - rect[0]) / S), H = Math.round((rect[3] - rect[1]) / S);
+    const S = 12, W = Math.round((rect[2] - rect[0]) / S), H = Math.round((rect[3] - rect[1]) / S);
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
     const g = cv.getContext('2d'), img = g.createImageData(W, H);
@@ -157,6 +165,12 @@ export class MapView {
     const pts = new Map();
     cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); drag = [e.clientX, e.clientY]; moved = 0; });
     cv.addEventListener('pointermove', (e) => {
+      if (!pts.has(e.pointerId) && this.view && e.pointerType === 'mouse') {
+        const r = cv.getBoundingClientRect();
+        this.hover = [(e.clientX - r.left) * devicePixelRatio, (e.clientY - r.top) * devicePixelRatio];
+        this.draw();
+        return;
+      }
       if (!pts.has(e.pointerId) || !this.view) return;
       const prev = pts.get(e.pointerId);
       if (pts.size === 2) {
@@ -179,13 +193,28 @@ export class MapView {
       if (moved < 6 && drag) this.click(e);
       drag = null;
     });
+    cv.addEventListener('pointerleave', () => { this.hover = null; this.draw(); });
     cv.addEventListener('wheel', (e) => { e.preventDefault(); if (!this.view) return; this.view.s *= Math.exp(-e.deltaY * 0.0015); this.draw(); }, { passive: false });
   }
 
   click(e) {
+    if (!this.view) this.fit();
     const r = this.canvas.getBoundingClientRect();
-    const [x, z] = this.toWorld((e.clientX - r.left) * devicePixelRatio, (e.clientY - r.top) * devicePixelRatio);
-    const here = this.world.locate(x, 0, z);
-    if (here.building && here.distance < 30) this.onJump(here.building);
+    const px = (e.clientX - r.left) * devicePixelRatio, py = (e.clientY - r.top) * devicePixelRatio;
+    const [x, z] = this.toWorld(px, py);
+    // a building: its name or its footprint takes the visitor to its entrance
+    for (const rec of this.world.plans.values()) {
+      if (rec.plan.feature) continue;
+      const en = this.world.entrance(rec.plan), [nx, ny] = this.toScreen(en[0], en[2]);
+      const b = this.world.constructor.worldBounds(rec.plan);
+      const inside = x > b[0] && x < b[2] && z > b[1] && z < b[3];
+      if (inside || Math.hypot(px - nx, py - (ny + 18 * devicePixelRatio)) < 28 * devicePixelRatio) { this.onJump(rec); return; }
+    }
+    // anywhere else on the land (not in the river, not beyond the edge of the world)
+    const [X0, Z0, X1, Z1] = WORLD.bounds;
+    if (x < X0 + 5 || x > X1 - 5 || z < Z0 + 5 || z > Z1 - 5) return;
+    let gx = x;
+    if (inRiver(gx, z)) { const c = riverCenter(z), half = WORLD.river.width / 2 + 6; gx = x < c ? c - half : c + half; }
+    this.onGo?.(gx, z);
   }
 }

@@ -35,8 +35,8 @@
   <section id="intro" class="panel intro">
     <h1 data-i18n="title">Memory Palace</h1>
     <p class="lede" data-i18n="lede">A world of architecture, from every age and civilization.</p>
+    <div class="progress"><div id="progress-bar"></div></div>
     <p id="intro-status" class="status" data-i18n="loading">Preparing the world…</p>
-    <button id="btn-enter" class="primary" disabled data-i18n="enter">Enter</button>
     <p class="hint" data-i18n="controls-desktop">W A S D to walk · mouse to look · Shift to run · M for the map · Esc to pause</p>
     <p class="hint touch" data-i18n="controls-touch">Left thumb to walk · drag to look</p>
     <div class="lang-switch"><button data-lang="en">English</button><span>·</span><button data-lang="zh">中文</button></div>
@@ -45,6 +45,7 @@
   <section id="map" class="panel map" hidden>
     <header><h2 data-i18n="map">Map</h2><button class="close" aria-label="Close">×</button></header>
     <canvas id="map-canvas"></canvas>
+    <p class="map-hint" data-i18n="map-hint">Click anywhere on the map to go there; click a name to go to its entrance.</p>
     <ul id="map-list"></ul>
   </section>
 
@@ -63,6 +64,7 @@
   </section>
 
   <div id="notice" class="notice" hidden></div>
+  <div id="click-hint" class="click-hint" hidden><span data-i18n="click-to-look">Click to look around</span><small data-i18n="controls-desktop">W A S D to walk · mouse to look · Shift to run · M for the map · Esc to pause</small></div>
 
   <script type="module" src="src/main.js"></script>
 </body>

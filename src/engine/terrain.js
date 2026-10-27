@@ -68,15 +68,19 @@ export class Terrain {
     return this.queue.length + this.pending.size;
   }
 
-  /** Resolve when every wanted chunk is built (initial load, teleports). */
-  async ready(x, z, onProgress) {
+  /**
+   * Resolve when the chunks within `near` metres are built (initial load, teleports); the rest
+   * keeps streaming in afterwards. onProgress(0…1).
+   */
+  async ready(x, z, onProgress, near = 420) {
     let total = 0;
     for (;;) {
-      const left = this.update(x, z);
+      this.update(x, z);
+      const left = this.queue.filter((q) => q.d < near).length + [...this.pending.values()].filter((p) => p.d < near).length;
       total = Math.max(total, left);
       onProgress?.(total ? 1 - left / total : 1);
       if (!left) return;
-      await new Promise((r) => setTimeout(r, 50));
+      await new Promise((r) => setTimeout(r, 40));
     }
   }
 
@@ -85,7 +89,7 @@ export class Terrain {
       if (!w.idle || !this.queue.length) continue;
       const job = this.queue.shift();
       const id = this.nextId++;
-      this.pending.set(id, { key: job.key, step: job.step, rect: job.rect });
+      this.pending.set(id, { key: job.key, step: job.step, rect: job.rect, d: job.d });
       w.idle = false;
       w.postMessage({ id, rect: job.rect, step: job.step });
     }

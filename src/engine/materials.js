@@ -60,7 +60,7 @@ const blocks = (u, v, course, block, stagger = 0.5) => {
   const row = floor(v.div(course));
   const rowH = hash(row.mul(13.17).add(3.1));
   const len = float(block).mul(rowH.mul(0.55).add(0.75));        // block length varies by course
-  const uu = u.add(rowH.mul(block * 7.0)).add(row.mul(block * stagger));
+  const uu = u.add(rowH.mul(float(block).mul(7.0))).add(row.mul(float(block).mul(stagger)));
   const col = floor(uu.div(len));
   const fu = fract(uu.div(len)), fv = fract(v.div(course));
   const du = min(fu, float(1).sub(fu)).mul(len), dv = min(fv, float(1).sub(fv)).mul(course);
@@ -98,8 +98,10 @@ const flags = (u, v, size) => {
 
 function make(spec) {
   const m = new MeshStandardNodeMaterial();
-  const base = new Color(spec.color);
-  const baseNode = vec3(base.r, base.g, base.b);
+  // the material's numbers are uniforms, not constants in the shader: materials of the same kind
+  // then share one compiled shader (and pipeline), which keeps the start-up short
+  const baseNode = uniform(new Color(spec.color));
+  const roughU = uniform(spec.roughness ?? 0.8);
   m.roughness = spec.roughness ?? 0.8;
   if (spec.side === 'double') { m.side = DoubleSide; m.shadowSide = DoubleSide; }
   m.metalness = spec.metalness ?? 0;
@@ -109,10 +111,10 @@ function make(spec) {
     case 'ashlar':
     case 'paving':
     case 'mudbrick': {
-      const course = spec.course, blk = spec.block;
+      const course = uniform(spec.course ?? 1), blk = uniform(spec.block ?? 1);
       const { u, v, isTop } = wallUV();
       // floors and tops: flags laid in rows along x
-      const b = spec.kind === 'paving' ? flags(u, v, blk * 1.5) : blocks(u, v, course, blk, spec.kind === 'mudbrick' ? 0.5 : 0.37);
+      const b = spec.kind === 'paving' ? flags(u, v, blk.mul(1.5)) : blocks(u, v, course, blk, spec.kind === 'mudbrick' ? 0.5 : 0.37);
       const jointW = spec.kind === 'mudbrick' ? 0.014 : 0.006;
       const joint = float(1).sub(smoothstep(jointW * 0.4, jointW * 2.2, b.d));
       const stain = mx_fractal_noise_float(P.mul(0.11), 4, 2.0, 0.5);
@@ -127,7 +129,7 @@ function make(spec) {
         .mul(grain.mul(0.05).add(fine.mul(0.03)).add(1));
       col = mix(col, col.mul(0.5), joint.mul(spec.kind === 'mudbrick' ? 0.85 : 0.55));
       m.colorNode = col;
-      m.roughnessNode = float(spec.roughness).add(grain.mul(0.05)).add(joint.mul(0.08));
+      m.roughnessNode = roughU.add(grain.mul(0.05)).add(joint.mul(0.08));
       // chipped arrises: blocks slightly pillowed toward their edges
       const pillow = smoothstep(0.0, 0.05, b.d).mul(0.0025);
       const h = pillow.add(grain.mul(0.0006)).add(fine.mul(0.0003)).sub(joint.mul(0.004));
@@ -135,7 +137,7 @@ function make(spec) {
       break;
     }
     case 'drums': {
-      const course = spec.course;
+      const course = uniform(spec.course ?? 1);
       const fv = fract(P.y.div(course));
       const dv = min(fv, float(1).sub(fv)).mul(course);
       const joint = float(1).sub(smoothstep(0.003, 0.012, dv));
@@ -147,7 +149,7 @@ function make(spec) {
       let col = baseNode.mul(id.sub(0.5).mul(0.12).add(1)).mul(stain.mul(0.16).add(1)).mul(grain.mul(0.05).add(fine.mul(0.03)).add(1));
       col = mix(col, col.mul(0.6), joint.mul(0.8));
       m.colorNode = col;
-      m.roughnessNode = float(spec.roughness).add(grain.mul(0.05));
+      m.roughnessNode = roughU.add(grain.mul(0.05));
       m.normalNode = bump(grain.mul(0.0007).add(fine.mul(0.0003)).sub(joint.mul(0.003)), 1);
       break;
     }
@@ -158,7 +160,7 @@ function make(spec) {
       const cloud = mx_fractal_noise_float(P.mul(0.6), 3, 2.0, 0.5);
       const col = baseNode.mul(speck.mul(0.55).add(0.7)).mul(cloud.mul(0.15).add(1));
       m.colorNode = col;
-      m.roughnessNode = float(spec.roughness).add(cloud.abs().mul(0.12)).add(float(1).sub(speck).mul(0.06));
+      m.roughnessNode = roughU.add(cloud.abs().mul(0.12)).add(float(1).sub(speck).mul(0.06));
       break;
     }
     case 'wood': {
@@ -167,14 +169,14 @@ function make(spec) {
       const rings = fract(g.mul(6.0));
       const col = baseNode.mul(rings.mul(0.16).add(0.92)).mul(mx_noise_float(P.mul(3.0)).mul(0.1).add(1));
       m.colorNode = col;
-      m.roughnessNode = float(spec.roughness).add(rings.mul(0.08));
+      m.roughnessNode = roughU.add(rings.mul(0.08));
       m.normalNode = bump(rings.mul(0.0006), 1);
       break;
     }
     case 'metal': {
       const n = mx_fractal_noise_float(P.mul(4.0), 3, 2.0, 0.5);
       m.colorNode = baseNode.mul(n.mul(0.12).add(1));
-      m.roughnessNode = float(spec.roughness).add(n.abs().mul(0.15));
+      m.roughnessNode = roughU.add(n.abs().mul(0.15));
       break;
     }
     case 'ground': {
@@ -190,7 +192,7 @@ function make(spec) {
     case 'sectile': {
       // opus sectile pavement: large squares, alternately with an inscribed circle and plain,
       // in porphyry, grey granite, giallo antico and white marble, framed by bands
-      const sz = spec.block, C = spec.colors.map((c) => { const k = new Color(c); return vec3(k.r, k.g, k.b); });
+      const sz = uniform(spec.block), C = spec.colors.map((c) => uniform(new Color(c)));
       const g = vec2(P.x, P.z).div(sz);
       const cell = floor(g), f = fract(g).sub(0.5);
       const parity = fract(cell.x.add(cell.y).mul(0.5)).mul(2);           // 0 or 1, a checker
@@ -205,7 +207,7 @@ function make(spec) {
       col = mix(col, C[1].mul(0.9), band);
       const vein = mx_noise_float(P.mul(3.0)).mul(detailFade());
       m.colorNode = col.mul(vein.mul(0.06).add(1));
-      m.roughnessNode = float(spec.roughness).add(band.mul(0.2));
+      m.roughnessNode = roughU.add(band.mul(0.2));
       m.normalNode = bump(band.mul(-0.002).add(vein.mul(0.0003)), 1);
       break;
     }
@@ -222,8 +224,8 @@ function make(spec) {
       const big = mx_fractal_noise_float(P.mul(0.4), 3, 2.0, 0.5);
       const col = baseNode.mul(mix(float(1), id.mul(0.5).add(0.75), aa)).mul(big.mul(0.1).add(1));
       m.colorNode = mix(col, vec3(0.32, 0.3, 0.27), grout.mul(0.7));
-      m.metalnessNode = float(spec.metalness ?? 1).mul(float(1).sub(grout.mul(0.9)));
-      m.roughnessNode = mix(float(spec.roughness), id2.mul(0.35).add(0.12), aa).add(grout.mul(0.5));
+      m.metalnessNode = uniform(spec.metalness ?? 1).mul(float(1).sub(grout.mul(0.9)));
+      m.roughnessNode = mix(roughU, id2.mul(0.35).add(0.12), aa).add(grout.mul(0.5));
       // the tilt of each tessera: a per-cell slope in the bump
       m.normalNode = bump(f.x.mul(id.sub(0.5)).add(f.y.mul(id2.sub(0.5))).add(f.z.mul(id.sub(id2))).mul(0.004).mul(aa).sub(grout.mul(0.0015)), 1);
       break;
@@ -231,9 +233,9 @@ function make(spec) {
     case 'veined': {
       // marble revetment: slabs sawn from one block and opened like a book, so that the veins of
       // each pair mirror each other; the slab's marble varies through the given colours
-      const C = spec.colors.map((c) => { const k = new Color(c); return vec3(k.r, k.g, k.b); });
+      const C = spec.colors.map((c) => uniform(new Color(c)));
       const { u, v } = wallUV();
-      const bw = spec.block, bh = spec.course;
+      const bw = uniform(spec.block), bh = uniform(spec.course);
       const cu = floor(u.div(bw)), cv = floor(v.div(bh));
       const fu = fract(u.div(bw)), lv = fract(v.div(bh));
       const odd = fract(cu.mul(0.5)).mul(2);
@@ -252,7 +254,7 @@ function make(spec) {
       let col = mix(body.mul(cloud.mul(0.07).add(1)), C[nb], vein.clamp(0, 1).mul(0.6));
       col = mix(col, col.mul(0.55), joint);
       m.colorNode = col;
-      m.roughnessNode = float(spec.roughness).add(joint.mul(0.3));
+      m.roughnessNode = roughU.add(joint.mul(0.3));
       m.normalNode = bump(joint.mul(-0.0015), 1);
       break;
     }

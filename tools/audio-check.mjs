@@ -21,7 +21,7 @@ await page.route('**/*', (route) => {
 });
 await page.goto(`http://127.0.0.1:${srv.address().port}/index.html?quality=low`);
 await page.waitForFunction('window.READY === true', null, { timeout: 600_000 });
-await page.click('#btn-enter');                       // the real gesture path
+await page.click('#view');                            // the real gesture path: a click on the world
 let failed = 0;
 const plans = await page.evaluate(() => [...window.palace.world.plans.values()].filter((p) => !p.plan.feature).map((p) => ({ id: p.id, rooms: p.plan.rooms.map((r) => r.kind) })));
 for (const p of plans) {

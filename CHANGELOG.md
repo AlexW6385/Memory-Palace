@@ -2,6 +2,13 @@
 
 Newest first. What you can visit and what looks better, in plain words.
 
+## v5.5 — Faster start, travel by map (2026-10-27)
+
+- **The world opens by itself** when it is ready — no more Enter button. Click (or press a key) to look around and start the music.
+- **A real loading bar:** what is being prepared (renderer, land, buildings, plants, light), the percentage, and about how many seconds are left; from the second visit on, the estimate uses how long the last start took on your machine.
+- **Faster start:** only the land, buildings and plants near you are made before the world opens — the distant ones keep arriving while you look around; materials of the same kind now share one shader, and all the plants share theirs, so far fewer shaders are compiled (about 90 pipelines instead of 310).
+- **Travel by map:** click anywhere on the land to go there (a crosshair shows where); click a building or its name to go to its entrance. The map now shows the whole world.
+
 ## v5.4 — The Levant and the Dome of the Rock (2026-10-27)
 
 - **A new region, the Levant,** north of Byzantium over a pass: Mount Moriah with the esplanade, the Kidron valley and the Mount of Olives, olive groves on the slopes, cypresses, carobs and garrigue, a clear dry sky (sometimes the hot dusty sharav, sometimes a winter shower), and a town of pale stone houses with low domes on their flat roofs.

@@ -3,7 +3,7 @@
 // instanced meshes per species, variant and level of detail, swaying in the wind.
 
 import * as THREE from 'three/webgpu';
-import { texture, uv, positionLocal, time, sin, cos, vec3, vec4, float, attribute, instanceIndex, hash, mix, normalWorld, max, dot, normalize, faceDirection, cameraViewMatrix } from 'three/tsl';
+import { uniform, texture, uv, positionLocal, time, sin, cos, vec3, vec4, float, attribute, instanceIndex, hash, mix, normalWorld, max, dot, normalize, faceDirection, cameraViewMatrix } from 'three/tsl';
 import { SPECIES, VARIANTS, speciesGeometry } from './species.js';
 import { foliageTexture } from './textures.js';
 import { MAX_DENSITY, NEAR_ONLY } from '../../world/flora-rules.js';
@@ -21,7 +21,7 @@ function swayNode(amount) {
   const ph = hash(instanceIndex).mul(6.28);
   const s = attribute('sway', 'float');
   const gust = sin(time.mul(0.37).add(ph.mul(0.3))).mul(0.5).add(0.8);
-  const amp = float(amount).mul(ENV.wind.length().mul(0.6).add(0.4)).mul(gust).mul(s);
+  const amp = uniform(amount).mul(ENV.wind.length().mul(0.6).add(0.4)).mul(gust).mul(s);
   return positionLocal.add(vec3(sin(time.mul(1.7).add(ph)).mul(amp).add(ENV.wind.x.mul(amp).mul(0.6)), 0, cos(time.mul(1.3).add(ph)).mul(amp).add(ENV.wind.y.mul(amp).mul(0.6))));
 }
 
@@ -33,7 +33,7 @@ function foliageMaterial(kind, amount) {
   const m = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide, alphaTest: 0.5, transparent: false });
   const t = texture(tex, uv());
   const tint = new THREE.Color(FOLIAGE_TINT[kind] || '#ffffff');
-  m.colorNode = t.rgb.mul(vec3(tint.r, tint.g, tint.b));
+  m.colorNode = t.rgb.mul(uniform(tint));
   m.opacityNode = t.a;
   m.roughness = 0.8;
   // light through the leaves: a little of the sun's colour on the side away from it
@@ -103,6 +103,7 @@ export class Flora {
       this.cells.set(k, { state: 'queued', rect: [cx, cz, cx + size, cz + size], near: kind === 'S', d: Math.hypot(cx + size / 2 - x, cz + size / 2 - z) });
     }
     for (const [k, c] of this.cells) if (!want.has(k) && c.state !== 'pending') { this.cells.delete(k); this.dirty = true; }
+    for (const c of this.cells.values()) c.d = Math.hypot((c.rect[0] + c.rect[2]) / 2 - x, (c.rect[1] + c.rect[3]) / 2 - z);
     this.queue = [...this.cells.entries()].filter(([, c]) => c.state === 'queued').sort((a, b) => a[1].d - b[1].d).map(([k]) => k);
     this.pump();
     const moved = !this.last || Math.hypot(x - this.last[0], z - this.last[1]) > 12;
@@ -110,8 +111,18 @@ export class Flora {
     return this.queue.length + [...this.cells.values()].filter((c) => c.state === 'pending').length;
   }
 
-  async ready(x, z) {
-    for (;;) { if (!this.update(x, z) && this.species) return; await new Promise((r) => setTimeout(r, 60)); }
+  /** Resolve when the plants within `near` metres are placed; farther ones follow. onProgress(0…1). */
+  async ready(x, z, onProgress, near = 260) {
+    let total = 0;
+    for (;;) {
+      this.update(x, z);
+      let left = 0;
+      for (const c of this.cells.values()) if (c.state !== 'done' && c.d < near) left++;
+      total = Math.max(total, left);
+      onProgress?.(total ? 1 - left / total : 1);
+      if (!left && this.species) { this.rebuild(x, z); return; }
+      await new Promise((r) => setTimeout(r, 50));
+    }
   }
 
   pump() {
@@ -174,7 +185,7 @@ export class Flora {
     let b = this.batches.get(key);
     if (b && b.cap >= n) return b;
     if (b) for (const mesh of b.meshes) { this.group.remove(mesh); mesh.dispose(); }
-    const S = SPECIES[sp], geo = speciesGeometry(sp, v, lod), cap = Math.max(16, Math.ceil(n * 1.5));
+    const S = SPECIES[sp], geo = speciesGeometry(sp, v, lod), cap = Math.max(1100, Math.ceil(n * 1.5));   // above the uniform-buffer limit: matrices go in an instanced attribute, so every batch shares one shader
     const meshes = [];
     const sway = NEAR_ONLY.has(sp) ? 0.05 : sp.includes('palm') ? 0.12 : 0.08;
     if (geo.trunk) {
