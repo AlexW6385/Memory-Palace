@@ -33,6 +33,8 @@ export class Renderer {
     r.toneMappingExposure = 0.55;          // set each frame from the climate and the eye's adaptation
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFShadowMap;
+    // stained glass colours the sunlight that passes through it (material.castShadowNode)
+    r.shadowMap.transmitted = true;
 
     const scene = this.scene = new THREE.Scene();
     const camera = this.camera = new THREE.PerspectiveCamera(68, 1, 0.08, 4000);

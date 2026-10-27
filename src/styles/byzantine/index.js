@@ -105,6 +105,23 @@ function arcCollider(col, cx, cz, r0, r1, a0, a1, y0, y1, step = 8) {
 }
 
 /**
+ * Arch heads: semicircular (default) or pointed (two-centred): `pointed` is the radius of each
+ * arc as a multiple of the span (1 = equilateral). halfWidth(a, dy): the opening's half-width at
+ * dy above the springing; rise(a): the height of the crown above the springing.
+ */
+export function archRise(a) {
+  if (!a.pointed) return a.r;
+  const R = a.pointed * 2 * a.r;
+  return Math.sqrt(R * R - (R - a.r) * (R - a.r));
+}
+export function archHalf(a, dy) {
+  if (dy <= 0) return a.r;
+  if (!a.pointed) return Math.sqrt(Math.max(0, a.r * a.r - dy * dy));
+  const R = a.pointed * 2 * a.r;
+  return Math.max(0, Math.sqrt(Math.max(0, R * R - dy * dy)) - (R - a.r));
+}
+
+/**
  * A wall in a vertical plane. Frame: origin o [x, z], unit direction u [ux, uz] along the wall,
  * thickness th centred on the plane. The wall spans u0…u1 and y0…y1, except:
  *  - outline: optional semicircular top { uc, r, spring }: above the springing the wall is
@@ -121,12 +138,13 @@ export function planarWall(el) {
   const nx = -uz, nz = ux;
   // band boundaries: every edge height and fine steps along each circle
   const ys = new Set([y0, y1]);
-  const circ = (sp, r) => { for (let k = 0; k <= 14; k++) { const y = sp + r * Math.sin((k / 14) * Math.PI / 2); if (y > y0 && y < y1) ys.add(+y.toFixed(4)); } };
-  for (const a of arches) { circ(a.spring, a.r); if (a.sill !== undefined && a.sill > y0) ys.add(a.sill); }
+  const circ = (a) => { const H = archRise(a); for (let k = 0; k <= 16; k++) { const y = a.spring + H * Math.sin((k / 16) * Math.PI / 2); if (y > y0 && y < y1) ys.add(+y.toFixed(4)); } };
+  for (const a of arches) { circ(a); if (a.sill !== undefined && a.sill > y0) ys.add(a.sill); }
   for (const h of holes) { if (h.y0 > y0 && h.y0 < y1) ys.add(h.y0); if (h.y1 > y0 && h.y1 < y1) ys.add(h.y1); }
-  if (top) { circ(top.spring, top.r); }
+  if (top) { circ(top); }
+  const circles = el.circles || [];
+  for (const c of circles) for (let k = -16; k <= 16; k++) { const y = c.yc + c.r * Math.sin((k / 16) * Math.PI / 2); if (y > y0 && y < y1) ys.add(+y.toFixed(4)); }
   const Y = [...ys].filter((y) => y >= y0 && y <= y1).sort((a, b) => a - b);
-  const halfW = (r, sp, y) => (y <= sp ? r : Math.sqrt(Math.max(0, r * r - (y - sp) * (y - sp))));
   const out = [];
   const W = (u, y, s) => [o[0] + u * ux + s * nx, y, o[1] + u * uz + s * nz];
   for (let i = 0; i < Y.length - 1; i++) {
@@ -135,25 +153,29 @@ export function planarWall(el) {
     // outer limits at ya and yb
     let lo = [u0, u0], hi = [u1, u1];
     if (top) {
-      if (ym > top.spring + top.r) continue;
-      lo = [Math.max(u0, top.uc - halfW(top.r, top.spring, ya)), Math.max(u0, top.uc - halfW(top.r, top.spring, yb))];
-      hi = [Math.min(u1, top.uc + halfW(top.r, top.spring, ya)), Math.min(u1, top.uc + halfW(top.r, top.spring, yb))];
+      if (ym > top.spring + archRise(top)) continue;
+      lo = [Math.max(u0, top.uc - archHalf(top, ya - top.spring)), Math.max(u0, top.uc - archHalf(top, yb - top.spring))];
+      hi = [Math.min(u1, top.uc + archHalf(top, ya - top.spring)), Math.min(u1, top.uc + archHalf(top, yb - top.spring))];
     }
     // cuts at this band: [left(ya), left(yb), right(ya), right(yb)]
     const cuts = [];
     for (const a of arches) {
       const sill = a.sill ?? y0;
-      if (ym < sill || ym > a.spring + a.r) continue;
+      if (ym < sill || ym > a.spring + archRise(a)) continue;
       if (ym < a.spring) {
         // below the springing: an arcade leaves no wall between adjacent arches (the columns)
         if (el.arcade) continue;
         cuts.push([a.uc - a.r, a.uc - a.r, a.uc + a.r, a.uc + a.r]);
       } else {
-        const ha = halfW(a.r, a.spring, ya), hb = halfW(a.r, a.spring, yb);
+        const ha = archHalf(a, ya - a.spring), hb = archHalf(a, yb - a.spring);
         cuts.push([a.uc - ha, a.uc - hb, a.uc + ha, a.uc + hb]);
       }
     }
     for (const h of holes) if (ym > h.y0 && ym < h.y1) cuts.push([h.u0, h.u0, h.u1, h.u1]);
+    for (const c of circles) if (Math.abs(ym - c.yc) < c.r) {
+      const hw = (y) => Math.sqrt(Math.max(0, c.r * c.r - (y - c.yc) * (y - c.yc)));
+      cuts.push([c.uc - hw(ya), c.uc - hw(yb), c.uc + hw(ya), c.uc + hw(yb)]);
+    }
     let pieces;
     if (el.arcade && arches.some((a) => ym < a.spring && ym >= (a.sill ?? y0))) {
       // only the ends outside the first and last arch remain below the springing
@@ -217,7 +239,7 @@ function planarWallEl(el, { bag, col }) {
   // opening covers that height (a parapet below a sill still blocks)
   const [ux, uz] = el.u;
   const opens = [];
-  for (const a of el.arches || []) opens.push({ u0: a.uc - a.r, u1: a.uc + a.r, y0: a.sill ?? el.y0, y1: a.spring + a.r });
+  for (const a of el.arches || []) opens.push({ u0: a.uc - a.r, u1: a.uc + a.r, y0: a.sill ?? el.y0, y1: a.spring + archRise(a) });
   for (const h of el.holes || []) opens.push({ u0: h.u0, u1: h.u1, y0: h.y0, y1: h.y1 });
   if (el.arcade && el.arches?.length) {
     const sp = Math.min(...el.arches.map((a) => a.spring));

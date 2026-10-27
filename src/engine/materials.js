@@ -5,7 +5,7 @@
 
 import { MeshStandardNodeMaterial, DoubleSide, Color } from 'three/webgpu';
 import {
-  Fn, float, vec2, vec3, positionWorld, normalWorld, normalView, positionView, abs, floor, fract, min, max,
+  Fn, float, vec2, vec3, vec4, positionWorld, normalWorld, normalView, positionView, abs, floor, fract, min, max,
   mix, smoothstep, hash, mx_noise_float, mx_fractal_noise_float, mx_worley_noise_float, dot, cross, normalize,
   sign, select, time, sin, clamp, length, cameraPosition, uniform, attribute, reflect, pow, fwidth,
 } from 'three/tsl';
@@ -273,6 +273,75 @@ function make(spec) {
       const stain = mx_fractal_noise_float(P.mul(0.3), 3, 2.0, 0.5);
       m.colorNode = baseNode.mul(id.sub(0.5).mul(0.3).mul(aa).add(1)).mul(ch.mul(0.1).add(1)).mul(lap.mul(-0.35).add(1)).mul(stain.mul(0.2).add(1));
       m.normalNode = bump(ch.mul(0.02).add(lv.mul(0.012).mul(aa)), 1);
+      break;
+    }
+    case 'glass': {
+      // stained glass seen from inside: small panes of deep colour set in lead, laid out in
+      // medallions (the scenes) up each lancet on a blue ground with red flecks, each medallion
+      // framed by a band of white and gold; lit by the sky and the sun behind (emissive)
+      const along = dot(P.xz, vec2(0.7071, 0.7071));
+      const q0 = vec2(along, P.y).mul(vec2(11.0, 9.0));
+      const rowS = hash(floor(q0.y).mul(3.17)).mul(0.6);
+      const q = vec2(q0.x.add(rowS), q0.y);
+      const cell = floor(q), fq = fract(q);
+      const id = hash(cell.x.mul(17.31).add(cell.y.mul(91.7)));
+      const blue = vec3(0.035, 0.08, 0.42), red = vec3(0.5, 0.03, 0.035), green = vec3(0.06, 0.3, 0.1), gold = vec3(0.62, 0.42, 0.06), violet = vec3(0.25, 0.07, 0.32), white = vec3(0.55, 0.55, 0.5);
+      const mq = vec2(along.mul(1.05), P.y.mul(0.85));
+      const mcell = floor(mq), mf = fract(mq).sub(0.5);
+      const mid = hash(mcell.x.mul(5.3).add(mcell.y.mul(11.9)));
+      const r0 = length(mf);
+      // shapes: circle, quatrefoil, lozenge
+      const quat = r0.mul(float(1).add(abs(mf.x.mul(mf.y)).mul(-3.0)));
+      const loz = abs(mf.x).add(abs(mf.y)).mul(0.78);
+      const md = select(mid.lessThan(0.4), r0, select(mid.lessThan(0.75), quat, loz));
+      const medallion = smoothstep(0.34, 0.31, md);
+      const border = smoothstep(0.39, 0.36, md).sub(medallion).clamp(0, 1);
+      const ground = select(id.lessThan(0.7), blue, select(id.lessThan(0.9), red, select(id.lessThan(0.96), violet, gold)));
+      const scene = select(id.lessThan(0.3), red, select(id.lessThan(0.52), blue, select(id.lessThan(0.64), green, select(id.lessThan(0.76), gold, select(id.lessThan(0.88), white, violet)))));
+      let col = mix(ground, scene, medallion);
+      col = mix(col, select(hash(cell.x.add(cell.y.mul(3.0))).lessThan(0.5), red, gold), border.mul(0.8));
+      const fw = fwidth(q.x).add(fwidth(q.y));
+      const lead = float(1).sub(smoothstep(0.05, 0.1, min(min(fq.x, float(1).sub(fq.x)), min(fq.y, float(1).sub(fq.y))))).mul(float(1).sub(smoothstep(0.3, 0.8, fw)));
+      const light = ENV.horizon.mul(0.2).add(ENV.sunColor.mul(0.011)).add(ENV.zenith.mul(0.1));
+      const streak = mx_noise_float(P.mul(11.0)).mul(0.3).add(1);
+      m.colorNode = vec3(0.02, 0.02, 0.025);
+      m.emissiveNode = col.mul(light).mul(streak).mul(float(1).sub(lead.mul(0.95)));
+      // the sun through the glass: its colour, dimmed, and the leads' shadow
+      m.castShadowNode = vec4(col.mul(1.1).mul(float(1).sub(lead.mul(0.9))), 1);
+      m.roughnessNode = float(0.2);
+      break;
+    }
+    case 'fleur': {
+      // painted stone: a ground colour with a gilded motif in a diaper (fleurs-de-lis, castles), or stars
+      const C = spec.colors.map((c) => uniform(new Color(c)));
+      const { u, v } = wallUV();
+      const sz = spec.stars ? 0.55 : 0.32;
+      const g = vec2(u, v).div(sz), cell = floor(g), f = fract(g).sub(0.5);
+      const off = fract(cell.y.mul(0.5)).mul(2).mul(0.5);
+      const f2 = vec2(fract(g.x.add(off)).sub(0.5), f.y);
+      const star = spec.stars
+        ? float(1).sub(smoothstep(0.035, 0.07, min(length(f2), abs(f2.x).add(abs(f2.y)).mul(0.55))))
+        : float(1).sub(smoothstep(0.1, 0.16, max(abs(f2.x).mul(1.6), abs(f2.y).add(abs(f2.x).mul(0.8)).sub(0.05))));
+      const aa = float(1).sub(smoothstep(0.3, 0.9, fwidth(g.x).add(fwidth(g.y))));
+      const motif = star.mul(aa).mul(spec.stars ? hash(cell.x.mul(3.1).add(cell.y.mul(7.7))).greaterThan(0.25).select(float(1), float(0)) : float(1));
+      const n = mx_fractal_noise_float(P.mul(1.5), 3, 2.0, 0.5);
+      m.colorNode = mix(C[0].mul(n.mul(0.08).add(1)), C[1], motif);
+      m.metalnessNode = motif.mul(0.85);
+      m.roughnessNode = roughU.sub(motif.mul(0.25));
+      break;
+    }
+    case 'timberframe': {
+      // plaster between dark oak timbers: posts, rails at sill and lintel height, braces
+      const { u, v } = wallUV();
+      const pu = fract(u.div(1.1)), pv = fract(v.div(3.0));
+      const post = smoothstep(0.08, 0.06, min(pu, float(1).sub(pu)).mul(1.1));
+      const rail = smoothstep(0.1, 0.07, min(abs(pv.sub(0.05)), abs(pv.sub(0.36)))).add(smoothstep(0.1, 0.07, abs(pv.sub(0.98))));
+      const brace = smoothstep(0.07, 0.04, abs(fract(u.div(2.2).add(v.div(3.0))).sub(0.5))).mul(hash(floor(u.div(2.2)).add(floor(v.div(3.0)).mul(7.0))).greaterThan(0.55).select(float(1), float(0)));
+      const aa = float(1).sub(smoothstep(0.2, 0.6, fwidth(u).mul(4)));
+      const wood = clamp(post.add(rail).add(brace), 0, 1).mul(aa);
+      const n = mx_fractal_noise_float(P.mul(0.8), 3, 2.0, 0.5);
+      m.colorNode = mix(baseNode.mul(n.mul(0.12).add(1)), vec3(0.17, 0.11, 0.07), wood);
+      m.roughnessNode = roughU;
       break;
     }
     case 'flame': {

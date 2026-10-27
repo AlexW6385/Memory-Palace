@@ -385,6 +385,16 @@
       ],
       "yaw": 1.62,
       "pitch": 0.0
+    },
+    {
+      "name": "paris-river",
+      "at": [
+        110,
+        1.5,
+        -5650
+      ],
+      "yaw": 2.5,
+      "pitch": 0.05
     }
   ],
   "hagia-sophia": [
@@ -529,6 +539,68 @@
       ],
       "yaw": 0.85,
       "pitch": -0.38
+    }
+  ],
+  "sainte-chapelle": [
+    {
+      "name": "courtyard",
+      "at": [
+        -32,
+        0,
+        22
+      ],
+      "yaw": -2.0,
+      "pitch": 0.32
+    },
+    {
+      "name": "lower-chapel",
+      "at": [
+        2,
+        0.15,
+        1.5
+      ],
+      "yaw": -1.5708,
+      "pitch": 0.05
+    },
+    {
+      "name": "upper-chapel",
+      "at": [
+        1.5,
+        7.6,
+        0
+      ],
+      "yaw": -1.5708,
+      "pitch": 0.25
+    },
+    {
+      "name": "upper-windows",
+      "at": [
+        14,
+        7.6,
+        2.5
+      ],
+      "yaw": -0.05,
+      "pitch": 0.55
+    },
+    {
+      "name": "apse",
+      "at": [
+        18,
+        7.6,
+        0
+      ],
+      "yaw": -1.5708,
+      "pitch": 0.35
+    },
+    {
+      "name": "aerial",
+      "at": [
+        90,
+        60,
+        70
+      ],
+      "yaw": 0.95,
+      "pitch": -0.35
     }
   ]
 }

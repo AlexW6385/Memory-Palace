@@ -7,4 +7,5 @@ export const BUILDINGS = [
   { id: 'parthenon', district: 'greece', load: () => import('./parthenon/index.js') },
   { id: 'hagia-sophia', district: 'byzantium', load: () => import('./hagia-sophia/index.js') },
   { id: 'dome-of-the-rock', district: 'levant', load: () => import('./dome-of-the-rock/index.js') },
+  { id: 'sainte-chapelle', district: 'francia', load: () => import('./sainte-chapelle/index.js') },
 ];

@@ -80,7 +80,7 @@ export class World {
     group.name = plan.id;
     for (const { mat, geometry } of built.parts) {
       const m = new THREE.Mesh(geometry, material(mat));
-      m.castShadow = mat !== 'water';
+      m.castShadow = mat !== 'water' && mat !== 'glass_outer';
       m.receiveShadow = true;
       m.name = `${plan.id}:${mat}`;
       group.add(m);

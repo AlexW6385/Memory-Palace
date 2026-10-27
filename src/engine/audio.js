@@ -297,6 +297,24 @@ export class Music {
     o.start(when); o.stop(when + dur + 0.05); v.start(when); v.stop(when + dur + 0.05); n.start(when);
   }
 
+  /** A peal of church bells: a few strikes of an inharmonic bell (hum, prime, tierce, quint, nominal). */
+  bells(when, level) {
+    const ctx = this.ctx;
+    const base = [196, 233, 262][Math.floor(Math.random() * 3)];
+    for (let s = 0; s < 3; s++) {
+      const t0 = when + s * 1.4, f0 = base * [1, 0.89, 0.75][s];
+      for (const [r, a, d] of [[0.5, 0.5, 5], [1, 0.8, 3.5], [1.19, 0.45, 2.5], [1.5, 0.3, 2], [2, 0.55, 1.6], [2.66, 0.2, 1.1], [3.0, 0.15, 0.8]]) {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.frequency.value = f0 * r;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(level * a * 0.4, t0 + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+        o.connect(g); g.connect(this.layers.get(this.zone).gain);
+        o.start(t0); o.stop(t0 + d + 0.05);
+      }
+    }
+  }
+
   /** The semantron: a wooden board struck with a mallet, in a run that quickens. */
   semantron(when, level) {
     const ctx = this.ctx, sr = ctx.sampleRate;
@@ -386,14 +404,14 @@ export class Music {
         }
       }
       // reed melody: long notes moving by step, often answering the strings
-      if (Z.lead && beat % 2 === 0 && Math.random() < Z.lead.density) {
+      if (Z.lead && (Z.lead.rhythm || beat % 2 === 0) && Math.random() < Z.lead.density) {
         const sc = S.scale, [lo, hi] = Z.lead.range;
         this.leadDeg = (this.leadDeg ?? Math.floor(sc.length * 1.5)) + [-1, -1, 0, 1, 1, 2, -2][Math.floor(Math.random() * 7)];
         const minDeg = Math.ceil((lo / 12) * sc.length), maxDeg = Math.floor((hi / 12) * sc.length);
         this.leadDeg = Math.max(minDeg, Math.min(maxDeg, this.leadDeg));
         const d = this.leadDeg, midi = S.tonic + Math.floor(d / sc.length) * 12 + sc[((d % sc.length) + sc.length) % sc.length];
         this.ornament = !!Z.lead.ornament;
-        if (Z.lead.timbre === 'voice') this.sing(midi, t, spb * (2 + Math.random() * 2.5), Z.lead.level);
+        if (Z.lead.timbre === 'voice') this.sing(midi, t, Z.lead.rhythm ? spb * Z.lead.rhythm[beat % Z.lead.rhythm.length] * 1.05 : spb * (2 + Math.random() * 2.5), Z.lead.level);
         else if (Z.lead.timbre === 'ney') this.flute(midi, t, spb * (1.5 + Math.random() * 2.5), Z.lead.level);
         else this.blow(midi, t, spb * (1.5 + Math.random() * 2), Z.lead.level);
       }
@@ -403,7 +421,8 @@ export class Music {
         const p = Z.drum.pattern, v = p[beat % p.length];
         if (v && Math.floor(beat / p.length) % (Z.drum.every || 1) === 0) this.drum(t, Z.drum.level * v);
       }
-      this.next += spb * (Math.random() < 0.2 ? 1.5 : 1);
+      if (Z.bells && beat % Z.bells.every === 0) this.bells(t, Z.bells.level);
+      this.next += Z.lead?.rhythm ? spb * Z.lead.rhythm[beat % Z.lead.rhythm.length] : spb * (Math.random() < 0.2 ? 1.5 : 1);
     }
   }
 }

@@ -24,7 +24,7 @@ const STRINGS = {
     'no-webgpu': 'WebGPU is not available in this browser, so the world runs on WebGL 2 and may be slower. Chrome, Edge and Safari 26 support WebGPU.',
     'error': 'The world could not be started: ',
     you: 'You',
-    districts: { nile: 'The Nile', greece: 'Greece', rome: 'Rome', byzantium: 'Byzantium', levant: 'The Levant' },
+    districts: { nile: 'The Nile', greece: 'Greece', rome: 'Rome', byzantium: 'Byzantium', levant: 'The Levant', francia: 'Francia' },
   },
   zh: {
     title: '记忆宫殿',
@@ -49,7 +49,7 @@ const STRINGS = {
     'no-webgpu': '此浏览器不支持 WebGPU，世界将以 WebGL 2 运行，可能较慢。Chrome、Edge 和 Safari 26 均支持 WebGPU。',
     'error': '世界无法启动：',
     you: '你',
-    districts: { nile: '尼罗河', greece: '希腊', rome: '罗马', byzantium: '拜占庭', levant: '黎凡特' },
+    districts: { nile: '尼罗河', greece: '希腊', rome: '罗马', byzantium: '拜占庭', levant: '黎凡特', francia: '法兰西' },
   },
 };
 

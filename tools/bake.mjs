@@ -27,12 +27,14 @@ async function scene(id) {
   const entry = BUILDINGS.find((b) => b.id === id);
   const { plan } = await entry.load();
   const built = buildPlan(plan);
-  const pos = [], alb = [];
+  const pos = [], alb = [], tr = [];
+  // stained glass lets coloured light through; the clear outer skin of a window lets it all through
+  const TRANSMIT = { stained_glass: [0.45, 0.24, 0.5], glass_outer: [1, 1, 1] };
   for (const { mat, geometry } of built.parts) {
-    if (mat === 'water') continue;
-    const a = albedo(mat), p = geometry.attributes.position.array;
+    if (mat === 'water' || mat === 'flame') continue;
+    const a = albedo(mat), p = geometry.attributes.position.array, t3 = TRANSMIT[mat];
     for (let i = 0; i < p.length; i++) pos.push(p[i]);
-    for (let t = 0; t < p.length / 9; t++) alb.push(a[0], a[1], a[2]);
+    for (let t = 0; t < p.length / 9; t++) { alb.push(a[0], a[1], a[2]); tr.push(...(t3 || [-1, -1, -1])); }
   }
   // open ground around the building
   const [bx0, bz0, bx1, bz1] = plan.bounds;
@@ -52,9 +54,10 @@ async function scene(id) {
     for (const v of [a, b, c]) pos.push(C.position[v * 3], C.position[v * 3 + 1] - 0.02, C.position[v * 3 + 2]);
     const A = vAlb(a);
     alb.push(...A);
+    tr.push(-1, -1, -1);
   }
   const climate = REGION[SITES[id]?.region || 'nile'].climate;
-  return { plan, built, pos: new Float32Array(pos), alb: new Float32Array(alb), lights: built.lights, climate };
+  return { plan, built, pos: new Float32Array(pos), alb: new Float32Array(alb), tr: new Float32Array(tr), lights: built.lights, climate };
 }
 
 function grid(plan, spacing) {
@@ -69,13 +72,13 @@ function grid(plan, spacing) {
 // ── worker: trace probes for a range of z slices ─────────────────────────────
 
 function workerMain() {
-  const { pos, alb, lights, G, rays, zs, prev, pass, climate } = workerData;
+  const { pos, alb, tr, lights, G, rays, zs, prev, pass, climate } = workerData;
   const SUN_DIR = sunDirection(climate), SUN_COLOR = climate.sun.color, SUN_INTENSITY = climate.sun.intensity;
   const skyRadiance = (d) => skyRadianceOf(climate, d);
   const geo = new BufferGeometry();
   geo.setAttribute('position', new Float32BufferAttribute(new Float32Array(pos), 3));
   const bvh = new MeshBVH(geo, { targetLeafSize: 8 });
-  const A = new Float32Array(alb);
+  const A = new Float32Array(alb), TR = new Float32Array(tr);
   const prevV = prev ? new Float32Array(prev) : null;
   const [nx, ny, nz] = G.n, s = G.spacing;
   const ray = new Ray(new Vector3(), new Vector3());
@@ -95,6 +98,35 @@ function workerMain() {
   const occluded = (o, d, far) => {
     sray.origin.set(o[0], o[1], o[2]); sray.direction.set(d[0], d[1], d[2]);
     return bvh.raycastFirst(sray, DoubleSide, 0, far) !== null;
+  };
+  /** Light let through along a ray (1 clear, 0 blocked, a colour through stained glass). */
+  const transmitted = (o, d, far) => {
+    const T = [1, 1, 1];
+    let ox = o[0], oy = o[1], oz = o[2], left = far;
+    for (let k = 0; k < 6; k++) {
+      sray.origin.set(ox, oy, oz); sray.direction.set(d[0], d[1], d[2]);
+      const h = bvh.raycastFirst(sray, DoubleSide, 0, left);
+      if (!h) return T;
+      const f = h.faceIndex;
+      if (TR[f * 3] < 0) return null;
+      for (let c = 0; c < 3; c++) T[c] *= TR[f * 3 + c];
+      ox = h.point.x + d[0] * 0.01; oy = h.point.y + d[1] * 0.01; oz = h.point.z + d[2] * 0.01; left -= h.distance + 0.01;
+    }
+    return null;
+  };
+  /** First opaque hit along a ray, and the colour of the glass passed on the way. */
+  const firstHit = (o, d, far, T) => {
+    let ox = o[0], oy = o[1], oz = o[2], left = far;
+    for (let k = 0; k < 6; k++) {
+      ray.origin.set(ox, oy, oz); ray.direction.set(d[0], d[1], d[2]);
+      const h = bvh.raycastFirst(ray, DoubleSide, 0, left);
+      if (!h) return null;
+      const f = h.faceIndex;
+      if (TR[f * 3] < 0) return h;
+      for (let c = 0; c < 3; c++) T[c] *= TR[f * 3 + c];
+      ox = h.point.x + d[0] * 0.01; oy = h.point.y + d[1] * 0.01; oz = h.point.z + d[2] * 0.01; left -= h.distance + 0.01;
+    }
+    return null;
   };
   // trilinear SH sample of the previous pass at p with normal n → irradiance rgb
   const sampleE = (p, nrm, out) => {
@@ -129,8 +161,8 @@ function workerMain() {
         for (let r = 0; r < rays; r++) {
           const d0 = dirs[r];
           const d = [ca * d0[0] - sa * d0[2], d0[1], sa * d0[0] + ca * d0[2]];
-          ray.origin.set(o[0], o[1], o[2]); ray.direction.set(d[0], d[1], d[2]);
-          const hit = bvh.raycastFirst(ray, DoubleSide, 0, 500);
+          const Tg = [1, 1, 1];
+          const hit = firstHit(o, d, 500, Tg);
           let L = [0, 0, 0];
           if (!hit) {
             L = d[1] >= 0 ? skyRadiance(d) : groundL;
@@ -144,7 +176,7 @@ function workerMain() {
             const nn = [n.x, n.y, n.z];
             const E = [0, 0, 0];
             const ndl = nn[0] * sun.x + nn[1] * sun.y + nn[2] * sun.z;
-            if (ndl > 0 && !occluded(p, SUN_DIR, 800)) for (let k = 0; k < 3; k++) E[k] += sunE[k] * ndl;
+            if (ndl > 0) { const Ts = transmitted(p, SUN_DIR, 800); if (Ts) for (let k = 0; k < 3; k++) E[k] += sunE[k] * ndl * Ts[k]; }
             for (const l of lights) {
               const lx = l.at[0] - p[0], ly = l.at[1] - p[1], lz = l.at[2] - p[2];
               const dd = Math.hypot(lx, ly, lz);
@@ -166,6 +198,7 @@ function workerMain() {
             }
             for (let k = 0; k < 3; k++) L[k] = (al[k] / Math.PI) * E[k];
           }
+          for (let k = 0; k < 3; k++) L[k] *= Tg[k];
           for (let k = 0; k < 3; k++) {
             sh[k] += L[k] * 0.282095;
             sh[3 + k] += L[k] * 0.488603 * d[1];
@@ -212,7 +245,7 @@ async function runPass(S, G, rays, threads, prev, pass) {
   const t0 = Date.now();
   const runChunk = (zs) => new Promise((ok, fail) => {
     const w = new Worker(fileURLToPath(import.meta.url), {
-      workerData: { pos: S.pos.buffer.slice(0), alb: S.alb.buffer.slice(0), lights: S.lights, G, rays, zs, prev, pass, climate: S.climate },
+      workerData: { pos: S.pos.buffer.slice(0), alb: S.alb.buffer.slice(0), tr: S.tr.buffer.slice(0), lights: S.lights, G, rays, zs, prev, pass, climate: S.climate },
     });
     w.on('message', (m) => {
       if (m.progress) {

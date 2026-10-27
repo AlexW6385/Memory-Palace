@@ -190,6 +190,63 @@ function houseDomed(el, { bag, col }) {
   }
 }
 
+/**
+ * house_timber: a town house of medieval Paris — a stone ground floor, timber-framed upper
+ * storeys jettied over the street, plastered between the timbers, a steep gabled roof whose gable
+ * faces the street. { rect, y, foot, storeys, front, seed }
+ */
+function houseTimber(el, { bag, col }) {
+  const rand = rng(el.seed || 1);
+  const [x0, z0, x1, z1] = el.rect, y = el.y, st = 3.0, H = el.storeys * st;
+  const f = el.front || 's', along = f === 's' || f === 'n';
+  bag.add('limestone', box(x0 - 0.1, el.foot - 0.6, z0 - 0.1, x1 + 0.1, y + st, z1 + 0.1));
+  col.rect([x0, z0, x1, z1], el.foot - 0.6, y + H);
+  // each upper storey steps out 0.4 m over the street
+  let R = [x0, z0, x1, z1];
+  for (let s = 1; s < el.storeys; s++) {
+    const J = 0.4 * s;
+    R = f === 's' ? [x0, z0, x1, z1 + J] : f === 'n' ? [x0, z0 - J, x1, z1] : f === 'e' ? [x0, z0, x1 + J, z1] : [x0 - J, z0, x1, z1];
+    bag.add('half_timber', box(R[0], y + s * st, R[1], R[2], y + (s + 1) * st, R[3]));
+    bag.add('timber', box(R[0] - 0.05, y + s * st - 0.12, R[1] - 0.05, R[2] + 0.05, y + s * st + 0.08, R[3] + 0.05));
+  }
+  // windows and the door on the street front
+  const L = along ? x1 - x0 : z1 - z0;
+  const open = (u, v0, w, h) => {
+    if (u + w > L - 0.25) return;
+    if (f === 's') bag.add('opening', box(x0 + u, y + v0, R[3], x0 + u + w, y + v0 + h, R[3] + 0.03));
+    if (f === 'n') bag.add('opening', box(x0 + u, y + v0, R[1] - 0.03, x0 + u + w, y + v0 + h, R[1]));
+    if (f === 'e') bag.add('opening', box(R[2], y + v0, z0 + u, R[2] + 0.03, y + v0 + h, z0 + u + w));
+    if (f === 'w') bag.add('opening', box(R[0] - 0.03, y + v0, z0 + u, R[0], y + v0 + h, z0 + u + w));
+  };
+  const du = 0.6 + rand() * Math.max(0.2, L - 2.4);
+  if (f === 's') bag.add('opening', box(x0 + du, y + 0.2, z1, x0 + du + 1.2, y + 2.5, z1 + 0.03));
+  if (f === 'n') bag.add('opening', box(x0 + du, y + 0.2, z0 - 0.03, x0 + du + 1.2, y + 2.5, z0));
+  if (f === 'e') bag.add('opening', box(x1, y + 0.2, z0 + du, x1 + 0.03, y + 2.5, z0 + du + 1.2));
+  if (f === 'w') bag.add('opening', box(x0 - 0.03, y + 0.2, z0 + du, x0, y + 2.5, z0 + du + 1.2));
+  for (let s = 1; s < el.storeys; s++) { const n = Math.max(1, Math.floor(L / 2.2)); for (let k = 0; k < n; k++) open((k + 0.5) * L / n - 0.35, s * st + 0.9, 0.7, 1.2); }
+  // the steep roof: the ridge runs back from the street, so the gable faces it
+  const ye = y + H, o = 0.35;
+  const tris = [];
+  if (along) {
+    const xm = (R[0] + R[2]) / 2, rise = (R[2] - R[0]) / 2 * 1.5;
+    const a = [R[0] - o, ye, R[1] - o], b = [R[2] + o, ye, R[1] - o], c = [R[2] + o, ye, R[3] + o], d = [R[0] - o, ye, R[3] + o];
+    const t0 = [xm, ye + rise, R[1] - o], t1 = [xm, ye + rise, R[3] + o];
+    tris.push(...a, ...t0, ...t1, ...a, ...t1, ...d, ...b, ...c, ...t1, ...b, ...t1, ...t0);
+    bag.add('half_timber', fromTriangles([R[0], ye, R[1], R[2], ye, R[1], xm, ye + rise - 0.3, R[1], R[0], ye, R[3], xm, ye + rise - 0.3, R[3], R[2], ye, R[3]]));
+  } else {
+    const zm = (R[1] + R[3]) / 2, rise = (R[3] - R[1]) / 2 * 1.5;
+    const a = [R[0] - o, ye, R[1] - o], b = [R[2] + o, ye, R[1] - o], c = [R[2] + o, ye, R[3] + o], d = [R[0] - o, ye, R[3] + o];
+    const t0 = [R[0] - o, ye + rise, zm], t1 = [R[2] + o, ye + rise, zm];
+    tris.push(...a, ...b, ...t1, ...a, ...t1, ...t0, ...d, ...t0, ...t1, ...d, ...t1, ...c);
+    bag.add('half_timber', fromTriangles([R[0], ye, R[1], R[0], ye + rise - 0.3, zm, R[0], ye, R[3], R[2], ye, R[1], R[2], ye, R[3], R[2], ye + rise - 0.3, zm]));
+  }
+  for (let i = 0; i < tris.length; i += 9) {
+    const ux = tris[i + 3] - tris[i], uz = tris[i + 5] - tris[i + 2], vx = tris[i + 6] - tris[i], vz = tris[i + 8] - tris[i + 2];
+    if (uz * vx - ux * vz < 0) for (let k = 0; k < 3; k++) { const t = tris[i + 3 + k]; tris[i + 3 + k] = tris[i + 6 + k]; tris[i + 6 + k] = t; }
+  }
+  bag.add(rand() < 0.5 ? 'slate' : 'roof_tile', fromTriangles(tris));
+}
+
 /** A low mud-brick wall (garden, animal pen). */
 function wallLow(el, { bag, col }) {
   const [x0, z0, x1, z1] = el.rect;
@@ -197,4 +254,4 @@ function wallLow(el, { bag, col }) {
   col.rect(el.rect, el.y - 0.5, el.y + el.h);
 }
 
-registerStyle('vernacular', { trim: () => {}, opening: () => {}, column: () => {}, elements: { house_egypt: houseEgypt, house_tiled: houseTiled, house_domed: houseDomed, wall_low: wallLow }, objects: {} });
+registerStyle('vernacular', { trim: () => {}, opening: () => {}, column: () => {}, elements: { house_egypt: houseEgypt, house_tiled: houseTiled, house_domed: houseDomed, house_timber: houseTimber, wall_low: wallLow }, objects: {} });

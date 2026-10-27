@@ -115,6 +115,26 @@ export const REGIONS = [
     },
     ground: 'levant',
   },
+  {
+    id: 'francia', name: { en: 'Francia', zh: '法兰西' },
+    z: [-6350, -5150], center: [-60, -5750],
+    climate: {
+      // a summer afternoon on the Seine: the sun in the west-south-west, soft moist air, clouds
+      // coming and going, now and then a shower
+      sun: { az: 248, el: 34, color: [1.0, 0.9, 0.78], intensity: 3.1 },
+      sky: { turbidity: 3.4, rayleigh: 1.25, mie: 0.0045, mieG: 0.8, zenith: [0.1, 0.15, 0.27], horizon: [0.28, 0.3, 0.32] },
+      fog: { color: [0.58, 0.62, 0.67], density: 0.0005, height: 0.012 },
+      exposure: 0.6,
+      wind: [0.6, 0.3],
+      weather: [
+        { id: 'fair', weight: 3, clouds: 0.4, cloudDensity: 0.5, sun: 1.0, fog: 1.0 },
+        { id: 'cloudy', weight: 3, clouds: 0.68, cloudDensity: 0.62, sun: 0.7, fog: 1.3 },
+        { id: 'overcast', weight: 2, clouds: 0.92, cloudDensity: 0.75, sun: 0.35, fog: 1.8 },
+        { id: 'shower', weight: 1.5, clouds: 0.94, cloudDensity: 0.85, sun: 0.3, fog: 2.2, rain: 0.8 },
+      ],
+    },
+    ground: 'francia',
+  },
 ];
 
 export const REGION = Object.fromEntries(REGIONS.map((r) => [r.id, r]));
@@ -155,7 +175,7 @@ export function skyRadiance(climate, d) {
 
 /** Walkable extent; the landscape continues beyond it to the mountains. */
 export const WORLD = {
-  bounds: [-1150, -5080, 1050, 1180],
+  bounds: [-1150, -6280, 1050, 1180],
   river: { width: 300, bank: 24, depth: 3.4, water: -2.3 },
   far: 700,                                       // how far beyond the bounds the terrain is drawn
 };
@@ -173,11 +193,13 @@ export const SITES = {
   parthenon: { origin: [-165, -2122], yaw: 0, base: 40, region: 'greece', pad: [-46, -26, 50, 26] },
   'hagia-sophia': { origin: [-60, -3300], yaw: 0, base: 24, region: 'byzantium', pad: [-100, -42, 48, 100] },
   'dome-of-the-rock': { origin: [-150, -4550], yaw: 0, base: 30, region: 'levant', pad: [-150, -120, 150, 120] },
+  'sainte-chapelle': { origin: [40, -5750], yaw: 0, base: 1.5, region: 'francia', pad: [-40, -32, 52, 46] },
 };
 
 /** Built-up quarters (towns), where the houses stand and no trees are planted. */
 export const TOWNS = [
   { id: 'constantinople', region: 'byzantium', rects: [[-260, -3470, 60, -3360], [-430, -3355, -185, -3150], [-250, -3190, 75, -3080], [80, -3330, 190, -3160]] },
+  { id: 'paris', region: 'francia', rects: [[-160, -5850, -50, -5700], [-120, -5690, 0, -5600], [-40, -5880, 120, -5815], [-300, -5640, -150, -5540]] },
   { id: 'jerusalem', region: 'levant', rects: [[-600, -4740, -340, -4520], [-380, -4860, -60, -4730], [-440, -4700, -330, -4610]] },
 ];
 export function inTown(x, z) {
@@ -239,9 +261,15 @@ export const LANDFORMS = [
   { kind: 'ridge', id: 'judean', points: [[-850, -4000], [-980, -4500], [-950, -5000]], height: 150, width: 300, rock: 11 },
   { kind: 'ridge', id: 'samaria', points: [[-1900, -5260], [-600, -5220], [0, -5205], [150, -5200]], height: 170, width: 300, endTaper: [80, 220], rock: 10,
     passes: [{ at: -380, depth: 0.93, width: 90 }] },
+  // ── Francia: the Seine's plain, Montmartre to the north, the hill of Sainte-Geneviève to the south ──
+  { kind: 'hill', id: 'montmartre', center: [-330, -6080], radius: [170, 130], height: 62 },
+  { kind: 'hill', id: 'sainte-genevieve', center: [-260, -5470], radius: [190, 130], height: 30 },
+  { kind: 'hill', id: 'chaillot', center: [-650, -5800], radius: [160, 220], height: 40 },
+  { kind: 'ridge', id: 'east-francia', points: [[700, -5200], [760, -5800], [720, -6400]], height: 70, width: 260, rock: 4 },
+  { kind: 'ridge', id: 'north-rim', points: [[-1900, -6460], [-600, -6430], [0, -6420], [900, -6460]], height: 140, width: 300, rock: 8 },
   { kind: 'ridge', id: 'moab', points: [[620, -4000], [700, -4600], [640, -5300]], height: 160, width: 260, rock: 10 },
   // ── the world's rim ──
-  { kind: 'ridge', id: 'west-uplands', points: [[-1500, 1800], [-1450, 400], [-1500, -1000], [-1550, -2400], [-1550, -3300], [-1600, -4200], [-1600, -5400]], height: 120, width: 400, rock: 8 },
+  { kind: 'ridge', id: 'west-uplands', points: [[-1500, 1800], [-1450, 400], [-1500, -1000], [-1550, -2400], [-1550, -3300], [-1600, -4200], [-1600, -5400], [-1600, -6600]], height: 120, width: 400, rock: 8 },
   { kind: 'dunes', id: 'south-erg', polygon: [[-600, 1150], [1100, 1150], [1100, 1900], [-600, 1900]], height: 9, wavelength: 110, dir: [0.7, 0.7] },
 ];
 
@@ -437,6 +465,9 @@ export const ROADS = [
   // the Levant: from Byzantium over the pass of the Thracian ridge, south of the western hill, up to
   // the Haram's west stairs
   { id: 'byzantium-north', width: 7, points: [[-330, -3116], [-450, -3300], [-470, -3520], [-340, -3760], [-300, -4000], [-290, -4250], [-340, -4420], [-330, -4545], [-300, -4550]] },
+  // Francia: from the Haram north over the pass of Samaria, along the foot of Sainte-Geneviève to
+  // the palace courtyard
+  { id: 'levant-north', width: 7, points: [[-300, -4550], [-330, -4700], [-380, -4950], [-380, -5200], [-360, -5420], [-120, -5620], [-20, -5735], [0, -5750]] },
   { id: 'greece-way', width: 7, points: [[-330, -1680], [-420, -1850], [-500, -2010], [-520, -2100], [-420, -2105], [-330, -2105], [-240, -2085], [-150, -2085], [-110, -2108]] },
 ];
 
@@ -520,6 +551,14 @@ const GROUND = {
     const rock = Math.max(steep, smooth(0.05, 0.5, m) * 0.55 + smooth(20, 60, h) * 0.2);
     const soil = Math.max(0, 0.4 + 0.3 * n) * (1 - rock);
     return { grass: Math.max(0, 1 - rock - soil), soil, rock, sand: 0, fields: 0, dry: 0.8, warmth: 0.45, red: 0.55 };
+  },
+  francia(x, z, h, steep) {
+    const n = fbm(x * 0.012 + 8, z * 0.012), m = fbm(x * 0.05 + 3, z * 0.05);
+    const rock = steep * 0.5;
+    // fields in strips on the plain, meadows by the river, vineyards and orchards on the slopes
+    const fields = (1 - smooth(6, 16, h)) * smooth(-0.05, 0.3, fbm(x * 0.005 + 1, z * 0.005)) * 0.85 * (1 - rock);
+    const soil = Math.max(0, 0.1 + 0.2 * m) * (1 - rock - fields);
+    return { grass: Math.max(0, 1 - rock - soil - fields), soil, rock, sand: 0, fields, dry: 0.08 + 0.15 * n, warmth: 0.5, red: 0.05 };
   },
   greece(x, z, h, steep) {
     const n = fbm(x * 0.02, z * 0.02), m = fbm(x * 0.07 + 9, z * 0.07);

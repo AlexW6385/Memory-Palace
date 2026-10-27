@@ -2,6 +2,14 @@
 
 Newest first. What you can visit and what looks better, in plain words.
 
+## v5.6 — Francia and the Sainte-Chapelle (2026-10-27)
+
+- **A new region, Francia,** north of the Levant over a pass: the plain of the Seine with Montmartre and Sainte-Geneviève, oaks, elms, poplars and willows, apple orchards and fields in strips, a summer sky that clouds over and showers, and a town of timber-framed houses with jettied storeys and steep gables.
+- **The Sainte-Chapelle** as consecrated in 1248: the lower chapel under blue vaults on painted columns; up the stair to the upper porch and into the upper chapel — fifteen windows of stained glass between slender gilded shafts, rib vaults of blue with gold stars, the apse with the tribune of the relics, the apostles on the piers; outside, buttresses with pinnacles, gables over the windows, the rose, the steep lead roof and the spire, and the round towers of the palace.
+- **Stained glass that colours the light:** the sun through the windows throws coloured patches; the baked light passes through the glass too.
+- **Gothic vocabulary:** pointed arches, quadripartite and apse rib vaults, bar tracery, buttresses, gables, roofs and spires.
+- **Music:** organum of the Notre-Dame school (a held tenor and a voice in the long–short rhythmic mode), plainchant below, bells outside.
+
 ## v5.5 — Faster start, travel by map (2026-10-27)
 
 - **The world opens by itself** when it is ready — no more Enter button. Click (or press a key) to look around and start the music.

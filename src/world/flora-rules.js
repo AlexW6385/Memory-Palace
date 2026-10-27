@@ -67,6 +67,17 @@ const RULES = {
     grass: ({ g }) => 80 * g.grass,
     boulder: ({ ny, g }) => (ny < 0.85 ? 0.25 * g.rock : 0),
   },
+  francia: {
+    // oaks and elms in the hedgerows and woods, poplars and willows by the water, apple orchards,
+    // lush grass
+    oak: ({ x, z, ny }) => (ny > 0.75 ? 0.05 * smooth(0.0, 0.4, fbm(x * 0.006 + 4, z * 0.006)) : 0),
+    elm: ({ x, z }) => 0.025 * smooth(0.1, 0.45, fbm(x * 0.009 + 6, z * 0.009)),
+    poplar: ({ w, x, z }) => (w > 3 && w < 60 ? 0.12 * smooth(-0.1, 0.3, fbm(x * 0.02 + 2, z * 0.02)) : 0),
+    willow: ({ w }) => (w > 1 && w < 22 ? 0.18 : 0),
+    apple: ({ x, z, h, ny }) => (ny > 0.85 && h < 30 ? 0.3 * smooth(0.15, 0.45, fbm(x * 0.006 + 9, z * 0.006)) : 0),
+    reeds: ({ w }) => (w > -4 && w < 6 ? 1.6 : 0),
+    grass: ({ g }) => 80 * g.grass,
+  },
   levant: {
     // olive groves on terraces, cypresses and Aleppo pines, carobs, low garrigue, dry grass
     olive: ({ x, z, h, ny }) => (ny > 0.8 && h < 50 ? 0.45 * smooth(-0.2, 0.15, fbm(x * 0.005 + 2, z * 0.005)) : 0),
@@ -89,7 +100,7 @@ const RULES = {
 };
 
 /** Species that grow in rows (orchards), with their spacing in metres. */
-export const ROWS = { olive: 9 };
+export const ROWS = { olive: 9, apple: 8 };
 
 /** All the species and densities at a place, blended across region boundaries. */
 export function densities(x, z, place) {
@@ -106,7 +117,7 @@ export function densities(x, z, place) {
 
 /** The largest density each species can reach (for rejection sampling). */
 export const MAX_DENSITY = { date_palm: 1.2, doum_palm: 0.15, sycamore_fig: 0.06, acacia: 0.08, tamarisk: 0.16, papyrus: 2.2, reeds: 3, halfa: 0.25, boulder: 0.7,
-  stone_pine: 0.17, cypress: 0.05, holm_oak: 0.14, oleander: 0.21, grass: 80, olive: 0.55, aleppo_pine: 0.08, maquis: 0.9, grass_dry: 45, plane_tree: 0.06, fig: 0.08, carob: 0.04 };
+  stone_pine: 0.17, cypress: 0.05, holm_oak: 0.14, oleander: 0.21, grass: 80, olive: 0.55, aleppo_pine: 0.08, maquis: 0.9, grass_dry: 45, plane_tree: 0.06, fig: 0.08, carob: 0.04, oak: 0.06, elm: 0.03, poplar: 0.13, willow: 0.18, apple: 0.32 };
 
 /** Small plants scattered only near the viewer. */
 export const NEAR_ONLY = new Set(['grass', 'grass_dry']);
