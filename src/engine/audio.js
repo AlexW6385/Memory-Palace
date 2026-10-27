@@ -166,6 +166,13 @@ export class Music {
           }
           const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420;
           osc.connect(lp); lp.connect(g);
+        } else if (Z.drone.timbre === 'sho') {
+          // the shō: free reeds in bamboo pipes, a bright, still cluster that swells and fades
+          osc.type = 'square'; vg.gain.value = f * 0.0008;
+          bg.gain.value = Z.drone.level / Z.drone.notes.length * 0.9;
+          const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = f * 5; lp.Q.value = 0.5;
+          const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = f * 0.8;
+          osc.connect(hp); hp.connect(lp); lp.connect(g);
         } else {
           const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = f * 3.2; lp.Q.value = 0.7;
           osc.connect(lp); lp.connect(g);
@@ -208,7 +215,7 @@ export class Music {
     const g = ctx.createGain();
     g.gain.value = level;
     // the kithara's gut strings over a wooden box sound brighter and drier than the harp
-    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = timbre === 'kithara' ? 5200 : timbre === 'oud' ? 1900 : timbre === 'pipa' ? 4200 : 3200;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = timbre === 'kithara' ? 5200 : timbre === 'oud' ? 1900 : timbre === 'pipa' ? 4200 : timbre === 'koto' ? 3600 : 3200;
     src.connect(lp); lp.connect(g); g.connect(this.layers.get(this.zone).gain);
     src.start(when);
   }

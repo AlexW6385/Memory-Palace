@@ -214,6 +214,27 @@ function doumPalm(seed, lod) {
   return { trunk: trunk.geometry(), leaves: leaves.geometry(), height: H, solidLeaves: true };
 }
 
+/** A clump of bamboo: tall thin culms, leaning out a little, leafy in their upper half. */
+function bamboo(seed, lod) {
+  const rand = rng(seed), culms = new Mesher(), leaves = new Mesher();
+  const n = lod ? 5 : 11, H = 10 + rand() * 3;
+  for (let i = 0; i < n; i++) {
+    const bx = (rand() - 0.5) * 1.6, bz = (rand() - 0.5) * 1.6, h = H * (0.7 + rand() * 0.3);
+    const lx = bx * 0.25 + (rand() - 0.5) * 0.12, lz = bz * 0.25 + (rand() - 0.5) * 0.12;
+    const pts = [];
+    for (let k = 0; k <= 4; k++) { const t = k / 4; pts.push([bx + lx * h * t * t, h * t, bz + lz * h * t * t, 0.045 * (1 - 0.6 * t)]); }
+    tube(culms, pts, lod ? 3 : 5, H);
+    const cards = lod ? 4 : 10;
+    for (let k = 0; k < cards; k++) {
+      const t = 0.45 + rand() * 0.55, a = rand() * Math.PI * 2;
+      const c = V(bx + lx * h * t * t + Math.cos(a) * 0.5, h * t, bz + lz * h * t * t + Math.sin(a) * 0.5);
+      const nrm = V(Math.cos(a), 0.3 + rand() * 0.4, Math.sin(a)).normalize();
+      card(leaves, c, 1.4, 1.2, nrm, rand() * 6.28, V(bx, h * 0.75, bz), 0.5, Math.pow(t, 1.5));
+    }
+  }
+  return { trunk: culms.geometry(), leaves: leaves.geometry(), height: H };
+}
+
 // ── small plants and stones ──────────────────────────────────────────────────
 
 /** Tuft: crossed cards rising from the ground (grass, reeds, scrub). */
@@ -301,6 +322,10 @@ export const SPECIES = {
   chinese_pine: { make: (s, l) => tree({ height: 13, trunk: { r: 0.32, lean: 0.18, fork: 0.55, limbs: 7, gnarl: 0.5 }, crown: { shape: 'flat', w: 6.0, h: 2.4, y: 0.78, clumps: 12, cards: 40, card: 1.6, up: 0.55 } }, s, l), foliage: 'needles', bark: 'bark_pine', scale: [0.75, 1.2], shadow: true, lod: [180, 1600] },
   arborvitae: { make: (s, l) => tree({ height: 10, trunk: { r: 0.22, lean: 0.03, fork: 0.15, limbs: 0 }, crown: { shape: 'spindle', w: 2.4, h: 6.5, y: 0.5, clumps: 12, cards: 28, card: 1.2, up: 0.0, clumpR: 1.1 } }, s, l), foliage: 'scale', bark: 'bark_dark', scale: [0.75, 1.2], shadow: true, lod: [170, 1500] },
   jujube: { make: (s, l) => tree({ height: 5, trunk: { r: 0.15, lean: 0.15, fork: 0.25, limbs: 5, gnarl: 0.7 }, crown: { shape: 'round', w: 3.2, h: 2.2, y: 0.6, clumps: 8, cards: 28, card: 1.1, up: 0.2 } }, s, l), foliage: 'olive', bark: 'bark_dark', scale: [0.8, 1.2], shadow: true, lod: [120, 900] },
+  red_pine: { make: (s, l) => tree({ height: 14, trunk: { r: 0.27, lean: 0.32, bend: 0.4, fork: 0.6, limbs: 6, gnarl: 0.8 }, crown: { shape: 'clumps', w: 4.6, h: 2.2, y: 0.8, clumps: 9, cards: 34, card: 1.5, up: 0.65 } }, s, l), foliage: 'needles', bark: 'bark_redpine', scale: [0.75, 1.2], shadow: true, lod: [180, 1600] },
+  sugi: { make: (s, l) => tree({ height: 28, trunk: { r: 0.45, lean: 0.01, fork: 0.25, limbs: 0 }, crown: { shape: 'spindle', w: 3.2, h: 11, y: 0.62, clumps: 16, cards: 34, card: 1.6, up: 0.0, clumpR: 1.6 } }, s, l), foliage: 'sugi', bark: 'bark_dark', scale: [0.75, 1.15], shadow: true, lod: [200, 1800] },
+  maple: { make: (s, l) => tree({ height: 8, trunk: { r: 0.2, lean: 0.14, fork: 0.3, limbs: 6, gnarl: 0.5 }, crown: { shape: 'round', w: 4.4, h: 2.8, y: 0.62, clumps: 11, cards: 44, card: 1.3, up: 0.3 } }, s, l), foliage: 'maple', bark: 'bark_grey', scale: [0.75, 1.2], shadow: true, lod: [150, 1300] },
+  bamboo: { make: bamboo, foliage: 'bamboo', bark: 'bamboo_culm', scale: [0.8, 1.15], shadow: true, lod: [120, 900] },
   fig: { make: (s, l) => tree({ height: 5, trunk: { r: 0.18, lean: 0.12, fork: 0.18, limbs: 6, gnarl: 0.6 }, crown: { shape: 'round', w: 3.6, h: 2.4, y: 0.55, clumps: 9, cards: 34, card: 1.35, up: 0.15 } }, s, l), foliage: 'broad', bark: 'bark_grey', scale: [0.75, 1.25], shadow: true, lod: [120, 900] },
   olive: { make: (s, l) => tree({ height: 6, trunk: { r: 0.3, lean: 0.15, fork: 0.32, limbs: 5, gnarl: 1.2 }, crown: { shape: 'clumps', w: 3.4, h: 1.9, y: 0.68, clumps: 9, cards: 38, card: 1.15, up: 0.2 } }, s, l), foliage: 'olive', bark: 'bark_olive', scale: [0.75, 1.25], shadow: true, lod: [150, 1300] },
   aleppo_pine: { make: (s, l) => tree({ height: 12, trunk: { r: 0.26, lean: 0.25, fork: 0.5, limbs: 6, gnarl: 0.4 }, crown: { shape: 'clumps', w: 4, h: 3, y: 0.75, clumps: 10, cards: 30, card: 1.4, up: 0.4 } }, s, l), foliage: 'needles', bark: 'bark_pine', scale: [0.8, 1.2], shadow: true, lod: [170, 1500] },

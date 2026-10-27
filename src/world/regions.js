@@ -155,6 +155,26 @@ export const REGIONS = [
     },
     ground: 'tang',
   },
+  {
+    id: 'heian', name: { en: 'Heian Japan', zh: '平安日本' },
+    z: [-8750, -7550], center: [60, -8180],
+    climate: {
+      // an autumn morning at Uji: the sun low in the east-south-east over the hills across the
+      // river, on the Phoenix Hall's face; soft moist air, mist on the water, showers passing
+      sun: { az: 112, el: 17, color: [1.0, 0.84, 0.66], intensity: 3.0 },
+      sky: { turbidity: 3.6, rayleigh: 1.3, mie: 0.005, mieG: 0.8, zenith: [0.1, 0.15, 0.27], horizon: [0.3, 0.3, 0.31] },
+      fog: { color: [0.6, 0.62, 0.64], density: 0.0005, height: 0.012 },
+      exposure: 0.6,
+      wind: [0.3, 0.3],
+      weather: [
+        { id: 'fair', weight: 3.5, clouds: 0.3, cloudDensity: 0.45, sun: 1.0, fog: 1.0 },
+        { id: 'cloudy', weight: 2.5, clouds: 0.65, cloudDensity: 0.6, sun: 0.72, fog: 1.3 },
+        { id: 'river-mist', weight: 2, clouds: 0.35, cloudDensity: 0.4, sun: 0.6, fog: 5, fogColor: [0.72, 0.73, 0.74] },
+        { id: 'drizzle', weight: 1.5, clouds: 0.95, cloudDensity: 0.8, sun: 0.3, fog: 2.2, rain: 0.5 },
+      ],
+    },
+    ground: 'heian',
+  },
 ];
 
 export const REGION = Object.fromEntries(REGIONS.map((r) => [r.id, r]));
@@ -195,7 +215,7 @@ export function skyRadiance(climate, d) {
 
 /** Walkable extent; the landscape continues beyond it to the mountains. */
 export const WORLD = {
-  bounds: [-1150, -7480, 1050, 1180],
+  bounds: [-1150, -8680, 1050, 1180],
   river: { width: 300, bank: 24, depth: 3.4, water: -2.3 },
   far: 700,                                       // how far beyond the bounds the terrain is drawn
 };
@@ -215,11 +235,23 @@ export const SITES = {
   'dome-of-the-rock': { origin: [-150, -4550], yaw: 0, base: 30, region: 'levant', pad: [-150, -120, 150, 120] },
   'sainte-chapelle': { origin: [40, -5750], yaw: 0, base: 1.5, region: 'francia', pad: [-40, -32, 52, 46] },
   'foguang-east-hall': { origin: [-260, -6950], yaw: 0, base: 8, region: 'tang', pad: [-118, -48, 34, 48] },
+  'byodo-in-phoenix-hall': { origin: [120, -8180], yaw: 0, base: 1.5, region: 'heian', pad: [-60, -78, 100, 78] },
 };
+
+/**
+ * Garden ponds dug into a site's pad: a union of ellipses { c, r } in building-local coordinates
+ * (the pad's frame) and the water level above the base. The ground is dug 1.2 m below the water
+ * and rises to the shore over 5 m; the water cannot be waded (bridges cross it).
+ */
+export const PONDS = [
+  // Aji-ike: in front of the Phoenix Hall and round both ends of its island
+  { site: 'byodo-in-phoenix-hall', level: -0.35, shapes: [{ c: [46, -5], r: [30, 66] }, { c: [-8, -53], r: [36, 11] }, { c: [-8, 53], r: [36, 11] }, { c: [64, 26], r: [16, 20] }] },
+];
 
 /** Built-up quarters (towns), where the houses stand and no trees are planted. */
 export const TOWNS = [
   { id: 'constantinople', region: 'byzantium', rects: [[-260, -3470, 60, -3360], [-430, -3355, -185, -3150], [-250, -3190, 75, -3080], [80, -3330, 190, -3160]] },
+  { id: 'uji', region: 'heian', rects: [[-160, -8420, -20, -8320], [-180, -8070, -40, -7990], [180, -7990, 240, -7880]] },
   { id: 'tang-village', region: 'tang', rects: [[-560, -7080, -430, -6990], [-560, -6920, -430, -6840], [-640, -7020, -575, -6900]] },
   { id: 'paris', region: 'francia', rects: [[-160, -5850, -50, -5700], [-120, -5690, 0, -5600], [-40, -5880, 120, -5815], [-300, -5640, -150, -5540]] },
   { id: 'jerusalem', region: 'levant', rects: [[-600, -4740, -340, -4520], [-380, -4860, -60, -4730], [-440, -4700, -330, -4610]] },
@@ -296,8 +328,16 @@ export const LANDFORMS = [
   { kind: 'hill', id: 'foguang-shan', center: [-110, -6950], radius: [200, 320], height: 58 },
   { kind: 'hill', id: 'loess-west', center: [-640, -6800], radius: [220, 180], height: 55 },
   { kind: 'hill', id: 'loess-north', center: [-520, -7250], radius: [240, 160], height: 48 },
-  { kind: 'ridge', id: 'wutai', points: [[-1900, -7660], [-600, -7630], [0, -7620], [900, -7660]], height: 210, width: 320, rock: 12 },
+  // Mount Wutai: the spur between Tang China and Heian Japan
+  { kind: 'ridge', id: 'wutai', points: [[-1900, -7660], [-600, -7630], [0, -7620], [150, -7615]], height: 210, width: 320, endTaper: [80, 220], rock: 12,
+    passes: [{ at: -480, depth: 0.93, width: 100 }] },
+  { kind: 'ridge', id: 'east-wutai', points: [[640, -7620], [900, -7660], [1500, -7700]], height: 180, width: 300, rock: 10 },
   { kind: 'ridge', id: 'east-tang', points: [[650, -6500], [740, -7000], [700, -7600]], height: 110, width: 260, rock: 8 },
+  // ── Heian Japan: the wooded hills west of Uji, Mount Asahi across the river, the northern mountains ──
+  { kind: 'hill', id: 'uji-west', center: [-330, -8230], radius: [210, 330], height: 62 },
+  { kind: 'hill', id: 'daikichi', center: [-120, -8560], radius: [180, 130], height: 40 },
+  { kind: 'hill', id: 'asahi', center: [720, -8150], radius: [170, 320], height: 95 },
+  { kind: 'ridge', id: 'hira', points: [[-1900, -8880], [-600, -8860], [0, -8850], [900, -8870], [1500, -8900]], height: 230, width: 330, rock: 12 },
   { kind: 'ridge', id: 'moab', points: [[620, -4000], [700, -4600], [640, -5300]], height: 160, width: 260, rock: 10 },
   // ── the world's rim ──
   { kind: 'ridge', id: 'west-uplands', points: [[-1500, 1800], [-1450, 400], [-1500, -1000], [-1550, -2400], [-1550, -3300], [-1600, -4200], [-1600, -5400], [-1600, -6600], [-1600, -7800]], height: 120, width: 400, rock: 8 },
@@ -437,6 +477,29 @@ for (const site of Object.values(SITES)) {
   const [x0, z0, x1, z1] = site.pad, [ox, oz] = site.origin;
   registerPad([ox + x0, oz + z0, ox + x1, oz + z1], site.base);
 }
+const POND_SHAPES = [];
+for (const p of PONDS) {
+  const s = SITES[p.site], [ox, oz] = s.origin;
+  for (const { c, r } of p.shapes) POND_SHAPES.push({ c: [ox + c[0], oz + c[1]], r, y: s.base + p.level });
+}
+/** Signed distance (m, approximate) from the shore of the nearest pond: negative in the water. */
+function pondDistance(x, z) {
+  let best = Infinity, y = 0;
+  for (const P of POND_SHAPES) {
+    const dx = (x - P.c[0]) / P.r[0], dz = (z - P.c[1]) / P.r[1];
+    const d = (Math.hypot(dx, dz) - 1) * Math.min(P.r[0], P.r[1]);
+    if (d < best) { best = d; y = P.y; }
+  }
+  return { d: best, y };
+}
+/** Is (x, z) in a garden pond, below its surface (y: the walker's feet, if on a bridge above)? */
+export function inPond(x, z, y = -Infinity) {
+  if (!POND_SHAPES.length) return false;
+  const p = pondDistance(x, z);
+  return p.d < -1.2 && y < p.y + 0.3;
+}
+/** Water that cannot be waded: the river and the ponds. */
+export function inWater(x, z, y) { return inRiver(x, z) || inPond(x, z, y); }
 
 /** Height of the natural ground (before river and pads). */
 function naturalHeight(x, z) {
@@ -458,6 +521,10 @@ export function terrainHeight(x, z) {
     const d = Math.hypot(dx, dz);
     // just below the base inside the pad, so that paving laid at the base never fights the ground
     if (d < p.blend) h = p.base - 0.12 * (1 - smooth(0, 1, d / 6)) + (h - p.base) * smooth(0, 1, d / p.blend);
+  }
+  if (POND_SHAPES.length) {
+    const p = pondDistance(x, z);
+    if (p.d < 5) { const bed = p.y - 1.2; h = bed + (Math.max(h, bed) - bed) * smooth(-1, 5, p.d); }
   }
   const R = WORLD.river, c = riverCenter(z);
   const e = Math.abs(x - c) - R.width / 2;               // > 0 outside the channel
@@ -501,6 +568,9 @@ export const ROADS = [
   { id: 'levant-north', width: 7, points: [[-300, -4550], [-330, -4700], [-380, -4950], [-380, -5200], [-360, -5420], [-120, -5620], [-20, -5735], [0, -5750]] },
   // Tang China: from Paris over the northern pass, up the valley to the monastery gate
   { id: 'francia-north', width: 6, points: [[-20, -5735], [-200, -5900], [-420, -6150], [-480, -6420], [-470, -6650], [-430, -6900], [-400, -6950], [-380, -6950]] },
+  // Heian Japan: from the Tang village north over the pass of Wutai, down to the plain of Uji and
+  // along the hills to the north shore of the pond
+  { id: 'tang-north', width: 6, points: [[-430, -6900], [-470, -7150], [-490, -7400], [-480, -7620], [-420, -7850], [-260, -8030], [-60, -8100], [60, -8110], [100, -8112]] },
   { id: 'greece-way', width: 7, points: [[-330, -1680], [-420, -1850], [-500, -2010], [-520, -2100], [-420, -2105], [-330, -2105], [-240, -2085], [-150, -2085], [-110, -2108]] },
 ];
 
@@ -600,6 +670,14 @@ const GROUND = {
     const fields = (1 - steep) * smooth(-0.1, 0.25, fbm(x * 0.006 + 4, z * 0.006)) * 0.75 * (1 - smooth(45, 70, h));
     const sand = Math.max(0, 0.25 + 0.3 * m) * (1 - rock - fields);
     return { sand, grass: Math.max(0, 1 - rock - fields - sand) * 0.8, soil: Math.max(0, 1 - rock - fields - sand) * 0.2, rock, fields, dry: 0.55 + 0.2 * n, warmth: 0.8, red: 0.1 };
+  },
+  heian(x, z, h, steep) {
+    const n = fbm(x * 0.013 + 6, z * 0.013), m = fbm(x * 0.05 + 5, z * 0.05);
+    const rock = steep * 0.45;
+    // rice fields on the plain (stubble after the harvest), moss and grass under the woods
+    const fields = (1 - smooth(4, 10, h)) * smooth(-0.05, 0.3, fbm(x * 0.005 + 7, z * 0.005)) * 0.85 * (1 - rock);
+    const soil = Math.max(0, 0.08 + 0.2 * m) * (1 - rock - fields);
+    return { grass: Math.max(0, 1 - rock - soil - fields), soil, rock, sand: 0, fields, dry: 0.2 + 0.2 * n, warmth: 0.3, red: 0.05 };
   },
   greece(x, z, h, steep) {
     const n = fbm(x * 0.02, z * 0.02), m = fbm(x * 0.07 + 9, z * 0.07);

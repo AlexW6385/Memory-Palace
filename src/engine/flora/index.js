@@ -13,8 +13,8 @@ import { WORLD } from '../../world/regions.js';
 
 const BIG = 128, SMALL = 16, NEAR_R = 64;
 
-const FOLIAGE_TEX = { acacia: 'acacia', broad: 'broad', broad_dark: 'broad', tamarisk: 'tamarisk', reed: 'reed', grass: 'grass', grass_dry: 'grass', needles: 'needles', scale: 'scale', olive: 'olive', oleander: 'oleander' };
-const FOLIAGE_TINT = { broad_dark: '#9aa58f', grass_dry: '#e2cf96', grass: '#ffffff' };
+const FOLIAGE_TEX = { acacia: 'acacia', broad: 'broad', broad_dark: 'broad', tamarisk: 'tamarisk', reed: 'reed', grass: 'grass', grass_dry: 'grass', needles: 'needles', scale: 'scale', olive: 'olive', oleander: 'oleander', sugi: 'scale', maple: 'maple', bamboo: 'bamboo' };
+const FOLIAGE_TINT = { sugi: '#a8b29a', broad_dark: '#9aa58f', grass_dry: '#e2cf96', grass: '#ffffff' };
 
 /** The wind: a sway of the upper parts, stronger in a windy weather, each plant with its own phase. */
 function swayNode(amount) {

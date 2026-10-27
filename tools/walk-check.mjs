@@ -7,7 +7,7 @@
 import { BUILDINGS } from '../src/buildings/index.js';
 import { buildPlan, toWorld } from '../src/core/build.js';
 import { CollisionWorld } from '../src/core/collide.js';
-import { terrainHeight, inRiver } from '../src/world/regions.js';
+import { terrainHeight, inWater } from '../src/world/regions.js';
 import { move, WALK } from '../src/core/walk.js';
 
 const ids = process.argv.slice(2);
@@ -17,7 +17,7 @@ for (const b of BUILDINGS) {
   const { plan } = await b.load();
   const cw = new CollisionWorld();
   cw.terrain = terrainHeight;
-  cw.water = inRiver;
+  cw.water = inWater;
   cw.add(buildPlan(plan).colliders);
   const problems = [];
   let legs = 0;

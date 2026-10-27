@@ -50,6 +50,8 @@ export const MATERIALS = {
   bark_pine:        { color: '#6b4d3a', roughness: 0.95, kind: 'bark', plates: 1 },
   bark_plane:       { color: '#9c9783', roughness: 0.85, kind: 'bark' },            // plane tree: peeling, mottled
   bark_olive:       { color: '#6f6a60', roughness: 0.92, kind: 'bark' },
+  bark_redpine:     { color: '#8a5440', roughness: 0.92, kind: 'bark', plates: 1 },   // Japanese red pine: reddish, flaking above
+  bamboo_culm:      { color: '#7f8b4d', roughness: 0.55, kind: 'smooth' },
   rock_boulder:     { color: '#8f897f', roughness: 0.9, kind: 'rock' },
   // Byzantine (Hagia Sophia, 562): gold glass mosaic, book-matched revetment, verde antico, lead
   mosaic_gold:      { color: '#c8963a', roughness: 0.3, metalness: 1, kind: 'mosaic' },
@@ -86,6 +88,17 @@ export const MATERIALS = {
   clay_robe:        { color: '#8a3b2b', roughness: 0.7, kind: 'smooth' },
   clay_green:       { color: '#3f6a54', roughness: 0.7, kind: 'smooth' },
   ceiling_grid:     { color: '#6e3a24', roughness: 0.75, kind: 'fleur', colors: ['#7a4127', '#2e1a10'], grid: 1 },
+  // Heian Japan: red earth paint (ni) on the timber, white plaster, dark clay tiles, cypress bark
+  timber_ni:        { color: '#9a3b22', roughness: 0.75, kind: 'wood' },
+  paint_ochre:      { color: '#c9a04a', roughness: 0.8, kind: 'smooth' },
+  plaster_white:    { color: '#e2ddd0', roughness: 0.9, kind: 'smooth' },
+  tile_dark:        { color: '#45484c', roughness: 0.7, kind: 'tiles' },
+  roof_bark:        { color: '#5a4334', roughness: 0.95, kind: 'bark' },
+  thatch:           { color: '#7d6a4c', roughness: 1.0, kind: 'bark' },
+  roof_ridge:       { color: '#4a3d33', roughness: 0.95, kind: 'wood' },
+  pebbles:          { color: '#8e8a83', roughness: 0.95, kind: 'rock' },
+  lacquer_black:    { color: '#1c1714', roughness: 0.3, kind: 'smooth' },
+  ceiling_coffer:   { color: '#7a3a22', roughness: 0.7, kind: 'fleur', colors: ['#8a4428', '#c9a04a'], grid: 1 },
   paint_white:      { color: '#ddd6c6', roughness: 0.85, kind: 'smooth' },
   flame:            { color: '#000000', roughness: 1, kind: 'flame' },
   glass_lamp:       { color: '#b9c6b4', roughness: 0.08, kind: 'smooth' },

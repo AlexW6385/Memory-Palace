@@ -9,7 +9,7 @@ import { registerStyle } from '../../core/build.js';
 import { box, lathe, fromTriangles, orientOutward } from '../../core/geom.js';
 import { byzantineElements } from '../byzantine/index.js';
 
-function hexa(out, b, t) {
+export function hexa(out, b, t) {
   const tris = [];
   const q = (a, b2, c, d) => tris.push(...a, ...b2, ...c, ...a, ...c, ...d);
   q(b[0], b[1], b[2], b[3]); q(t[0], t[3], t[2], t[1]);
@@ -18,7 +18,7 @@ function hexa(out, b, t) {
 }
 
 /** A box in a local frame: centre c [x, z], axes u (along) and n (out), extents ±hu, ±hn, y0…y1. */
-function obox(out, c, u, n, hu, hn, y0, y1, nOff = 0) {
+export function obox(out, c, u, n, hu, hn, y0, y1, nOff = 0) {
   const P = (a, b, y) => [c[0] + u[0] * a + n[0] * (b + nOff), y, c[1] + u[1] * a + n[1] * (b + nOff)];
   hexa(out, [P(-hu, -hn, y0), P(hu, -hn, y0), P(hu, hn, y0), P(-hu, hn, y0)], [P(-hu, -hn, y1), P(hu, -hn, y1), P(hu, hn, y1), P(-hu, hn, y1)]);
 }
@@ -34,7 +34,7 @@ function slant(out, c, u, n, hu, n0, y0, n1, y1, d) {
  * along the wall with small blocks; in the upper tiers descending cantilevers (ang) cut like split
  * bamboo; the topmost arm and a beam-end under the eave purlin. `both` also steps inward.
  */
-function bracketSet(el, { bag }) {
+export function bracketSet(el, { bag }) {
   const [x, z] = el.at, y = el.y, n = el.dir, u = [-n[1], n[0]], T = el.tiers || 4, s = el.step || 0.48;
   const out = [], blocks = [];
   const c = [x, z];
@@ -67,16 +67,15 @@ function bracketSet(el, { bag }) {
 }
 
 /** A hipped roof (wudian) { c [x, z], A, B (half-sizes at the eave edge, A ≥ B), y (eave), rise, lift, mat }. */
-function hipRoof(el, ctx) {
-  // a hall whose long side runs along z: build it along x and turn it a quarter round its centre
-  if (el.alongZ) {
-    const list = [];
-    hipRoofX(el, { bag: { add: (mat, g) => list.push([mat, g]) } });
-    const [cx, cz] = el.c;
-    for (const [mat, g] of list) { g.translate(-cx, 0, -cz); g.rotateY(Math.PI / 2); g.translate(cx, 0, cz); ctx.bag.add(mat, g); }
-    return;
-  }
-  hipRoofX(el, ctx);
+function hipRoof(el, ctx) { alongZ(hipRoofX, el, ctx); }
+
+/** Build a roof along x, or — for a hall whose long side runs along z — turn it a quarter round its centre. */
+export function alongZ(fn, el, ctx) {
+  if (!el.alongZ) return fn(el, ctx);
+  const list = [];
+  fn(el, { ...ctx, bag: { add: (mat, g) => list.push([mat, g]) } });
+  const [cx, cz] = el.c;
+  for (const [mat, g] of list) { g.translate(-cx, 0, -cz); g.rotateY(Math.PI / 2); g.translate(cx, 0, cz); ctx.bag.add(mat, g); }
 }
 function hipRoofX(el, { bag }) {
   const [cx, cz] = el.c, A = el.A, B = el.B, R = el.rise, U = el.lift ?? 0.6;
@@ -128,6 +127,7 @@ function hipRoofX(el, { bag }) {
   obox(r, [cx, cz], [1, 0], [0, 1], L + 0.2, 0.3, top - 0.1, top + 0.75);
   for (const s of [-1, 1]) {
     const ex = cx + s * (L + 0.1);
+    if (!el.noChiwei)
     // a chiwei: a tall ornament curling inward, built of stacked blocks
     for (let k = 0; k < 6; k++) obox(r, [ex - s * (0.18 * k * k / 6), cz], [1, 0], [0, 1], 0.42 - k * 0.03, 0.22, top + 0.6 + k * 0.42, top + 1.05 + k * 0.42);
     for (const sz of [-1, 1]) {
@@ -141,11 +141,12 @@ function hipRoofX(el, { bag }) {
       }
     }
   }
-  bag.add('tile_grey', fromTriangles(r));
+  bag.add(el.ridgeMat || 'tile_grey', fromTriangles(r));
 }
 
 /** A gabled roof (for gates and lesser halls) { c, A, B, y, rise, mat } with a ridge. */
-function gableRoofC(el, { bag }) {
+function gableRoofC(el, ctx) { alongZ(gableRoofCX, el, ctx); }
+function gableRoofCX(el, { bag }) {
   const [cx, cz] = el.c, A = el.A, B = el.B, y = el.y, R = el.rise;
   const tris = [], under = [];
   const prof = (t) => y + R * Math.pow(t, 1.4);
@@ -163,9 +164,22 @@ function gableRoofC(el, { bag }) {
   }
   for (let i = 0; i < tris.length; i += 9) under.push(tris[i], tris[i + 1] - 0.25, tris[i + 2], tris[i + 6], tris[i + 7] - 0.25, tris[i + 8], tris[i + 3], tris[i + 4] - 0.25, tris[i + 5]);
   bag.add(el.mat || 'tile_grey', fromTriangles(tris));
-  bag.add('timber_red', fromTriangles(under));
-  bag.add('tile_grey', box(cx - A - 0.1, y + R - 0.1, cz - 0.25, cx + A + 0.1, y + R + 0.5, cz + 0.25));
-  for (const s of [-1, 1]) bag.add('tile_grey', box(cx + s * A - 0.25, y + R, cz - 0.22, cx + s * A + 0.25, y + R + 1.1, cz + 0.22));
+  bag.add(el.soffit || 'timber_red', fromTriangles(under));
+  const rm = el.ridgeMat || 'tile_grey';
+  bag.add(rm, box(cx - A - 0.1, y + R - 0.1, cz - 0.25, cx + A + 0.1, y + R + 0.5, cz + 0.25));
+  if (!el.noHorns) for (const s of [-1, 1]) bag.add(rm, box(cx + s * A - 0.25, y + R, cz - 0.22, cx + s * A + 0.25, y + R + 1.1, cz + 0.22));
+  // the gable ends closed by boards
+  if (el.gableMat) {
+    const g = [];
+    for (const s of [-1, 1]) {
+      const x = cx + s * (A - 0.6);
+      for (let k = 0; k < N; k++) for (const sz of [-1, 1]) {
+        const t0 = k / N, t1 = (k + 1) / N, z0 = cz + sz * B * (1 - t0) * 0.82, z1 = cz + sz * B * (1 - t1) * 0.82;
+        g.push(x, y, cz, x, prof(t0) - 0.3, z0, x, prof(t1) - 0.3, z1, x, y, cz, x, prof(t1) - 0.3, z1, x, prof(t0) - 0.3, z0);
+      }
+    }
+    bag.add(el.gableMat, fromTriangles(g));
+  }
 }
 
 /** A round timber column on a lotus base { at, y, h, d }. */
@@ -178,21 +192,23 @@ function column(el, { bag, col }) {
 }
 
 /** A seated Buddha on a lotus throne { at, y, h, yaw }: massing of throne, crossed legs, robe, head and halo. */
-function buddha(el, { bag }) {
+export function buddha(el, { bag }) {
   const [x, z] = el.at, y = el.y, H = el.h || 5.2, s = H / 5.2, dir = el.dir || [-1, 0];
-  bag.add('clay_robe', lathe([[1.5 * s, 0], [1.4 * s, 0.4 * s], [1.0 * s, 0.6 * s], [1.0 * s, 1.0 * s]], 16, null, x, y, z));
-  bag.add('clay_gilt', lathe([[0.9 * s, 0], [1.55 * s, 0.25 * s], [1.6 * s, 0.45 * s], [1.3 * s, 0.6 * s]], 24, (th) => 1 + 0.07 * Math.abs(Math.cos(th * 8)), x, y + 1.0 * s, z));
+  const robe = el.robe || 'clay_robe', gilt = el.gilt || 'clay_gilt';
+  if (!el.noThrone) bag.add(robe, lathe([[1.5 * s, 0], [1.4 * s, 0.4 * s], [1.0 * s, 0.6 * s], [1.0 * s, 1.0 * s]], 16, null, x, y, z));
+  if (!el.noThrone) bag.add(gilt, lathe([[0.9 * s, 0], [1.55 * s, 0.25 * s], [1.6 * s, 0.45 * s], [1.3 * s, 0.6 * s]], 24, (th) => 1 + 0.07 * Math.abs(Math.cos(th * 8)), x, y + 1.0 * s, z));
   const b = y + 1.6 * s;
   // the crossed legs: an oval wider across than deep; then the body, the shoulders, the neck
   const legs = lathe([[1.0 * s, 0], [1.02 * s, 0.25 * s], [0.85 * s, 0.48 * s], [0.001, 0.52 * s]], 24, null, 0, 0, 0);
   legs.scale(Math.abs(dir[1]) > 0.5 ? 1.35 : 0.8, 1, Math.abs(dir[1]) > 0.5 ? 0.8 : 1.35); legs.translate(x, b, z);
-  bag.add('clay_robe', legs);
-  bag.add('clay_robe', lathe([[0.62 * s, 0.4 * s], [0.6 * s, 1.0 * s], [0.66 * s, 1.5 * s], [0.68 * s, 1.68 * s], [0.42 * s, 1.92 * s], [0.18 * s, 2.05 * s]], 20, null, x, b, z));
-  bag.add('clay_gilt', lathe([[0.001, 2.05 * s], [0.3 * s, 2.15 * s], [0.34 * s, 2.45 * s], [0.25 * s, 2.7 * s], [0.12 * s, 2.85 * s], [0.001, 2.92 * s]], 16, null, x, b, z));
+  bag.add(robe, legs);
+  bag.add(robe, lathe([[0.62 * s, 0.4 * s], [0.6 * s, 1.0 * s], [0.66 * s, 1.5 * s], [0.68 * s, 1.68 * s], [0.42 * s, 1.92 * s], [0.18 * s, 2.05 * s]], 20, null, x, b, z));
+  bag.add(gilt, lathe([[0.001, 2.05 * s], [0.3 * s, 2.15 * s], [0.34 * s, 2.45 * s], [0.25 * s, 2.7 * s], [0.12 * s, 2.85 * s], [0.001, 2.92 * s]], 16, null, x, b, z));
   // the halo, a disc behind the head
+  if (el.noHalo) return;
   const hx = x - dir[0] * 0.45 * s, hz = z - dir[1] * 0.45 * s;
   const R = 0.85 * s, yc = b + 2.45 * s;
-  bag.add('clay_gilt', lathe([[0.001, -0.04], [R, -0.04], [R, 0.04], [0.001, 0.04]], 24, null, 0, 0, 0).rotateX(Math.PI / 2).rotateY(Math.atan2(dir[0], dir[1])).translate(hx, yc, hz));
+  bag.add(gilt, lathe([[0.001, -0.04], [R, -0.04], [R, 0.04], [0.001, 0.04]], 24, null, 0, 0, 0).rotateX(Math.PI / 2).rotateY(Math.atan2(dir[0], dir[1])).translate(hx, yc, hz));
 }
 
 /** A standing figure (attendant, heavenly king) { at, y, h, robe }. */
@@ -230,6 +246,8 @@ function pagoda(el, { bag, col }) {
   bag.add('opening', box(x - 0.5, y + 0.7, z - 1.52, x + 0.5, y + 2.2, z - 1.49));
   col.circle(x, z, 1.7, y, y + 6);
 }
+
+export { hipRoof, gableRoofC, column as chineseColumn };
 
 registerStyle('chinese', {
   column,
