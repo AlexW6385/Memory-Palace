@@ -10,4 +10,5 @@ export const BUILDINGS = [
   { id: 'sainte-chapelle', district: 'francia', load: () => import('./sainte-chapelle/index.js') },
   { id: 'foguang-east-hall', district: 'tang', load: () => import('./foguang-east-hall/index.js') },
   { id: 'byodo-in-phoenix-hall', district: 'heian', load: () => import('./byodo-in-phoenix-hall/index.js') },
+  { id: 'sanchi-great-stupa', district: 'india', load: () => import('./sanchi-great-stupa/index.js') },
 ];

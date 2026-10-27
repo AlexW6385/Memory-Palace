@@ -92,6 +92,19 @@ const RULES = {
     grass: ({ g }) => 80 * g.grass,
     boulder: ({ ny, g }) => (ny < 0.85 ? 0.2 * g.rock : 0),
   },
+  india: {
+    // dry deciduous forest on the hills (teak, neem), great banyans by the villages and the roads,
+    // palmyra palms on the plain and by the water, acacias and scrub, dry grass
+    teak: ({ x, z, h, ny }) => (ny > 0.6 ? 0.04 * smooth(5, 30, h) + 0.02 * smooth(0.1, 0.5, fbm(x * 0.008 + 3, z * 0.008)) : 0),
+    neem: ({ x, z }) => 0.025 * smooth(0.0, 0.45, fbm(x * 0.01 + 7, z * 0.01)) + 0.005,
+    banyan: ({ x, z, h }) => (h < 20 ? 0.006 + 0.01 * smooth(0.3, 0.6, fbm(x * 0.006 + 1, z * 0.006)) : 0),
+    date_palm: ({ x, z, w, g }) => (w > 2 ? 0.25 * Math.exp(-w / 70) + 0.08 * g.fields * smooth(0.1, 0.5, fbm(x * 0.02 + 4, z * 0.02)) : 0),
+    acacia: ({ x, z, g }) => 0.03 * g.grass * smooth(0.2, 0.6, fbm(x * 0.02 + 9, z * 0.02)),
+    maquis: ({ ny, g }) => (ny > 0.5 ? 0.35 * (g.grass + g.rock * 0.5) : 0),
+    reeds: ({ w }) => (w > -4 && w < 6 ? 1.6 : 0),
+    grass_dry: ({ g }) => 45 * g.grass,
+    boulder: ({ ny, g }) => 0.3 * g.rock + (ny < 0.8 ? 0.2 : 0),
+  },
   francia: {
     // oaks and elms in the hedgerows and woods, poplars and willows by the water, apple orchards,
     // lush grass
@@ -142,7 +155,7 @@ export function densities(x, z, place) {
 
 /** The largest density each species can reach (for rejection sampling). */
 export const MAX_DENSITY = { date_palm: 1.2, doum_palm: 0.15, sycamore_fig: 0.06, acacia: 0.08, tamarisk: 0.16, papyrus: 2.2, reeds: 3, halfa: 0.25, boulder: 0.7,
-  stone_pine: 0.17, cypress: 0.05, holm_oak: 0.14, oleander: 0.21, grass: 80, olive: 0.55, aleppo_pine: 0.08, maquis: 0.9, grass_dry: 45, plane_tree: 0.06, fig: 0.08, carob: 0.04, oak: 0.06, elm: 0.03, poplar: 0.13, willow: 0.18, apple: 0.32, chinese_pine: 0.08, arborvitae: 0.02, jujube: 0.07, red_pine: 0.07, sugi: 0.04, maple: 0.05, bamboo: 0.5 };
+  stone_pine: 0.17, cypress: 0.05, holm_oak: 0.14, oleander: 0.21, grass: 80, olive: 0.55, aleppo_pine: 0.08, maquis: 0.9, grass_dry: 45, plane_tree: 0.06, fig: 0.08, carob: 0.04, oak: 0.06, elm: 0.03, poplar: 0.13, willow: 0.18, apple: 0.32, chinese_pine: 0.08, arborvitae: 0.02, jujube: 0.07, red_pine: 0.07, sugi: 0.04, maple: 0.05, bamboo: 0.5, teak: 0.07, neem: 0.03, banyan: 0.016 };
 
 /** Small plants scattered only near the viewer. */
 export const NEAR_ONLY = new Set(['grass', 'grass_dry']);

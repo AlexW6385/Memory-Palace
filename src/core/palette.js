@@ -88,6 +88,10 @@ export const MATERIALS = {
   clay_robe:        { color: '#8a3b2b', roughness: 0.7, kind: 'smooth' },
   clay_green:       { color: '#3f6a54', roughness: 0.7, kind: 'smooth' },
   ceiling_grid:     { color: '#6e3a24', roughness: 0.75, kind: 'fleur', colors: ['#7a4127', '#2e1a10'], grid: 1 },
+  // India (Sanchi): buff and pinkish sandstone, lime plaster on the dome, Ashoka's polished stone
+  sandstone_rail:   { color: '#bf9a7c', roughness: 0.86, kind: 'smooth' },
+  lime_plaster:     { color: '#e0d8c6', roughness: 0.92, kind: 'smooth' },
+  polished_sandstone: { color: '#c9b69a', roughness: 0.25, kind: 'smooth' },
   // Heian Japan: red earth paint (ni) on the timber, white plaster, dark clay tiles, cypress bark
   timber_ni:        { color: '#9a3b22', roughness: 0.75, kind: 'wood' },
   paint_ochre:      { color: '#c9a04a', roughness: 0.8, kind: 'smooth' },

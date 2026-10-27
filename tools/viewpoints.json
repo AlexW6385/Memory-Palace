@@ -415,6 +415,16 @@
       ],
       "yaw": 0.418,
       "pitch": 0.05
+    },
+    {
+      "name": "malwa",
+      "at": [
+        -150,
+        2,
+        -9050
+      ],
+      "yaw": 0.0,
+      "pitch": 0.12
     }
   ],
   "hagia-sophia": [
@@ -735,6 +745,58 @@
       ],
       "yaw": 0.927,
       "pitch": -0.25
+    }
+  ],
+  "sanchi-great-stupa": [
+    {
+      "name": "approach",
+      "at": [
+        0,
+        0,
+        44
+      ],
+      "yaw": 0.0,
+      "pitch": 0.15
+    },
+    {
+      "name": "gateway",
+      "at": [
+        -6,
+        0,
+        33
+      ],
+      "yaw": -0.785,
+      "pitch": 0.3
+    },
+    {
+      "name": "walk",
+      "at": [
+        -20.6,
+        0,
+        4
+      ],
+      "yaw": 0.0,
+      "pitch": 0.15
+    },
+    {
+      "name": "terrace",
+      "at": [
+        -17.3,
+        4.3,
+        3
+      ],
+      "yaw": 0.0,
+      "pitch": 0.1
+    },
+    {
+      "name": "aerial",
+      "at": [
+        70,
+        45,
+        70
+      ],
+      "yaw": 0.785,
+      "pitch": -0.4
     }
   ]
 }
