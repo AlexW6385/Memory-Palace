@@ -141,15 +141,37 @@ export class Music {
     return b;
   }
 
-  pluck(midi, when, level) {
+  pluck(midi, when, level, timbre) {
     const ctx = this.ctx;
     const src = ctx.createBufferSource();
     src.buffer = this.harpBuffer(midi);
     const g = ctx.createGain();
     g.gain.value = level;
-    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200;
+    // the kithara's gut strings over a wooden box sound brighter and drier than the harp
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = timbre === 'kithara' ? 5200 : 3200;
     src.connect(lp); lp.connect(g); g.connect(this.layers.get(this.zone).gain);
     src.start(when);
+  }
+
+  /** A reed melody note: two slightly detuned pipes (the double aulos), nasal formant, breath. */
+  blow(midi, when, dur, level) {
+    const ctx = this.ctx, f = mtof(midi);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.exponentialRampToValueAtTime(level, when + 0.08);
+    g.gain.setValueAtTime(level, when + dur * 0.7);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1250; bp.Q.value = 1.4;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = f * 6;
+    for (const det of [-4, 4]) {
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = det;
+      const v = ctx.createOscillator(), vg = ctx.createGain();
+      v.frequency.value = 5.2; vg.gain.value = f * 0.006;
+      v.connect(vg); vg.connect(o.frequency);
+      o.connect(bp); o.start(when); o.stop(when + dur + 0.05); v.start(when); v.stop(when + dur + 0.05);
+    }
+    bp.connect(lp); lp.connect(g); g.connect(this.layers.get(this.zone).gain);
   }
 
   sistrum(when, level) {
@@ -213,10 +235,19 @@ export class Music {
           const deg = this.phrase.deg, oct = Math.floor(deg / sc.length), st = sc[((deg % sc.length) + sc.length) % sc.length];
           const midi = S.tonic + oct * 12 + st;
           const swing = (Math.random() - 0.5) * 0.06;
-          this.pluck(midi, t + swing, Z.harp.level * (0.6 + Math.random() * 0.4));
-          if (Math.random() < 0.18) this.pluck(midi - 7, t + swing + 0.02, Z.harp.level * 0.5);     // a fifth below
+          this.pluck(midi, t + swing, Z.harp.level * (0.6 + Math.random() * 0.4), Z.harp.timbre);
+          if (Math.random() < 0.18) this.pluck(midi - 7, t + swing + 0.02, Z.harp.level * 0.5, Z.harp.timbre);     // a fifth below
           if (this.phrase.left === 0) this.beat += 2 + Math.floor(Math.random() * 4);           // breath between phrases
         }
+      }
+      // reed melody: long notes moving by step, often answering the strings
+      if (Z.lead && beat % 2 === 0 && Math.random() < Z.lead.density) {
+        const sc = S.scale, [lo, hi] = Z.lead.range;
+        this.leadDeg = (this.leadDeg ?? Math.floor(sc.length * 1.5)) + [-1, -1, 0, 1, 1, 2, -2][Math.floor(Math.random() * 7)];
+        const minDeg = Math.ceil((lo / 12) * sc.length), maxDeg = Math.floor((hi / 12) * sc.length);
+        this.leadDeg = Math.max(minDeg, Math.min(maxDeg, this.leadDeg));
+        const d = this.leadDeg, midi = S.tonic + Math.floor(d / sc.length) * 12 + sc[((d % sc.length) + sc.length) % sc.length];
+        this.blow(midi, t, spb * (1.5 + Math.random() * 2), Z.lead.level);
       }
       if (Z.sistrum && beat % Z.sistrum.every === Z.sistrum.every - 1 && Math.random() < 0.7) this.sistrum(t, Z.sistrum.level);
       if (Z.drum) {

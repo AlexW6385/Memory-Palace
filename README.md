@@ -12,6 +12,9 @@ The name is meant in two senses. These buildings are the memory of civilizations
 
 - **The Temple of Horus at Edfu** (Ptolemaic Egypt, 237–57 BC), the best preserved temple of ancient Egypt, at true scale: the pylon with its flagpoles and granite falcons, the court of 32 columns, the pronaos of 18, the hall of appearances, the offering hall, the hall of the Ennead, the sanctuary with the granite naos of Nectanebo II and the sacred barque, the corridor of mysteries and its nine chapels, and the ambulatory inside the enclosure wall — each hall higher, lower and darker than the last. On the bank of a river, among palms.
 
+- **The Parthenon** (Athens, 447–432 BC) on its Acropolis rock: the full Doric order, the pediments, the two-tier colonnade around the gold-and-ivory Athena Parthenos and the pool before her, and the treasury room with its four Ionic columns.
+- **The Pantheon** (Rome, c. AD 114–128): the portico of sixteen granite columns, the bronze doors, the rotunda of coloured marbles under the coffered dome and its open oculus.
+
 More buildings, one from each major tradition, are next (see [DESIGN.md](DESIGN.md) §11).
 
 ## Controls

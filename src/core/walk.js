@@ -15,6 +15,9 @@ export function move(P, dx, dz, dt, C) {
     [nx, nz] = C.resolve(nx, nz, RADIUS, Math.max(g, P.y) + LOW, Math.max(g, P.y) + HEAD);
     g = C.groundAt(nx, nz, P.y + STEP);
     if (!Number.isFinite(g)) continue;
+    // open ground steeper than about 40° cannot be climbed (built steps and ramps can)
+    const run = Math.hypot(nx - P.x, nz - P.z);
+    if (g - P.y > Math.max(0.02, run * 0.85) && Math.abs(g - C.terrain(nx, nz)) < 1e-6) continue;
     P.x = nx; P.z = nz;
     if (g >= P.y - STEP && P.vy === 0) P.y = g;   // follow steps up and down
   }

@@ -3,6 +3,7 @@
 // the temple runs north toward −z. Metres, true scale.
 
 import { CAPITAL_TYPES } from '../../styles/egyptian/columns.js';
+import { SITES } from '../../world/layout.js';
 
 const E = [];
 const add = (o) => (E.push(o), o);
@@ -282,8 +283,7 @@ export const edfu = {
   era: { en: 'Ptolemaic Egypt, 237–57 BC', zh: '托勒密埃及，前237—前57年' },
   style: 'egyptian',
   district: 'nile',
-  origin: [0, 0],
-  yaw: 0,
+  ...SITES.edfu,
   entrance: { at: [0, 26], facing: 'n' },
   bounds: [-44, -139, 44, 31],      // local rect the light bake covers
   bakeTop: 18,

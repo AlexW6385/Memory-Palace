@@ -155,8 +155,9 @@ const GENERIC = {
   },
 
   /** Architrave or beam of rectangular section, bottom at y. */
-  beam(el, { bag }) {
+  beam(el, { bag, col }) {
     bag.add(el.mat || 'sandstone', orientedBox(el.a, el.b, el.w, el.y, el.y + el.h, el.ext ?? 0));
+    col.segment(el.a, el.b, el.w, el.y, el.y + el.h);     // overhead: blocks nothing, but supports what stands on it
   },
 
   /** Straight flight of steps rising from y0 to y1 in direction dir across rect. */

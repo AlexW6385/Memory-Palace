@@ -3,6 +3,7 @@
 
 import { tr, t } from './i18n.js';
 import { WORLD } from '../engine/world.js';
+import { LANDFORMS } from '../world/layout.js';
 
 export class MapView {
   constructor(world, onJump) {
@@ -22,7 +23,7 @@ export class MapView {
 
   renderList() {
     this.list.innerHTML = '';
-    for (const rec of this.world.buildings.values()) {
+    for (const rec of this.world.plans.values()) {
       const li = document.createElement('li');
       const b = document.createElement('button');
       b.innerHTML = `<span class="name"></span><span class="era"></span>`;
@@ -38,11 +39,9 @@ export class MapView {
     const cv = this.canvas, r = cv.getBoundingClientRect();
     cv.width = r.width * devicePixelRatio; cv.height = r.height * devicePixelRatio;
     let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
-    for (const rec of this.world.buildings.values()) {
-      for (const o of rec.built.colliders.obstacles) {
-        x0 = Math.min(x0, o.bb?.[0] ?? Infinity); z0 = Math.min(z0, o.bb?.[1] ?? Infinity);
-        x1 = Math.max(x1, o.bb?.[2] ?? -Infinity); z1 = Math.max(z1, o.bb?.[3] ?? -Infinity);
-      }
+    for (const rec of this.world.plans.values()) {
+      const b = this.world.constructor.worldBounds(rec.plan);
+      x0 = Math.min(x0, b[0]); z0 = Math.min(z0, b[1]); x1 = Math.max(x1, b[2]); z1 = Math.max(z1, b[3]);
     }
     if (this.player) { x0 = Math.min(x0, this.player.x); x1 = Math.max(x1, this.player.x); z0 = Math.min(z0, this.player.z); z1 = Math.max(z1, this.player.z); }
     if (!Number.isFinite(x0)) { x0 = -100; z0 = -100; x1 = 100; z1 = 100; }
@@ -64,6 +63,12 @@ export class MapView {
     const [ra] = this.toScreen(R.x0, 0), [rb] = this.toScreen(R.x1, 0);
     g.fillStyle = '#28434a';
     g.fillRect(ra, 0, rb - ra, cv.height);
+    // hills: their tops and the foot of their slopes
+    for (const L of LANDFORMS) {
+      const [a, b] = this.toScreen(L.center[0] - L.half[0], L.center[1] - L.half[1]), [c, d] = this.toScreen(L.center[0] + L.half[0], L.center[1] + L.half[1]);
+      g.fillStyle = 'rgba(160, 150, 130, 0.35)';
+      g.beginPath(); g.roundRect?.(a, b, c - a, d - b, L.round * v.s); g.fill();
+    }
     // floors (light) then obstacles (dark), per building
     for (const rec of this.world.buildings.values()) {
       g.fillStyle = 'rgba(214, 190, 150, 0.22)';
@@ -78,7 +83,14 @@ export class MapView {
         else { o.poly.forEach(([x, z], i) => { const [px, py] = this.toScreen(x, z); i ? g.lineTo(px, py) : g.moveTo(px, py); }); g.closePath(); }
         g.fill();
       }
-      // name
+    }
+    // buildings not yet built: their outline; then every name
+    for (const rec of this.world.plans.values()) {
+      if (!this.world.buildings.has(rec.id)) {
+        const b = this.world.constructor.worldBounds(rec.plan);
+        const [a, c] = this.toScreen(b[0], b[1]), [d, e2] = this.toScreen(b[2], b[3]);
+        g.strokeStyle = 'rgba(232, 214, 180, 0.6)'; g.strokeRect(a, c, d - a, e2 - c);
+      }
       const e = this.world.entrance(rec.plan);
       const [nx, ny] = this.toScreen(e[0], e[2]);
       g.fillStyle = '#f3ead9';
@@ -86,11 +98,22 @@ export class MapView {
       g.textAlign = 'center';
       g.fillText(tr(rec.plan.name), nx, ny + 22 * devicePixelRatio);
     }
-    // district name
-    g.fillStyle = 'rgba(243,234,217,0.5)';
-    g.font = `italic ${13 * devicePixelRatio}px Palatino, Georgia, serif`;
-    g.textAlign = 'left';
-    g.fillText(t('districts').nile, 12 * devicePixelRatio, 22 * devicePixelRatio);
+    // district names, above the buildings of each district
+    const groups = new Map();
+    for (const rec of this.world.plans.values()) {
+      const e = this.world.entrance(rec.plan);
+      const k = rec.plan.district;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(e);
+    }
+    g.fillStyle = 'rgba(243,234,217,0.62)';
+    g.font = `italic ${15 * devicePixelRatio}px Palatino, Georgia, serif`;
+    g.textAlign = 'center';
+    for (const [k, list] of groups) {
+      const x = list.reduce((s, e) => s + e[0], 0) / list.length, z = Math.min(...list.map((e) => e[2]));
+      const [px, py] = this.toScreen(x, z);
+      g.fillText(t('districts')[k] || k, px, py - 70 * devicePixelRatio);
+    }
     // the visitor
     if (this.player) {
       const [px, py] = this.toScreen(this.player.x, this.player.z), a = this.player.yaw;

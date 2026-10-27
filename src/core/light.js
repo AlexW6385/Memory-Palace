@@ -19,7 +19,7 @@ export const SUN_COLOR = [1.0, 0.94, 0.84];
 export const SUN_INTENSITY = 4.2;
 
 /** Sky radiance, linear RGB, at the zenith and at the horizon. */
-export const SKY_ZENITH = [0.11, 0.17, 0.31];
+export const SKY_ZENITH = [0.13, 0.18, 0.28];
 export const SKY_HORIZON = [0.27, 0.28, 0.29];
 
 /** Sky radiance seen along direction d (unit vector, y up). Used by the baker and as fallback. */

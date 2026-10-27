@@ -8,6 +8,7 @@ import { join, relative } from 'node:path';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { BUILDINGS } from '../src/buildings/index.js';
+import { toWorld } from '../src/core/build.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const MB = 1e6;
@@ -38,15 +39,21 @@ const three = ['build/three.webgpu.js', 'build/three.tsl.js', 'build/three.core.
 let lib = 0;
 for (const f of three) { try { lib += await gz(join(ROOT, 'node_modules/three', f)); } catch { /* not installed */ } }
 // per-building data loaded on demand
-let firstBuilding = 0;
+// the viewer builds everything within LOAD_RADIUS of the first building's entrance at start
+const LOAD_RADIUS = 650;
+let atStart = 0, start = null;
 for (const b of BUILDINGS) {
+  const { plan } = await b.load();
   let bytes = 0;
-  try { bytes += (await stat(join(ROOT, 'data/gi', `${b.id}.gi`))).size; }   // already compressed
-     catch { /* not baked */ }
+  try { bytes += (await stat(join(ROOT, 'data/gi', `${b.id}.gi`))).size; } catch { /* not baked */ }   // already compressed
   report(`building ${b.id} on-demand data`, bytes, 25 * MB);
-  if (!firstBuilding) firstBuilding = bytes;
+  const p = toWorld(plan, plan.entrance.at[0], plan.entrance.at[1]);
+  if (!start) start = p;
+  const c0 = toWorld(plan, plan.bounds[0], plan.bounds[1]), c1 = toWorld(plan, plan.bounds[2], plan.bounds[3]);
+  const d = Math.hypot(Math.max(Math.min(c0[0], c1[0]) - start[0], 0, start[0] - Math.max(c0[0], c1[0])), Math.max(Math.min(c0[2], c1[2]) - start[2], 0, start[2] - Math.max(c0[2], c1[2])));
+  if (d < LOAD_RADIUS) atStart += bytes;
 }
-report('initial load (site + three.js + first building)', site + lib + firstBuilding, 15 * MB);
+report('initial load (site + three.js + buildings near the start)', site + lib + atStart, 15 * MB);
 
 // committed files
 const files = execSync('git ls-files', { cwd: ROOT }).toString().trim().split('\n').filter(Boolean);

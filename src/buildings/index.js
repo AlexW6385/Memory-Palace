@@ -3,4 +3,6 @@
 
 export const BUILDINGS = [
   { id: 'edfu', district: 'nile', load: () => import('./edfu/index.js') },
+  { id: 'pantheon', district: 'rome', load: () => import('./pantheon/index.js') },
+  { id: 'parthenon', district: 'greece', load: () => import('./parthenon/index.js') },
 ];

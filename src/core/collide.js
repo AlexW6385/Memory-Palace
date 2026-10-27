@@ -9,7 +9,7 @@ export class CollisionWorld {
     this.obstacles = [];
     this.grid = new Map();
     this.floorGrid = new Map();
-    this.groundY = 0;       // the open ground of the world
+    this.terrain = () => 0;   // height of the open ground of the world at (x, z)
   }
 
   add({ floors, obstacles }) {
@@ -52,7 +52,8 @@ export class CollisionWorld {
 
   /** Highest walkable surface at (x, z) not above maxY. */
   groundAt(x, z, maxY) {
-    let best = this.groundY <= maxY ? this.groundY : -Infinity;
+    const t = this.terrain(x, z);
+    let best = t <= maxY ? t : -Infinity;
     for (const f of this._near(this.floorGrid, x, z)) {
       const h = CollisionWorld.floorHeight(f, x, z);
       if (h !== null && h <= maxY && h > best) best = h;

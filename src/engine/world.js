@@ -3,45 +3,71 @@
 
 import * as THREE from 'three/webgpu';
 import { BUILDINGS } from '../buildings/index.js';
-import { buildPlan, toWorld } from '../core/build.js';
+import { buildPlan, toWorld, subtractRects } from '../core/build.js';
+import { terrainPatch } from '../core/terrain-mesh.js';
+import { WORLD, LANDFORMS, terrainHeight, landformRect } from '../world/layout.js';
 import { CollisionWorld } from '../core/collide.js';
 import { GeoBag, frustum, fromTriangles, quad } from '../core/geom.js';
 import { material, flameMaterial } from './materials.js';
 
-/** World extent and the Nile (docs/world.md). */
-export const WORLD = {
-  bounds: [-1200, -1200, 1200, 1200],
-  river: { x0: 190, x1: 520, bank: 22, depth: 3.2, water: -2.3 },
-  loadDistance: 700,
-};
+export { WORLD };
+
+/** Buildings closer than this (m, to their bounds) are built and lit. */
+export const LOAD_RADIUS = 650;
 
 export class World {
   constructor(renderer) {
     this.r = renderer;
     this.scene = renderer.scene;
     this.collide = new CollisionWorld();
-    this.buildings = new Map();       // id → { plan, music, meshes, built }
+    this.collide.terrain = terrainHeight;
+    this.plans = new Map();           // id → { id, entry, plan, music }: every building, small
+    this.buildings = new Map();       // id → { plan, music, group, built, gi }: those built so far
+    this.loading = new Map();
   }
 
-  async init(progress = () => {}) {
+  /** Load every building's plan (small modules); geometry and light are built on demand. */
+  async init() {
     this.addLand();
-    let i = 0;
-    for (const b of BUILDINGS) {
-      progress(i++ / BUILDINGS.length);
-      await this.loadBuilding(b);
-    }
-    progress(1);
+    await Promise.all(BUILDINGS.map(async (entry) => {
+      const mod = await entry.load();
+      this.plans.set(entry.id, { id: entry.id, entry, plan: mod.plan, music: mod.music });
+    }));
+  }
+
+  /** Distance from (x, z) to a plan's bounds. */
+  static distance(plan, x, z) {
+    const [x0, z0, x1, z1] = World.worldBounds(plan);
+    return Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(z0 - z, 0, z - z1));
+  }
+
+  /** Build every building within `radius` of (x, z); resolves when they are in the scene. */
+  async ensureNear(x, z, radius = LOAD_RADIUS) {
+    const wanted = [...this.plans.values()].filter((p) => World.distance(p.plan, x, z) < radius);
+    await Promise.all(wanted.map((p) => this.loadBuilding(p.entry)));
   }
 
   addLand() {
     const { bounds: [X0, Z0, X1, Z1], river: R } = WORLD;
     const bag = new GeoBag();
-    const t = [];
     const g = -0.02;
-    // west and east land, the banks sloping down to the river bed
-    quad(t, [X0, g, Z0], [X0, g, Z1], [R.x0, g, Z1], [R.x0, g, Z0]);
-    quad(t, [R.x1, g, Z0], [R.x1, g, Z1], [X1, g, Z1], [X1, g, Z0]);
-    bag.add('ground', fromTriangles(t));
+    // open ground: a coarse plane around the landforms (which get fine patches) and the river
+    const holes = LANDFORMS.map(landformRect);
+    for (const side of [[X0, Z0, R.x0, Z1], [R.x1, Z0, X1, Z1]]) {
+      for (const r of subtractRects(side, holes)) {
+        const t = [];
+        quad(t, [r[0], g, r[1]], [r[0], g, r[3]], [r[2], g, r[3]], [r[2], g, r[1]]);
+        bag.add('ground', fromTriangles(t));
+      }
+    }
+    // the plain continues to the horizon beyond the walkable world
+    const F = 9000;
+    for (const r of [[-F, -F, F, Z0], [-F, Z1, F, F], [-F, Z0, X0, Z1], [X1, Z0, F, Z1]]) {
+      const t = [];
+      quad(t, [r[0], g - 0.05, r[1]], [r[0], g - 0.05, r[3]], [r[2], g - 0.05, r[3]], [r[2], g - 0.05, r[1]]);
+      bag.add('ground', fromTriangles(t));
+    }
+    for (const L of LANDFORMS) bag.add('terrain', terrainPatch(landformRect(L), 2.5, (x, z) => terrainHeight(x, z) + g));
     const b = [];
     quad(b, [R.x0, g, Z0], [R.x0, g, Z1], [R.x0 + R.bank, -R.depth, Z1], [R.x0 + R.bank, -R.depth, Z0]);
     quad(b, [R.x0 + R.bank, -R.depth, Z0], [R.x0 + R.bank, -R.depth, Z1], [R.x1 - R.bank, -R.depth, Z1], [R.x1 - R.bank, -R.depth, Z0]);
@@ -53,6 +79,7 @@ export class World {
     for (const { mat, geometry } of bag.merged()) {
       const m = new THREE.Mesh(geometry, material(mat));
       m.receiveShadow = true;
+      m.castShadow = mat === 'terrain';
       this.scene.add(m);
     }
     // keep walkers on land: the river banks and the edge of the world
@@ -69,8 +96,13 @@ export class World {
     });
   }
 
-  async loadBuilding(entry) {
-    if (this.buildings.has(entry.id)) return this.buildings.get(entry.id);
+  loadBuilding(entry) {
+    if (this.buildings.has(entry.id)) return Promise.resolve(this.buildings.get(entry.id));
+    if (!this.loading.has(entry.id)) this.loading.set(entry.id, this._load(entry));
+    return this.loading.get(entry.id);
+  }
+
+  async _load(entry) {
     const mod = await entry.load();
     const plan = mod.plan;
     const built = buildPlan(plan);
@@ -133,6 +165,9 @@ export class World {
   }
 
   update(pos) {
+    // build what is coming into range, a little at a time
+    const now = performance.now();
+    if (!this._next || now > this._next) { this._next = now + 1000; this.ensureNear(pos.x, pos.z); }
     const here = this.locate(pos.x, pos.y, pos.z);
     if (here.building?.gi) this.r.gi.use(here.building.gi);
     return here;

@@ -25,6 +25,25 @@ export function fromTriangles(tris) {
   return g;
 }
 
+/** For a convex solid given as triangles: flip any triangle whose normal points inward. */
+export function orientOutward(tris) {
+  let cx = 0, cy = 0, cz = 0;
+  const n = tris.length / 3;
+  for (let i = 0; i < tris.length; i += 3) { cx += tris[i]; cy += tris[i + 1]; cz += tris[i + 2]; }
+  cx /= n; cy /= n; cz /= n;
+  for (let i = 0; i < tris.length; i += 9) {
+    const ax = tris[i], ay = tris[i + 1], az = tris[i + 2];
+    const ux = tris[i + 3] - ax, uy = tris[i + 4] - ay, uz = tris[i + 5] - az;
+    const vx = tris[i + 6] - ax, vy = tris[i + 7] - ay, vz = tris[i + 8] - az;
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    const mx = (ax + tris[i + 3] + tris[i + 6]) / 3 - cx, my = (ay + tris[i + 4] + tris[i + 7]) / 3 - cy, mz = (az + tris[i + 5] + tris[i + 8]) / 3 - cz;
+    if (nx * mx + ny * my + nz * mz < 0) {
+      for (let k = 0; k < 3; k++) { const t = tris[i + 3 + k]; tris[i + 3 + k] = tris[i + 6 + k]; tris[i + 6 + k] = t; }
+    }
+  }
+  return tris;
+}
+
 /** Push a quad (a b c d, counter-clockwise seen from outside) as two triangles. */
 export function quad(out, a, b, c, d) {
   out.push(...a, ...b, ...c, ...a, ...c, ...d);

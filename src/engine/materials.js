@@ -186,6 +186,42 @@ function make(spec) {
       m.normalNode = bump(mid.mul(0.01).add(pebbles.mul(0.006)), 1);
       break;
     }
+    case 'sectile': {
+      // opus sectile pavement: large squares, alternately with an inscribed circle and plain,
+      // in porphyry, grey granite, giallo antico and white marble, framed by bands
+      const sz = spec.block, C = spec.colors.map((c) => { const k = new Color(c); return vec3(k.r, k.g, k.b); });
+      const g = vec2(P.x, P.z).div(sz);
+      const cell = floor(g), f = fract(g).sub(0.5);
+      const parity = fract(cell.x.add(cell.y).mul(0.5)).mul(2);           // 0 or 1, a checker
+      const band = smoothstep(0.455, 0.47, max(abs(f.x), abs(f.y)));
+      const rr = length(f);
+      const ring = smoothstep(0.36, 0.37, rr).mul(float(1).sub(smoothstep(0.4, 0.41, rr)));
+      const disc = float(1).sub(smoothstep(0.36, 0.37, rr));
+      const inner = mix(C[1], C[0], parity);                                // circle: porphyry or granite
+      const field = mix(C[2], C[3], parity);                                // the square around it
+      let col = mix(field, inner, disc.mul(parity.mul(0.6).add(0.4)));
+      col = mix(col, C[3], ring);
+      col = mix(col, C[1].mul(0.9), band);
+      const vein = mx_noise_float(P.mul(3.0)).mul(detailFade());
+      m.colorNode = col.mul(vein.mul(0.06).add(1));
+      m.roughnessNode = float(spec.roughness).add(band.mul(0.2));
+      m.normalNode = bump(band.mul(-0.002).add(vein.mul(0.0003)), 1);
+      break;
+    }
+    case 'terrain': {
+      const rock = new Color(spec.rock);
+      // rock where the ground is steep, and in patches over the tops of the hills
+      const patches = smoothstep(0.1, 0.45, mx_fractal_noise_float(P.mul(0.03), 3, 2.0, 0.5).add(smoothstep(18.0, 36.0, P.y).mul(0.6)));
+      const steep = clamp(float(1).sub(smoothstep(0.62, 0.82, normalWorld.y)).add(patches), 0, 1);
+      const big = mx_fractal_noise_float(P.mul(0.04), 4, 2.0, 0.5);
+      const mid = mx_fractal_noise_float(P.mul(0.5), 3, 2.0, 0.5);
+      const strata = mx_noise_float(vec3(P.x.mul(0.05), P.y.mul(1.4), P.z.mul(0.05)));
+      const earth = baseNode.mul(big.mul(0.25).add(1)).mul(mid.mul(0.12).add(1));
+      const stone = vec3(rock.r, rock.g, rock.b).mul(strata.mul(0.18).add(1)).mul(mid.mul(0.15).add(1));
+      m.colorNode = mix(earth, stone, steep);
+      m.normalNode = bump(mid.mul(0.03).add(strata.mul(steep).mul(0.05)), 1);
+      break;
+    }
     case 'water': {
       const t = time.mul(0.35);
       const w = mx_noise_float(vec3(P.x.mul(0.7).add(t), P.z.mul(0.7), t.mul(0.6))).add(mx_noise_float(vec3(P.x.mul(2.3), P.z.mul(2.3).sub(t), t)).mul(0.4));

@@ -7,6 +7,7 @@
 import { BUILDINGS } from '../src/buildings/index.js';
 import { buildPlan, toWorld } from '../src/core/build.js';
 import { CollisionWorld } from '../src/core/collide.js';
+import { terrainHeight } from '../src/world/layout.js';
 
 const R = 0.3, STEP = 0.5, HEAD = 1.7, LOW = 0.25, CELL = 0.25;
 const ids = process.argv.slice(2);
@@ -17,6 +18,7 @@ for (const b of BUILDINGS) {
   const { plan } = await b.load();
   const built = buildPlan(plan);
   const cw = new CollisionWorld();
+  cw.terrain = terrainHeight;
   cw.add(built.colliders);
   const problems = [];
 
@@ -43,7 +45,7 @@ for (const b of BUILDINGS) {
     seen[k] = 1; ground[k] = g;
     stack.push([i, j, g]);
   };
-  visit(si, sj, built.colliders.floors.length ? 0 : 0);
+  visit(si, sj, (plan.base || 0) + (plan.entrance.y || 0));
   if (!seen[idx(si, sj)]) problems.push(`entrance at ${ew.map((v) => v.toFixed(1))} is not walkable`);
   while (stack.length) {
     const [i, j, g] = stack.pop();

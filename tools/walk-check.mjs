@@ -7,6 +7,7 @@
 import { BUILDINGS } from '../src/buildings/index.js';
 import { buildPlan, toWorld } from '../src/core/build.js';
 import { CollisionWorld } from '../src/core/collide.js';
+import { terrainHeight } from '../src/world/layout.js';
 import { move, WALK } from '../src/core/walk.js';
 
 const ids = process.argv.slice(2);
@@ -15,15 +16,15 @@ for (const b of BUILDINGS) {
   if (ids.length && !ids.includes(b.id)) continue;
   const { plan } = await b.load();
   const cw = new CollisionWorld();
+  cw.terrain = terrainHeight;
   cw.add(buildPlan(plan).colliders);
   const problems = [];
   let legs = 0;
   for (const [ri, route] of (plan.walks || []).entries()) {
     const W = route.map(([x, z]) => toWorld(plan, x, z));
     const P = { x: W[0][0], y: 0, z: W[0][2], vy: 0 };
-    P.y = cw.groundAt(P.x, P.z, 50);
     // start on the floor at the first waypoint: the highest walkable surface below head height
-    P.y = cw.groundAt(P.x, P.z, (route.y0 ?? 0) + 0.5);
+    P.y = cw.groundAt(P.x, P.z, (plan.base || 0) + (route.y0 ?? 0) + 0.5);
     for (let k = 1; k < W.length; k++) {
       const [tx, , tz] = W[k];
       const dist = Math.hypot(tx - P.x, tz - P.z);

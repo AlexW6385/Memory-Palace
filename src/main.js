@@ -31,10 +31,17 @@ async function main() {
   music.setVolume(settings.music);
 
   // start at the first building's entrance, or at a pose given in the URL (x,y,z,yaw,pitch)
-  const first = world.buildings.values().next().value;
-  const goTo = (rec) => { const [x, y, z, yaw] = world.entrance(rec.plan); controls.setPose(x, y, z, yaw, 0.04); };
-  if (params.get('pose')) { const p = params.get('pose').split(',').map(Number); controls.setPose(p[0], p[1], p[2], p[3] || 0, p[4] || 0); }
-  else goTo(first);
+  const first = world.plans.values().next().value;
+  const goTo = async (rec) => {
+    const [x, y, z, yaw] = world.entrance(rec.plan);
+    await world.ensureNear(x, z);
+    controls.setPose(x, y, z, yaw, 0.04);
+  };
+  if (params.get('pose')) {
+    const p = params.get('pose').split(',').map(Number);
+    await world.ensureNear(p[0], p[2]);
+    controls.setPose(p[0], p[1], p[2], p[3] || 0, p[4] || 0);
+  } else await goTo(first);
 
   status.textContent = t('compiling');
   world.update(R.camera.position);
@@ -114,10 +121,11 @@ async function main() {
 
   // hooks for the screenshot and walk-through tools
   window.palace = {
-    pose: (x, y, z, yaw = 0, pitch = 0) => { controls.setPose(x, y, z, yaw, pitch); snap = true; },
+    pose: async (x, y, z, yaw = 0, pitch = 0) => { await world.ensureNear(x, z); controls.setPose(x, y, z, yaw, pitch); snap = true; },
     settle: () => { snap = true; },
-    camera: (x, y, z, yaw = 0, pitch = 0) => { controls.free = true; R.camera.position.set(x, y, z); R.camera.rotation.set(pitch, yaw, 0, 'YXZ'); },
-    entrance: (id) => goTo(world.buildings.get(id)),
+    camera: async (x, y, z, yaw = 0, pitch = 0) => {
+      await world.ensureNear(x, z, 900); controls.free = true; R.camera.position.set(x, y, z); R.camera.rotation.set(pitch, yaw, 0, 'YXZ'); },
+    entrance: (id) => goTo(world.plans.get(id)),
     walk: async (keys, ms) => { controls.enabled = true; for (const k of keys) controls.keys.add(k); await new Promise((r) => setTimeout(r, ms)); controls.keys.clear(); },
     feet: () => ({ ...controls.feet }),
     world, renderer: R, controls, stats,

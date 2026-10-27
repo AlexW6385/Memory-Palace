@@ -17,6 +17,8 @@ import { BUILDINGS } from '../src/buildings/index.js';
 import { buildPlan, toWorld } from '../src/core/build.js';
 import { albedo } from '../src/core/palette.js';
 import { SUN_DIR, SUN_COLOR, SUN_INTENSITY, skyRadiance } from '../src/core/light.js';
+import { terrainPatch } from '../src/core/terrain-mesh.js';
+import { terrainHeight } from '../src/world/layout.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const MAGIC = 0x4947504D;
@@ -37,14 +39,15 @@ async function scene(id) {
   const [bx0, bz0, bx1, bz1] = plan.bounds;
   const c0 = toWorld(plan, bx0, bz0), c1 = toWorld(plan, bx1, bz1);
   const gx0 = Math.min(c0[0], c1[0]) - 300, gx1 = Math.max(c0[0], c1[0]) + 300, gz0 = Math.min(c0[2], c1[2]) - 300, gz1 = Math.max(c0[2], c1[2]) + 300;
-  const g = -0.02, ga = albedo('ground');
-  pos.push(gx0, g, gz0, gx0, g, gz1, gx1, g, gz1, gx0, g, gz0, gx1, g, gz1, gx1, g, gz0);
-  alb.push(...ga, ...ga);
+  const ground = terrainPatch([gx0, gz0, gx1, gz1], 3, (x, z) => terrainHeight(x, z) - 0.02);
+  const gp = ground.attributes.position.array, ga = albedo('ground');
+  for (let i = 0; i < gp.length; i++) pos.push(gp[i]);
+  for (let t = 0; t < gp.length / 9; t++) alb.push(...ga);
   return { plan, built, pos: new Float32Array(pos), alb: new Float32Array(alb), lights: built.lights };
 }
 
 function grid(plan, spacing) {
-  const [bx0, bz0, bx1, bz1] = plan.bounds;
+  const [bx0, bz0, bx1, bz1] = plan.bakeBounds || plan.bounds;
   const a = toWorld(plan, bx0, bz0), b = toWorld(plan, bx1, bz1);
   const min = [Math.min(a[0], b[0]), (plan.base || 0) + 0.5, Math.min(a[2], b[2])];
   const max = [Math.max(a[0], b[0]), (plan.base || 0) + (plan.bakeTop ?? 20), Math.max(a[2], b[2])];
@@ -296,13 +299,13 @@ if (isMainThread) {
   const args = process.argv.slice(2);
   const opt = (k, d) => { const i = args.indexOf('--' + k); return i >= 0 ? args[i + 1] : d; };
   const ids = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && args[i - 1].startsWith('--')));
-  const spacing = +opt('spacing', 1.0), rays = +opt('rays', 64);
+  const spacing = +opt('spacing', 1.0), rays = +opt('rays', 160);
   const threads = +opt('threads', Math.max(1, availableParallelism()));
   for (const b of BUILDINGS) {
     if (ids.length && !ids.includes(b.id)) continue;
     const t0 = Date.now();
     const S = await scene(b.id);
-    const G = grid(S.plan, spacing);
+    const G = grid(S.plan, args.includes('--spacing') ? spacing : (S.plan.bakeSpacing ?? spacing));
     console.log(`${b.id}: ${S.pos.length / 9} triangles, ${S.lights.length} lamps, ${G.n.join('×')} probes (${G.n[0] * G.n[1] * G.n[2]}), ${rays} rays, ${threads} threads`);
     const v1 = await runPass(S, G, rays, threads, null, 1);
     const v2 = await runPass(S, G, rays, threads, v1.buffer, 2);

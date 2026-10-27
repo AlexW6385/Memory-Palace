@@ -126,6 +126,11 @@ Append-only: date, decision, reason.
 - 2026-10-26 — Interface uses system fonts; no web fonts. Reason: Google Fonts are OFL, not CC0/MIT.
 - 2026-10-26 — The world is a city of civilizations along a river running north–south (docs/world.md); the Nile district comes first, with Edfu at the origin in its true orientation. The river is brought closer to Edfu than in reality so the district reads as a river city.
 - 2026-10-26 — Edfu is shown complete and in use (57 BC), with unpainted stone until L3 (extent of original paint uncertain). Published dimensions conflict (UNESCO 47 m width vs a 40 m pronaos); we take a 50 m enclosure (docs/buildings/edfu.md §4).
+- 2026-10-26 — Terrain: one height function for the whole world (flat plain, river, rock landforms with cliffs and walkable slopes), meshed finely over landforms; open ground steeper than ~40° cannot be climbed. The Acropolis is 40 m high instead of ~70 m so the climb stays a short walk. Reason: districts need their real settings (an acropolis, later hills and harbours); buildings keep true scale, landscape is allowed to be compressed.
+- 2026-10-26 — Greek order built straight (no stylobate curvature or column inclination) at L1–L2; entasis is modelled from a measured profile. Refinements recorded for L3. Reason: every element above the stylobate would have to follow the curvature.
+- 2026-10-26 — Second building: the Parthenon, the canonical Doric temple, with the most published measurements of any Greek building.
+- 2026-10-26 — Third building: the Pantheon (Roman Imperial; the Corinthian order, concrete vaulting, the coffered dome). New style module `src/styles/roman/` (Corinthian column, entablature with modillions, ring walls, niches, coffered dome with stepped coffers).
+- 2026-10-26 — Buildings are built on demand: plans load at start, geometry and baked light within 650 m of the visitor. The budget check counts everything within that radius of the start as the initial load. Reason: §6 budgets as the world grows.
 - 2026-10-26 — Edfu's roof stairs and roof terrace, the New Year court, the nilometer and the pylon's internal stairs are deferred to L2 of the building; the mammisi is a separate building for later.
 
 ## 11. Roadmap and status
@@ -138,6 +143,7 @@ The implementing agent updates this section at the end of every session. Phases 
 - Phase 1 done: Edfu dossier rewritten to §4 standard; Edfu built to Building L2 — plan, section and structure at true scale; torus rolls and cavetto cornices; door frames with winged sun discs; uraeus frieze on the pronaos screen walls; cedar doors on the pylon and the inner halls; the naos and the sacred barque; both stairs to the roof (dog-leg, route inferred) and the walkable stepped roof; oil lamps baked into the inner rooms; music by zone. World L1: the Nile district with the river and palms.
 - Edfu's L2 items still open (recorded, not blocking): the New Year court and kiosk, the nilometer, the pylon's internal stairs and chambers, the mammisi (separate building). L3 next: reliefs and inscriptions, painted ceilings.
 - Checks: `npm test` runs the plan check and a walk-through of every building's routes (`tools/walk-check.mjs`, same body and movement as the viewer). Budget: initial load 5.2 MB; Edfu's baked light 4.3 MB.
+- Phase 2 in progress (2026-10-26): terrain (one height function; the Acropolis plateau); the Parthenon (Greek Doric, Building L2: the full order with entasis, pediments, coffered pteron, two-tier interior colonnade, Athena Parthenos massing, pool, Ionic west room); the Pantheon (Roman, Building L2: portico of 16 Corinthian columns in three aisles, intermediate block with the second pediment, bronze doors, rotunda with seven niches and eight aediculae, opus sectile floor, coffered dome of 140 stepped coffers and open oculus, stepped and gilt-bronze exterior). On-demand building load. Budget: initial load 8.6 MB.
 
 **Done (previous version, replaced)**
 - Python planner, Edfu temple plan with 47 loci, three.js viewer with loci UI, toy-style props, bilingual UI, Pages deployment.
@@ -149,7 +155,7 @@ The implementing agent updates this section at the end of every session. Phases 
 **Phase 1 — The first building, as the quality bar**
 - Rewrite the Edfu dossier to §4 standard. Rebuild the Temple of Horus at Edfu to Building L1 → L2 with the new renderer, materials and baked light; its music. This building sets the bar every later one must meet.
 
-**Phase 2 — Breadth: one building per major tradition**
+**Phase 2 — Breadth: one building per major tradition** *(in progress: Egyptian, Greek, Roman built; next Byzantine, Islamic, Gothic, Chinese, Japanese, Indian, …)*
 - Plan the world layout (`docs/world.md`). Add, each to L1 then L2 with dossier and music, a first building from each of a wide spread of traditions — e.g. Greek, Roman, Byzantine, Islamic, Romanesque, Gothic, Renaissance, Chinese, Japanese, Indian, Mesoamerican, Baroque, 19th-century iron-and-glass, early Modern — in the order the agent judges best for variety and importance. World L1 → L2.
 
 **Phase 3 — Depth**
