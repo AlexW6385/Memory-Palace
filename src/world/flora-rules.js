@@ -37,7 +37,7 @@ const patch = (x, z, k, lo = 0.0, hi = 0.4, f = 0.02) => smooth(lo, hi, fbm(x * 
  * Densities by district. Each function receives the place: { x, z, h (ground height),
  * ny (normal y), g (ground cover), w (distance from a pond's edge) } and returns plants per 100 m².
  */
-const RULES = {
+export const RULES = {
   nile: {
     // date palms in groves and by the houses, doum palms, sycamore figs in the yards, tamarisks and
     // acacias on the dry ground, halfa grass

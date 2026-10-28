@@ -66,8 +66,8 @@ for (const sz of [-1, 1]) {
   // the outer wall: red sandstone below with the aisle windows, yellow limestone above with the
   // tribune windows; the door to the cloister in the south aisle
   const wz = sz * (AO + WT / 2);
-  const aisleWin = bays(NAVE_P, XW).map(([a, b]) => ({ uc: (a + b) / 2, r: 0.5, spring: 4.6, sill: 3.4 }));
-  const tribWin = bays(NAVE_P, XW).map(([a, b]) => ({ uc: (a + b) / 2, r: 0.45, spring: 13.0, sill: 11.6 }));
+  const aisleWin = bays(NAVE_P, XW).map(([a, b]) => ({ uc: (a + b) / 2, r: 0.62, spring: 5.0, sill: 3.0 }));
+  const tribWin = bays(NAVE_P, XW).map(([a, b]) => ({ uc: (a + b) / 2, r: 0.55, spring: 13.2, sill: 11.4 }));
   const lowArches = sz > 0 ? aisleWin.map((w, i) => (i === 1 ? { uc: w.uc, r: 0.9, spring: 2.6, sill: 0 } : w)) : aisleWin;
   pwall({ o: [0, wz], u: [1, 0], th: WT, u0: 0, u1: TW0, y0: 0, y1: RED, arches: lowArches, mat: 'sandstone_red' });
   pwall({ o: [0, wz], u: [1, 0], th: WT, u0: 0, u1: TW0, y0: RED, y1: OUT, arches: tribWin, mat: 'limestone_yellow', collide: false });
@@ -117,8 +117,8 @@ for (const x of [XC0, XC1]) add({ t: 'arch_band', c: [x, VSPR, 0], span: 'z', r0
 for (const sz of [-1, 1]) add({ t: 'arch_band', c: [XM, VSPR, sz * PZ], span: 'x', r0: HN, r1: HN + 0.65, d0: sz * PZ - PS, d1: sz * PZ + PS, mat: 'limestone_yellow' });
 // the walls of the crossing square over the arches, up to the octagon
 for (const sz of [-1, 1]) {
-  pwall({ o: [XC0 - PS, sz * PZ], u: [1, 0], th: 2 * PS, u0: 0, u1: XC1 - XC0 + 2 * PS, y0: VSPR, y1: 24.4, outline: null, arches: [{ uc: (XC1 - XC0) / 2 + PS, r: HN, spring: VSPR, sill: VSPR }], mat: 'limestone_yellow', collide: false });
-  pwall({ o: [sz > 0 ? XC1 : XC0, -PZ - PS], u: [0, 1], th: 2 * PS, u0: 0, u1: 2 * (PZ + PS), y0: VSPR, y1: 24.4, arches: [{ uc: PZ + PS, r: HN, spring: VSPR, sill: VSPR }], mat: 'limestone_yellow', collide: false });
+  pwall({ o: [XC0 - PS, sz * PZ], u: [1, 0], th: 2 * PS, u0: 0, u1: XC1 - XC0 + 2 * PS, y0: VSPR, y1: 22.4, outline: null, arches: [{ uc: (XC1 - XC0) / 2 + PS, r: HN, spring: VSPR, sill: VSPR }], mat: 'limestone_yellow', collide: false });
+  pwall({ o: [sz > 0 ? XC1 : XC0, -PZ - PS], u: [0, 1], th: 2 * PS, u0: 0, u1: 2 * (PZ + PS), y0: VSPR, y1: 22.4, arches: [{ uc: PZ + PS, r: HN, spring: VSPR, sill: VSPR }], mat: 'limestone_yellow', collide: false });
 }
 // squinches: a half-cone in each corner carrying the octagon
 for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
@@ -127,9 +127,9 @@ for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
 }
 const RO8 = HN / Math.cos(22.5 * D2R);
 add({ t: 'arc_wall', c: [XM, 0], r0: RO8, r1: RO8 + 1.0, a0: 22.5, a1: 382.5, y0: 22.4, y1: 31.0, step: 45, mat: 'limestone_yellow', collide: false,
-  gaps: [0, 45, 90, 135, 180, 225, 270, 315].map((a) => ({ a: a + 0.001, w: 0.8, y0: 23.0, y1: 24.6 })) });
+  gaps: [45, 90, 135, 180, 225, 270, 315, 360].map((a) => ({ a, w: 1.3, y0: 22.6, y1: 24.6 })) });
 {
-  const Rs = (RO8 * RO8 + 2.0 * 2.0) / (2 * 2.0), cy = 26.4 - Rs, e0 = Math.asin((24.4 - cy) / Rs) / D2R;
+  const Rs = (RO8 * RO8 + 1.5 * 1.5) / (2 * 1.5), cy = 26.4 - Rs, e0 = Math.asin((24.9 - cy) / Rs) / D2R;
   add({ t: 'sphere', c: [XM, cy, 0], R: Rs, e0, e1: 90, segA: 48, segE: 12, mat: 'limestone_yellow', outer: { t: 0.35, mat: 'limestone_yellow' } });
 }
 add({ t: 'pyramid_roof', c: [XM, 0], r: (RO8 + 1.3) / Math.cos(22.5 * D2R), sides: 8, rot: 22.5, y: 31.0, apex: 36.0 });
@@ -232,7 +232,8 @@ for (const a of CHAPELS) {
 add({ t: 'block', rect: [37.6, -1.0, 38.8, 1.0], y0: 0, y1: 1.05, mat: 'limestone_yellow' });
 add({ t: 'obj', kind: 'reliquary', at: [XH + 1.2, 0], y: 0 });
 for (const sz of [-1, 1]) add({ t: 'grille', a: [XC1 + PS + 0.2, sz * (HN - 0.1)], b: [XH - PS - 0.1, sz * (HN - 0.1)], y0: 0, y1: 2.4 });
-for (const [x, z, y] of [[38.2, 0, 4.2], [XH + 1.2, 0, 4.5], [12, 0, 6.0], [20, 0, 6.0]]) add({ t: 'lamp', at: [x, y, z], intensity: 5, distance: 10 });
+// lamps hung in the choir and before the saint, down the nave and in the arms of the transept
+for (const [x, z, y] of [[38.2, 0, 4.2], [XH + 1.2, 0, 4.5], [5.2, 0, 5.5], [11.7, 0, 5.5], [18.6, 0, 5.5], [XM, 0, 6.0], [XM, -11, 5.0], [XM, 11, 5.0]]) add({ t: 'lamp', at: [x, y, z], intensity: 6, distance: 12 });
 for (const a of CHAPELS) add({ t: 'lamp', at: [XH + Math.cos(a * D2R) * (RCH + 0.6), 2.6, Math.sin(a * D2R) * (RCH + 0.6)], intensity: 3, distance: 6 });
 for (const sz of [-1, 1]) add({ t: 'lamp', at: [TE1 + 1.0, 2.6, sz * APSIDIOLE_Z], intensity: 3, distance: 6 });
 

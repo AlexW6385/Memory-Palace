@@ -22,7 +22,7 @@
 export const REGIONS = [
   {
     id: 'nile', name: { en: 'The Nile', zh: '尼罗河' },
-    center: [0, 0], house: 'house_egypt',
+    center: [0, 0], house: 'house_egypt', tint: [196, 170, 128],
     climate: {
       // late afternoon in Upper Egypt: the sun low in the west-south-west, warm, dusty air
       sun: { az: 248, el: 24, color: [1.0, 0.8, 0.6], intensity: 3.3, lat: 25, dec: -5, hour: 16.5 },
@@ -40,7 +40,7 @@ export const REGIONS = [
   },
   {
     id: 'rome', name: { en: 'Rome', zh: '罗马' },
-    center: [0, -230], house: 'house_tiled',
+    center: [0, -230], house: 'house_tiled', tint: [150, 152, 112],
     climate: {
       // a spring morning on the Campus Martius: the sun in the east-south-east, clouds passing
       sun: { az: 118, el: 30, color: [1.0, 0.9, 0.78], intensity: 3.2, lat: 42, dec: 8, hour: 9 },
@@ -59,7 +59,7 @@ export const REGIONS = [
   },
   {
     id: 'greece', name: { en: 'Greece', zh: '希腊' },
-    center: [-240, 0], house: 'house_tiled',
+    center: [-240, 0], house: 'house_tiled', tint: [170, 140, 110],
     climate: {
       // an Attic noon: a high sun from the south, deep blue sky, clear dry air
       sun: { az: 196, el: 52, color: [1.0, 0.95, 0.88], intensity: 3.6, lat: 38, dec: 15, hour: 12.5 },
@@ -77,7 +77,7 @@ export const REGIONS = [
   },
   {
     id: 'byzantium', name: { en: 'Byzantium', zh: '拜占庭' },
-    center: [280, -250], house: 'house_tiled',
+    center: [280, -250], house: 'house_tiled', tint: [140, 150, 120],
     climate: {
       // a late autumn morning on the Bosphorus: the sun low in the south-east, sea air, often grey;
       // the poyraz blows from the north-east (Climate of Istanbul: cloudy, frequent light rain, fog)
@@ -99,7 +99,7 @@ export const REGIONS = [
   },
   {
     id: 'levant', name: { en: 'The Levant', zh: '黎凡特' },
-    center: [300, 30], house: 'house_domed',
+    center: [300, 30], house: 'house_domed', tint: [180, 160, 125],
     climate: {
       // a clear morning in the Judean hills: the sun in the east-south-east, dry bright air;
       // sometimes the hot dusty sharav, in winter a passing shower
@@ -119,7 +119,7 @@ export const REGIONS = [
   },
   {
     id: 'francia', name: { en: 'Francia', zh: '法兰西' },
-    center: [-240, -230], house: 'house_timber',
+    center: [-240, -230], house: 'house_timber', tint: [130, 150, 105],
     climate: {
       // a summer afternoon on the Seine: the sun in the west-south-west, soft moist air, clouds
       // coming and going, now and then a shower
@@ -139,7 +139,7 @@ export const REGIONS = [
   },
   {
     id: 'tang', name: { en: 'Tang China', zh: '唐' },
-    center: [200, 330], house: 'house_china',
+    center: [200, 330], house: 'house_china', tint: [176, 152, 110],
     climate: {
       // late afternoon on Mount Wutai: the sun low in the west, on the hall's face; dry clear air
       // of the north, at times yellow with dust from the loess, now and then a shower
@@ -159,7 +159,7 @@ export const REGIONS = [
   },
   {
     id: 'heian', name: { en: 'Heian Japan', zh: '平安日本' },
-    center: [530, 330], house: 'house_japan',
+    center: [530, 330], house: 'house_japan', tint: [120, 140, 100],
     climate: {
       // an autumn morning at Uji: the sun low in the east-south-east over the hills across the
       // river, on the Phoenix Hall's face; soft moist air, mist on the water, showers passing
@@ -179,7 +179,7 @@ export const REGIONS = [
   },
   {
     id: 'india', name: { en: 'India', zh: '印度' },
-    center: [-10, 300], house: 'house_india',
+    center: [-10, 300], house: 'house_india', tint: [172, 148, 112],
     climate: {
       // a winter afternoon in Malwa: the sun in the south-west, warm and dry, a dusty haze on the
       // plain; now and then high cloud, rarely a winter shower
@@ -199,7 +199,7 @@ export const REGIONS = [
   },
   {
     id: 'rouergue', name: { en: 'Rouergue', zh: '鲁埃格' },
-    center: [-480, -240], house: 'house_rouergue',
+    center: [-480, -240], house: 'house_rouergue', tint: [128, 140, 108],
     climate: {
       // a spring afternoon at Conques: the sun in the south-west on the west portal, mild air from
       // the Atlantic, clouds building over the hills, a shower now and then, mist in the gorge
