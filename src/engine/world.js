@@ -4,7 +4,7 @@
 import * as THREE from 'three/webgpu';
 import { BUILDINGS } from '../buildings/index.js';
 import { FEATURES } from '../world/features/index.js';
-import { buildPlan, toWorld, subtractRects } from '../core/build.js';
+import { buildPlanAsync, toWorld, subtractRects } from '../core/build.js';
 import { Terrain } from './terrain.js';
 import { Flora } from './flora/index.js';
 import { WORLD, terrainHeight, inWater } from '../world/regions.js';
@@ -18,6 +18,8 @@ export { WORLD };
  *  UNLOAD_RADIUS are taken down again, so that memory does not grow as the visitor travels. */
 export const LOAD_RADIUS = 650;
 export const UNLOAD_RADIUS = 1100;
+/** How many triangles of buildings left behind are kept ready for going back. */
+export const CACHE_TRIANGLES = 1_500_000;
 
 export class World {
   constructor(renderer) {
@@ -29,6 +31,7 @@ export class World {
     this.plans = new Map();           // id → { id, entry, plan, music }: every building, small
     this.buildings = new Map();       // id → { plan, music, group, built, gi }: those built so far
     this.loading = new Map();
+    this.cache = new Map();           // id → rec: buildings left behind, kept ready (oldest first)
   }
 
   /** Load every building's plan (small modules); geometry and light are built on demand. A
@@ -48,15 +51,28 @@ export class World {
     return Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(z0 - z, 0, z - z1));
   }
 
-  /** Take down the buildings far from (x, z): their geometry, their colliders. */
+  /**
+   * Take down the buildings far from (x, z): out of the scene and the colliders. The most recently
+   * left are kept ready (up to CACHE_TRIANGLES in all), so that going back is immediate; older
+   * ones are freed.
+   */
   unloadFar(x, z, radius = UNLOAD_RADIUS) {
     for (const [id, rec] of this.buildings) {
       if (World.distance(rec.plan, x, z) < radius) continue;
       this.scene.remove(rec.group);
-      rec.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
       this.collide.remove(rec.built.colliders);
       this.buildings.delete(id);
       this.loading.delete(id);
+      this.cache.delete(id);
+      this.cache.set(id, rec);                       // most recent last
+    }
+    let total = 0;
+    for (const rec of this.cache.values()) total += rec.triangles;
+    for (const [id, rec] of this.cache) {
+      if (total <= CACHE_TRIANGLES) break;
+      rec.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+      this.cache.delete(id);
+      total -= rec.triangles;
     }
   }
 
@@ -89,9 +105,18 @@ export class World {
   }
 
   async _load(entry) {
+    // left a moment ago and still kept: put it back
+    const kept = this.cache.get(entry.id);
+    if (kept) {
+      this.cache.delete(entry.id);
+      this.scene.add(kept.group);
+      this.collide.add(kept.built.colliders);
+      this.buildings.set(entry.id, kept);
+      return kept;
+    }
     const mod = await entry.load();
     const plan = mod.plan;
-    const built = buildPlan(plan);
+    const built = await buildPlanAsync(plan);
     const group = new THREE.Group();
     group.name = plan.id;
     for (const { mat, geometry } of built.parts) {
@@ -111,7 +136,9 @@ export class World {
     }
     this.scene.add(group);
     this.collide.add(built.colliders);
-    const rec = { id: plan.id, plan, music: mod.music, group, built };
+    let triangles = 0;
+    for (const p of built.parts) triangles += p.geometry.attributes.position.count / 3;
+    const rec = { id: plan.id, plan, music: mod.music, group, built, triangles };
     this.buildings.set(plan.id, rec);
     if (plan.feature) this.plans.get(entry.id).plan = plan;
     // baked light for this building, if it has been baked

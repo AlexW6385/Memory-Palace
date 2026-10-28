@@ -41,10 +41,10 @@ export function doricColumn(el, { bag, col }) {
   const mat = el.mat || 'marble_column';
   const capH = H * 0.082, abH = capH * 0.36, echH = capH - abH;
   const shaftH = H - capH;
-  const n = el.flutes ?? 20, seg = n * 8;
+  const n = el.flutes ?? 20, seg = n * 5;          // five facets to a flute keep its curve, at a third of the triangles
   // shaft with entasis, in rows (more rows near the neck grooves)
   const prof = [];
-  const rows = 14;
+  const rows = 8;
   for (let i = 0; i <= rows; i++) {
     const t = i / rows;
     prof.push([R * parthenonRadius(t), shaftH * t]);
@@ -114,7 +114,7 @@ export function ionicColumn(el, { bag, col }) {
   const rTop = R * 0.84;
   const prof = [];
   for (let i = 0; i <= 10; i++) { const t = i / 10; prof.push([R + (rTop - R) * (t * 0.7 + t * t * 0.3), shaftH * t]); }
-  bag.add(mat, lathe(prof, 24 * 8, fluteMod(24, 0.06, 0.18), x, y + bH, z));
+  bag.add(mat, lathe(prof, 24 * 5, fluteMod(24, 0.06, 0.18), x, y + bH, z));
   // capital: echinus ring, the volute block with its two faces, the thin abacus
   const c0 = y + bH + shaftH;
   bag.add(mat, lathe([[rTop * 1.02, 0], [rTop * 1.12, capH * 0.18], [rTop * 1.1, capH * 0.42], [0, capH * 0.42]], 32, null, x, c0, z));

@@ -2,7 +2,8 @@
 
 import { Renderer } from './engine/renderer.js';
 import { World } from './engine/world.js';
-import { Controls } from './engine/controls.js';
+import { Controls, SPEEDS } from './engine/controls.js';
+import { WALK } from './core/walk.js';
 import { Music } from './engine/audio.js';
 import { Climate } from './engine/climate.js';
 import { Rain } from './engine/rain.js';
@@ -81,7 +82,7 @@ async function main() {
   if (!navigator.gpu) { $('notice').textContent = t('no-webgpu'); $('notice').hidden = false; setTimeout(() => { $('notice').hidden = true; }, 12000); }
 
   // timings of the start, in the console (and kept for the next visit's estimate)
-  const T0 = performance.now(), times = {};
+  let T0 = performance.now(), times = {};
   const mark = (k) => { times[k] = Math.round(performance.now() - T0); };
   progress.set('start', 0.15);
   const R = await new Renderer(canvas).init(settings.quality);
@@ -176,16 +177,23 @@ async function main() {
   const travel = async (fn) => {
     closePanels(); toast(t('travelling'));
     fade.hidden = false; requestAnimationFrame(() => fade.classList.add('on'));
+    T0 = performance.now(); times = {};
+    // the notice counts down what is still being made ready
+    const f = { build: 0, land: 0, plants: 0 };
+    const report = (stage, v) => { f[stage] = v; toast(`${t('travelling')} ${Math.round((f.build * 0.45 + f.land * 0.35 + f.plants * 0.2) * 90)}%`); };
     try {
-      await fn();
+      await fn(report);
       world.update(R.camera.position);
+      toast(`${t('travelling')} 95%`);
       await R.warmup();
+      mark('shaders');
+      console.info('[memory palace] travel (ms):', JSON.stringify(times));
     } finally {
       toast(''); fade.classList.remove('on'); setTimeout(() => { fade.hidden = true; }, 400);
     }
   };
-  const mapView = new MapView(world, (rec) => travel(() => goTo(rec)), (x, z) => travel(async () => {
-    await arrive(x, z);
+  const mapView = new MapView(world, (rec) => travel((report) => goTo(rec, report)), (x, z) => travel(async (report) => {
+    await arrive(x, z, report);
     const y = world.collide.groundAt(x, z, world.collide.terrain(x, z) + 2);
     // face the nearest building, so that one arrives looking at something
     let yaw = controls.yaw, best = Infinity;
@@ -223,7 +231,7 @@ async function main() {
   const q = $('set-quality'), mv = $('set-music'), sv = $('set-sens'), lang = $('set-lang');
   q.value = settings.quality; mv.value = settings.music; sv.value = settings.sensitivity;
   // the clock beside the small map: the hour (drag to change it) and run / hold
-  const clockTime = $('clock-time'), clockHour = $('clock-hour'), clockPlay = $('clock-play'), clockIcon = $('clock-icon');
+  const clockTime = $('clock-time'), clockHour = $('clock-hour'), clockPlay = $('clock-play'), clockIcon = $('clock-icon'), clockPeriod = $('clock-period');
   const paintClock = () => {
     const h = climate.hour, hh = Math.floor(h) % 24, mm = Math.floor((h - Math.floor(h)) * 60);
     clockTime.textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
@@ -231,8 +239,11 @@ async function main() {
     const runs = climate.mode === 'cycle';
     clockPlay.textContent = runs ? '❚❚' : '▶';
     const day = climate.state?.day ?? 1;
-    clockIcon.style.background = day > 0.5 ? '#ffcf6e' : '#cdd6ee';
-    clockIcon.style.boxShadow = day > 0.5 ? '0 0 8px #ffcf6e' : 'inset -4px -1px 0 #6f7891';
+    clockIcon.style.background = day > 0.5 ? '#ffcf6e' : '#dfe5f5';
+    clockIcon.style.boxShadow = day > 0.5 ? '0 0 10px #ffcf6e' : 'inset -4px -1px 0 #7d86a0, 0 0 6px rgba(200, 210, 240, 0.5)';
+    const periods = t('periods'), bounds = [5, 7, 11, 14, 17.5, 20, 22];
+    let k = bounds.findIndex((b) => h < b); if (k < 0) k = 7;
+    clockPeriod.textContent = periods[k];
   };
   clockHour.oninput = () => {
     climate.hour = +clockHour.value % 24;
@@ -247,9 +258,16 @@ async function main() {
   setInterval(() => { paintClock(); settings.hour = climate.hour; }, 1000);
   setInterval(save, 15000);
   paintClock();
-  // the walking speed: shown beside the clock, flashing when it changes
-  const speedEl = $('speed');
-  const paintSpeed = (i) => { speedEl.textContent = `${t('speeds')[i]} · ${t('speed-hint')}`; speedEl.classList.add('flash'); clearTimeout(paintSpeed.t); paintSpeed.t = setTimeout(() => speedEl.classList.remove('flash'), 1200); };
+  // the walking speed, under the clock: its name, how fast, four marks; ‹ › (or the wheel, 1–4) to change
+  const speedName = $('speed-name'), speedKmh = $('speed-kmh'), pips = [...$('speed-pips').children];
+  const paintSpeed = (i) => {
+    speedName.textContent = t('speeds')[i];
+    speedKmh.textContent = `${Math.round(WALK * SPEEDS[i] * 3.6)} km/h`;
+    pips.forEach((p, k) => p.classList.toggle('on', k <= i));
+    speedName.classList.add('flash'); clearTimeout(paintSpeed.t); paintSpeed.t = setTimeout(() => speedName.classList.remove('flash'), 1200);
+  };
+  $('speed-down').onclick = () => controls.setSpeed(controls.speed - 1);
+  $('speed-up').onclick = () => controls.setSpeed(controls.speed + 1);
   controls.onSpeed = (i) => { settings.speed = i; save(); paintSpeed(i); };
   controls.setSpeed(settings.speed || 0);
   onLang(() => { paintSpeed(controls.speed); paintClock(); });
