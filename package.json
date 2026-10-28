@@ -11,6 +11,7 @@
     "budget": "node tools/budget.mjs",
     "test": "node --test \"tests/**/*.test.mjs\"",
     "walk": "node tools/walk-check.mjs",
+    "roads": "node tools/road-check.mjs",
     "audio": "node tools/audio-check.mjs",
     "load": "node tools/load-check.mjs"
   },

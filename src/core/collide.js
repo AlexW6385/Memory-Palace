@@ -25,6 +25,25 @@ export class CollisionWorld {
     }
   }
 
+  /** Take out what add() put in (a building that is unloaded). */
+  remove({ floors, obstacles }) {
+    const fs = new Set(floors), os = new Set(obstacles);
+    this.floors = this.floors.filter((f) => !fs.has(f));
+    this.obstacles = this.obstacles.filter((o) => !os.has(o));
+    for (const [grid, items] of [[this.floorGrid, floors], [this.grid, obstacles]]) {
+      const drop = items === floors ? fs : os;
+      for (const it of items) {
+        const [x0, z0, x1, z1] = it.rect ? [Math.min(it.rect[0], it.rect[2]), Math.min(it.rect[1], it.rect[3]), Math.max(it.rect[0], it.rect[2]), Math.max(it.rect[1], it.rect[3])] : it.bb;
+        for (let i = Math.floor(x0 / CELL); i <= Math.floor(x1 / CELL); i++) for (let j = Math.floor(z0 / CELL); j <= Math.floor(z1 / CELL); j++) {
+          const k = i + ',' + j, list = grid.get(k);
+          if (!list) continue;
+          const kept = list.filter((q) => !drop.has(q));
+          if (kept.length) grid.set(k, kept); else grid.delete(k);
+        }
+      }
+    }
+  }
+
   _index(grid, [x0, z0, x1, z1], item) {
     for (let i = Math.floor(x0 / CELL); i <= Math.floor(x1 / CELL); i++) {
       for (let j = Math.floor(z0 / CELL); j <= Math.floor(z1 / CELL); j++) {

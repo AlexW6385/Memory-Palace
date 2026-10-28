@@ -2,6 +2,15 @@
 
 Newest first. What you can visit and what looks better, in plain words.
 
+## v6.0 — The world as a patch of land; faster start and travel (2026-10-27)
+
+- **The regions now lie side by side** in a patch of land instead of along one valley: the Nile in the middle, and round it in a spiral by age Rome, Greece, Byzantium, the Levant, Francia, Tang China, Heian Japan and India. New regions will be added on the outside, ring by ring.
+- **Mountain ridges between neighbouring regions,** crossed by passes; higher mountains at the world's end. **A river runs down each column of regions,** each as wide as its region needs (the Nile and the Bosphorus wide, the Tiber and the Seine narrower), through gorges in the ridges; **stone bridges** carry the roads over them. The roads join the regions in the spiral's order, and every road has been walked end to end by the new road check.
+- **Faster start:** the world opens as soon as the buildings, ground and plants round your feet are ready and what you can see is compiled; the rest comes in as you go. One scene pass instead of two (the ambient occlusion now reads the depth), so about half as many shaders to compile and half the drawing each frame; the ground is computed several times faster; towns are made only when you come near.
+- **Faster travel by map:** the view fades out, only the place you arrive at is made ready, and buildings far behind you are taken down so that memory does not grow.
+- **Day and night:** days now pass (a day lasts half an hour): the sun climbs and sets on each region's own course for its latitude and season, the sky reddens at dusk, and at night the full moon lights the land, the stars and the Milky Way come out over a deep blue sky, and your eyes adapt to the dark. In the settings the time can also be held at morning, noon, evening or night, or at each place's own hour.
+- **Picture quality** starts at "medium" on laptops (8 cores or fewer); "high" can be chosen in the settings.
+
 ## v5.9 — India and the Great Stupa at Sanchi (2026-10-27)
 
 - **A new region, India,** north of Heian Japan over the pass of Mount Hira: the plain of Malwa with its red-brown earth, fields and palmyra palms, great banyans, teak and neem on the hills, a village of limewashed houses under clay tiles, and a warm, hazy winter afternoon.

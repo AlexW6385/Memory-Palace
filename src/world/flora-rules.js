@@ -2,12 +2,12 @@
 // Pure; the viewer scatters from these deterministically, cell by cell. The reasoning for each
 // region's planting is in its building's dossier (§10, surroundings) and docs/world.md.
 
-import { REGIONS, regionWeights, riverCenter, WORLD, SITES, fbm, nearRoad, inTown } from './regions.js';
+import { REGIONS, regionWeights, riverAt, SITES, fbm, nearRoad, inTown } from './regions.js';
 
 const smooth = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
 
 /** Distance from the water's edge (negative in the water). */
-export function fromWater(x, z) { return Math.abs(x - riverCenter(z)) - WORLD.river.width / 2; }
+export function fromWater(x, z) { const r = riverAt(x, z); return Math.abs(x - r.c) - r.w / 2; }
 
 /** Inside a building's levelled site (no planting there, except what the plan places). */
 const PADS = Object.values(SITES).map((s) => { const [x0, z0, x1, z1] = s.pad || [0, 0, 0, 0]; return [s.origin[0] + x0 - 4, s.origin[1] + z0 - 4, s.origin[0] + x1 + 4, s.origin[1] + z1 + 4]; });

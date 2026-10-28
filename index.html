@@ -59,10 +59,20 @@
         <option value="medium" data-i18n="q-medium">Medium</option>
         <option value="low" data-i18n="q-low">Low</option>
       </select></label>
+    <label><span data-i18n="time">Time of day</span>
+      <select id="set-time">
+        <option value="cycle" data-i18n="t-cycle">Days pass</option>
+        <option value="7" data-i18n="t-morning">Morning</option>
+        <option value="12" data-i18n="t-noon">Noon</option>
+        <option value="18.5" data-i18n="t-evening">Evening</option>
+        <option value="23" data-i18n="t-night">Night</option>
+        <option value="baked" data-i18n="t-baked">Each place's own hour</option>
+      </select></label>
     <label><span data-i18n="music">Music</span><input id="set-music" type="range" min="0" max="1" step="0.05"></label>
     <label><span data-i18n="sensitivity">Look sensitivity</span><input id="set-sens" type="range" min="0.3" max="2" step="0.05"></label>
   </section>
 
+  <div id="fade" class="fade" hidden></div>
   <div id="notice" class="notice" hidden></div>
   <div id="click-hint" class="click-hint" hidden><span data-i18n="click-to-look">Click to look around</span><small data-i18n="controls-desktop">W A S D to walk · mouse to look · Shift to run · M for the map · Esc to pause</small></div>
 

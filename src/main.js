@@ -12,7 +12,11 @@ import { initLang, setLang, t, onLang } from './ui/i18n.js';
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 
-const settings = load('mp.settings', { quality: 'high', music: 0.6, sensitivity: 1 });
+// the default picture quality follows the machine: 'high' only on machines with many cores and
+// much memory (a laptop with 8 cores and 8 GB starts at 'medium'; the setting can be changed)
+const strong = (navigator.hardwareConcurrency || 4) >= 10 && (navigator.deviceMemory || 8) >= 8;
+const settings = load('mp.settings', { quality: strong ? 'high' : 'medium', music: 0.6, sensitivity: 1, time: 'cycle' });
+if (params.get('time')) settings.time = params.get('time');
 if (params.get('quality')) settings.quality = params.get('quality');
 
 function load(k, d) { try { return { ...d, ...JSON.parse(localStorage.getItem(k) || '{}') }; } catch { return d; } }
@@ -76,13 +80,27 @@ async function main() {
   const canvas = $('view');
   if (!navigator.gpu) { $('notice').textContent = t('no-webgpu'); $('notice').hidden = false; setTimeout(() => { $('notice').hidden = true; }, 12000); }
 
+  // timings of the start, in the console (and kept for the next visit's estimate)
+  const T0 = performance.now(), times = {};
+  const mark = (k) => { times[k] = Math.round(performance.now() - T0); };
   progress.set('start', 0.15);
   const R = await new Renderer(canvas).init(settings.quality);
+  mark('renderer');
   progress.set('start', 0.7);
   const world = new World(R);
   await world.init();
+  mark('plans');
   progress.set('start', 1);
   const climate = new Climate(R);
+  // the time of day: days pass ('cycle', from the first region's baked moment), each region's baked
+  // moment ('baked'), or an hour held
+  const applyTime = (v) => {
+    const h = parseFloat(v);
+    if (Number.isFinite(h)) climate.setTime(h);
+    else climate.setTime(v === 'baked' ? 'baked' : 'cycle');
+  };
+  climate.hour = 16.5;
+  applyTime(settings.time);
   const floraScale = { high: 1, medium: 0.7, low: 0.45 };
   world.flora.scale = floraScale[settings.quality] ?? 1;
   const controls = new Controls(R.camera, canvas, world.collide);
@@ -94,15 +112,18 @@ async function main() {
   const first = [...world.plans.values()].find((p) => !p.plan.feature && p.id === 'edfu') || [...world.plans.values()].find((p) => !p.plan.feature);
   // arriving somewhere: the buildings and the ground near it are made before the view is shown;
   // the far land and plants keep coming in afterwards
+  // only what is close is waited for (the buildings within sight, the ground and the plants
+  // round the visitor's feet); everything further comes in while walking
   const arrive = async (x, z, report = null) => {
-    const near = [...world.plans.values()].filter((p) => World.distance(p.plan, x, z) < 300);
+    world.unloadFar(x, z);                            // what is far from the new place is let go first
+    const near = [...world.plans.values()].filter((p) => World.distance(p.plan, x, z) < 220);
     let built = 0;
     const buildings = Promise.all(near.map((p) => world.loadBuilding(p.entry).then(() => { built++; report?.('build', built / near.length); })));
     if (!near.length) report?.('build', 1);
     await Promise.all([
-      buildings,
-      world.terrain.ready(x, z, (f) => report?.('land', f)),
-      world.flora.ready(x, z, (f) => report?.('plants', f)),
+      buildings.then(() => mark('buildings')),
+      world.terrain.ready(x, z, (f) => report?.('land', f), 260).then(() => mark('land')),
+      world.flora.ready(x, z, (f) => report?.('plants', f), 140).then(() => mark('plants')),
     ]);
     world.ensureNear(x, z);                           // the rest within range, in the background
     climate.update(x, z, 0);
@@ -123,6 +144,8 @@ async function main() {
   progress.shaderT0 = performance.now();
   world.update(R.camera.position);
   await R.warmup();
+  mark('shaders');
+  console.info('[memory palace] start (ms):', JSON.stringify(times));
   progress.set('shaders', 1);
   progress.finish();
 
@@ -146,7 +169,20 @@ async function main() {
 
   // going somewhere from the map: to a building's entrance, or to any point of the land
   const toast = (msg) => { const n = $('notice'); n.textContent = msg; n.hidden = !msg; };
-  const travel = async (fn) => { closePanels(); toast(t('travelling')); try { await fn(); } finally { toast(''); } };
+  // travelling: the view fades out, the new place is made ready (ground, plants, buildings, their
+  // shaders), and the view fades in there
+  const fade = $('fade');
+  const travel = async (fn) => {
+    closePanels(); toast(t('travelling'));
+    fade.hidden = false; requestAnimationFrame(() => fade.classList.add('on'));
+    try {
+      await fn();
+      world.update(R.camera.position);
+      await R.warmup();
+    } finally {
+      toast(''); fade.classList.remove('on'); setTimeout(() => { fade.hidden = true; }, 400);
+    }
+  };
   const mapView = new MapView(world, (rec) => travel(() => goTo(rec)), (x, z) => travel(async () => {
     await arrive(x, z);
     const y = world.collide.groundAt(x, z, world.collide.terrain(x, z) + 2);
@@ -177,6 +213,9 @@ async function main() {
   // settings
   const q = $('set-quality'), mv = $('set-music'), sv = $('set-sens'), lang = $('set-lang');
   q.value = settings.quality; mv.value = settings.music; sv.value = settings.sensitivity;
+  const tm = $('set-time');
+  tm.value = ['cycle', 'baked', '7', '12', '18.5', '23'].includes(String(settings.time)) ? String(settings.time) : 'cycle';
+  tm.onchange = () => { settings.time = tm.value; applyTime(tm.value); save(); };
   q.onchange = () => { settings.quality = q.value; R.setQuality(q.value); world.flora.scale = floraScale[q.value] ?? 1; world.flora.dirty = true; save(); };
   mv.oninput = () => { settings.music = +mv.value; music.setVolume(settings.music); save(); };
   sv.oninput = () => { settings.sensitivity = +sv.value; controls.sensitivity = settings.sensitivity; save(); };
@@ -198,7 +237,8 @@ async function main() {
     music.ambience(cl.rain, cl.windy, !outdoors);
     // eye adaptation: open up in dark rooms (at most ~3 stops), close down outdoors
     const amb = R.gi.ambientAt(c.x, c.y, c.z);
-    const target = cl.exposure * Math.min(8, Math.max(1, Math.pow(R.gi.openAmbient() / Math.max(amb, 1e-4), 0.55)));
+    // at night the eye opens further (dark-adapted), though the night stays dark
+    const target = cl.exposure * (1 + 2.6 * (1 - cl.day)) * Math.min(8 + 6 * (1 - cl.day), Math.max(1, Math.pow(R.gi.openAmbient() / Math.max(amb, 1e-4), 0.55)));
     exposure = snap ? target : exposure + (target - exposure) * (1 - Math.exp(-dt / (target > exposure ? 1.6 : 0.6)));
     snap = false;
     R.renderer.toneMappingExposure = exposure;

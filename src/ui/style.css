@@ -70,3 +70,7 @@ button.primary:disabled { opacity: 0.4; cursor: default; }
 .click-hint small { font-size: 12px; opacity: 0.75; }
 @media (pointer: coarse) { .click-hint { display: none; } }
 .map .map-hint { font-size: 12.5px; color: var(--ink-dim); margin: 6px 4px 0; }
+
+/* the travel fade: the view goes dark while the new place is made ready, then comes back */
+.fade { position: fixed; inset: 0; background: #0d0b09; opacity: 0; transition: opacity 0.35s ease; pointer-events: none; z-index: 5; }
+.fade.on { opacity: 1; }

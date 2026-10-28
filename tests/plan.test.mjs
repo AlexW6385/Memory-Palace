@@ -31,3 +31,7 @@ test('plan check passes', () => {
 test('walk-through check passes', () => {
   execFileSync('node', ['tools/walk-check.mjs'], { cwd: ROOT, stdio: 'pipe' });
 });
+
+test('road check passes (every road walkable across passes and bridges)', () => {
+  execFileSync('node', ['tools/road-check.mjs'], { cwd: ROOT, stdio: 'pipe' });
+});

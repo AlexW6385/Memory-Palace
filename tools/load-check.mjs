@@ -16,7 +16,7 @@ const browser = await chromium.launch({ args: ['--enable-unsafe-webgpu', '--enab
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
-page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); else if (m.text().includes('[memory palace]')) console.log(m.text()); });
 await page.route('**/*', async (route) => {
   const m = route.request().url().match(/cdn\.jsdelivr\.net\/npm\/three@[^/]+\/(.*)$/);
   if (m) return route.fulfill({ path: join(ROOT, 'node_modules/three', m[1]), contentType: 'text/javascript' });
@@ -33,6 +33,8 @@ for (;;) {
   await page.waitForTimeout(500);
 }
 await page.waitForTimeout(1200);
+console.log('materials in scene:', await page.evaluate(() => { const m = new Map(); window.palace.renderer.scene.traverse((o) => { if (o.material && o.visible) { const k = (o.material.name || o.material.type) + (o.isInstancedMesh ? ' (inst)' : ''); m.set(k, (m.get(k) || 0) + 1); } }); return JSON.stringify([...m.entries()]); }));
+console.log('geometry MB by group:', await page.evaluate(() => { const m = {}; const seen = new Set(); window.palace.renderer.scene.traverse((o) => { if (!o.geometry || seen.has(o.geometry)) return; seen.add(o.geometry); let b = 0; for (const a of Object.values(o.geometry.attributes)) b += a.array.byteLength; if (o.geometry.index) b += o.geometry.index.array.byteLength; if (o.isInstancedMesh) b += o.instanceMatrix.array.byteLength; let top = o; while (top.parent && top.parent.type !== 'Scene') top = top.parent; const k = (top.name || top.type).split(':')[0]; m[k] = (m[k] || 0) + b / 1048576; }); return JSON.stringify(Object.fromEntries(Object.entries(m).map(([k, v]) => [k, +v.toFixed(1)]))); }));
 console.log('pipelines:', await page.evaluate(() => { const r = window.palace.renderer.renderer, p = r._pipelines; return p ? JSON.stringify({ vertex: p.programs.vertex.size, fragment: p.programs.fragment.size, pipelines: p.caches.size }) : 'n/a'; }));
 const ui = await page.evaluate(() => ({ intro: !document.getElementById('intro').hidden, hud: !document.getElementById('hud').hidden, enter: !!document.getElementById('btn-enter') }));
 console.log(`open after ${((Date.now() - t0) / 1000).toFixed(1)}s: intro shown ${ui.intro}, hud shown ${ui.hud}, enter button ${ui.enter}`);
@@ -42,8 +44,8 @@ await page.waitForTimeout(800);
 console.log('map open:', await page.evaluate(() => !document.getElementById('map').hidden), 'view:', await page.evaluate(() => JSON.stringify(window.palace.mapView?.view)));
 const box = await page.locator('#map-canvas').boundingBox();
 const before = await page.evaluate(() => window.palace.feet());
-await page.mouse.click(box.x + box.width * 0.46, box.y + box.height * 0.5);
-await page.waitForTimeout(400);
+await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.62);
+await page.waitForTimeout(60);
 // the click starts the journey: the map closes and the visitor is told they are travelling
 // (the arrival itself is the same path as the screenshot tool's poses)
 const started = await page.evaluate(() => ({ closed: document.getElementById('map').hidden, notice: document.getElementById('notice').textContent }));

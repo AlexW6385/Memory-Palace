@@ -3,7 +3,7 @@
 // 32 m. Chunks are built in workers and swapped in when ready.
 
 import * as THREE from 'three/webgpu';
-import { WORLD, riverCenter } from '../world/regions.js';
+import { WORLD, riverAt, GRID, REGIONS } from '../world/regions.js';
 import { material } from './materials.js';
 
 const TILE = 512, SUB = 256;
@@ -134,15 +134,19 @@ export class Terrain {
     this.pump();
   }
 
-  /** The river: a ribbon of water following its meander from one end of the world to the other. */
+  /** The rivers: a ribbon of water down each column of cells, following its meander and width. */
   addWater() {
     const R = WORLD.river, [, Z0, , Z1] = this.extent;
     const pos = [];
-    const half = R.width / 2 + R.bank * 0.6;
-    for (let z = Z0; z < Z1; z += 20) {
-      const a = riverCenter(z), b = riverCenter(z + 20);
-      pos.push(a - half, R.water, z, a + half, R.water, z, b + half, R.water, z + 20);
-      pos.push(a - half, R.water, z, b + half, R.water, z + 20, b - half, R.water, z + 20);
+    const cols = [...new Set(REGIONS.map((r) => r.cell[0]))];
+    for (const gx of cols) {
+      const colX = GRID.origin[0] + gx * GRID.cell[0];
+      for (let z = Z0; z < Z1; z += 20) {
+        const a = riverAt(colX, z), b = riverAt(colX, z + 20);
+        const ha = a.w / 2 + R.bank * 0.6, hb = b.w / 2 + R.bank * 0.6;
+        pos.push(a.c - ha, R.water, z, a.c + ha, R.water, z, b.c + hb, R.water, z + 20);
+        pos.push(a.c - ha, R.water, z, b.c + hb, R.water, z + 20, b.c - hb, R.water, z + 20);
+      }
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));

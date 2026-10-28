@@ -1,10 +1,11 @@
 // The regions of the world and its landscape (docs/world.md).
 //
-// The world is a river valley running north–south. On its west bank lie the regions, each a
-// basin closed by natural boundaries: the Nile region under its desert escarpment, Rome among
-// its hills, Greece around the Acropolis under the mountains. Ridge spurs come down from the
-// western uplands to the river between them; a pass crosses each spur, and a path runs along
-// the river bank below its end.
+// The world is a patch of land that grows outward: each region is a cell of a grid (1600 m
+// east–west by 1200 m north–south), the Nile in the middle and the others round it in a spiral
+// in the order of their age, so that new regions are added on the outside. Ridges run along
+// the cells' edges, crossed by passes; beyond the outermost cells rise mountains. A river runs
+// north–south through each column of cells, through gorges in the ridges, crossed by bridges
+// where the roads meet it.
 //
 // Everything here is pure data and pure functions, shared by the viewer (terrain meshes,
 // ground, climate), the walker, the plan and walk checks and the light baker.
@@ -13,17 +14,20 @@
 // ── regions and their climates ───────────────────────────────────────────────
 
 /**
- * Each region spans a band of the valley in z (north edge, south edge). Its climate fixes the
+ * Each region occupies a cell of the grid ([column, row], +x east, +z south) and has a river of its
+ * own width (`phase` keeps each river's meander where the region's buildings expect it). The sun's
+ * course through the day follows the region's latitude and season (`lat`, `dec`: the sun's
+ * declination); `az`, `el` and `hour` are the moment the buildings' light is baked for. Its climate fixes the
  * sun (time of day, so that light can be baked) and gives the sky, haze and a weather cycle.
  * Sun: azimuth in degrees from north, clockwise; elevation in degrees.
  */
 export const REGIONS = [
   {
     id: 'nile', name: { en: 'The Nile', zh: '尼罗河' },
-    z: [-560, 1250], center: [-40, 120],
+    cell: [0, 0], river: { width: 300, phase: 0 },
     climate: {
       // late afternoon in Upper Egypt: the sun low in the west-south-west, warm, dusty air
-      sun: { az: 248, el: 24, color: [1.0, 0.8, 0.6], intensity: 3.3 },
+      sun: { az: 248, el: 24, color: [1.0, 0.8, 0.6], intensity: 3.3, lat: 25, dec: -5, hour: 16.5 },
       sky: { turbidity: 4.2, rayleigh: 1.5, mie: 0.0045, mieG: 0.82, zenith: [0.1, 0.13, 0.2], horizon: [0.32, 0.27, 0.21] },
       fog: { color: [0.62, 0.55, 0.45], density: 0.00042, height: 0.01 },
       exposure: 0.55,
@@ -38,10 +42,10 @@ export const REGIONS = [
   },
   {
     id: 'rome', name: { en: 'Rome', zh: '罗马' },
-    z: [-1600, -560], center: [-80, -1080],
+    cell: [0, -1], river: { width: 90, phase: -120 },
     climate: {
       // a spring morning on the Campus Martius: the sun in the east-south-east, clouds passing
-      sun: { az: 118, el: 30, color: [1.0, 0.9, 0.78], intensity: 3.2 },
+      sun: { az: 118, el: 30, color: [1.0, 0.9, 0.78], intensity: 3.2, lat: 42, dec: 8, hour: 9 },
       sky: { turbidity: 3.2, rayleigh: 1.2, mie: 0.004, mieG: 0.8, zenith: [0.11, 0.16, 0.27], horizon: [0.27, 0.29, 0.31] },
       fog: { color: [0.52, 0.57, 0.63], density: 0.00045, height: 0.012 },
       exposure: 0.62,
@@ -57,10 +61,10 @@ export const REGIONS = [
   },
   {
     id: 'greece', name: { en: 'Greece', zh: '希腊' },
-    z: [-2750, -1600], center: [-180, -2100],
+    cell: [1, -1], river: { width: 60, phase: 975 },
     climate: {
       // an Attic noon: a high sun from the south, deep blue sky, clear dry air
-      sun: { az: 196, el: 52, color: [1.0, 0.95, 0.88], intensity: 3.6 },
+      sun: { az: 196, el: 52, color: [1.0, 0.95, 0.88], intensity: 3.6, lat: 38, dec: 15, hour: 12.5 },
       sky: { turbidity: 2.2, rayleigh: 0.95, mie: 0.003, mieG: 0.78, zenith: [0.09, 0.15, 0.3], horizon: [0.24, 0.28, 0.33] },
       fog: { color: [0.52, 0.6, 0.7], density: 0.0003, height: 0.01 },
       exposure: 0.5,
@@ -75,11 +79,11 @@ export const REGIONS = [
   },
   {
     id: 'byzantium', name: { en: 'Byzantium', zh: '拜占庭' },
-    z: [-3950, -2750], center: [-120, -3300],
+    cell: [1, 0], river: { width: 300, phase: 3350 },
     climate: {
       // a late autumn morning on the Bosphorus: the sun low in the south-east, sea air, often grey;
       // the poyraz blows from the north-east (Climate of Istanbul: cloudy, frequent light rain, fog)
-      sun: { az: 142, el: 26, color: [1.0, 0.87, 0.72], intensity: 3.0 },
+      sun: { az: 142, el: 26, color: [1.0, 0.87, 0.72], intensity: 3.0, lat: 41, dec: -15, hour: 9.5 },
       sky: { turbidity: 3.8, rayleigh: 1.3, mie: 0.005, mieG: 0.8, zenith: [0.1, 0.14, 0.24], horizon: [0.3, 0.31, 0.32] },
       fog: { color: [0.58, 0.62, 0.66], density: 0.0005, height: 0.012 },
       exposure: 0.6,
@@ -97,11 +101,11 @@ export const REGIONS = [
   },
   {
     id: 'levant', name: { en: 'The Levant', zh: '黎凡特' },
-    z: [-5150, -3950], center: [-160, -4560],
+    cell: [1, 1], river: { width: 60, phase: 5750 },
     climate: {
       // a clear morning in the Judean hills: the sun in the east-south-east, dry bright air;
       // sometimes the hot dusty sharav, in winter a passing shower
-      sun: { az: 112, el: 32, color: [1.0, 0.92, 0.8], intensity: 3.4 },
+      sun: { az: 112, el: 32, color: [1.0, 0.92, 0.8], intensity: 3.4, lat: 32, dec: 0, hour: 8.5 },
       sky: { turbidity: 2.6, rayleigh: 1.1, mie: 0.0035, mieG: 0.8, zenith: [0.09, 0.15, 0.29], horizon: [0.27, 0.28, 0.29] },
       fog: { color: [0.62, 0.6, 0.56], density: 0.00032, height: 0.01 },
       exposure: 0.52,
@@ -117,11 +121,11 @@ export const REGIONS = [
   },
   {
     id: 'francia', name: { en: 'Francia', zh: '法兰西' },
-    z: [-6350, -5150], center: [-60, -5750],
+    cell: [0, 1], river: { width: 90, phase: 6950 },
     climate: {
       // a summer afternoon on the Seine: the sun in the west-south-west, soft moist air, clouds
       // coming and going, now and then a shower
-      sun: { az: 248, el: 34, color: [1.0, 0.9, 0.78], intensity: 3.1 },
+      sun: { az: 248, el: 34, color: [1.0, 0.9, 0.78], intensity: 3.1, lat: 49, dec: 20, hour: 16 },
       sky: { turbidity: 3.4, rayleigh: 1.25, mie: 0.0045, mieG: 0.8, zenith: [0.1, 0.15, 0.27], horizon: [0.28, 0.3, 0.32] },
       fog: { color: [0.58, 0.62, 0.67], density: 0.0005, height: 0.012 },
       exposure: 0.6,
@@ -137,11 +141,11 @@ export const REGIONS = [
   },
   {
     id: 'tang', name: { en: 'Tang China', zh: '唐' },
-    z: [-7550, -6350], center: [-260, -6950],
+    cell: [-1, 1], river: { width: 60, phase: 8150 },
     climate: {
       // late afternoon on Mount Wutai: the sun low in the west, on the hall's face; dry clear air
       // of the north, at times yellow with dust from the loess, now and then a shower
-      sun: { az: 256, el: 21, color: [1.0, 0.82, 0.62], intensity: 3.2 },
+      sun: { az: 256, el: 21, color: [1.0, 0.82, 0.62], intensity: 3.2, lat: 39, dec: 10, hour: 17 },
       sky: { turbidity: 3.0, rayleigh: 1.2, mie: 0.004, mieG: 0.8, zenith: [0.09, 0.14, 0.27], horizon: [0.3, 0.28, 0.25] },
       fog: { color: [0.62, 0.57, 0.5], density: 0.0004, height: 0.01 },
       exposure: 0.56,
@@ -157,11 +161,11 @@ export const REGIONS = [
   },
   {
     id: 'heian', name: { en: 'Heian Japan', zh: '平安日本' },
-    z: [-8750, -7550], center: [60, -8180],
+    cell: [-1, 0], river: { width: 110, phase: 8150 },
     climate: {
       // an autumn morning at Uji: the sun low in the east-south-east over the hills across the
       // river, on the Phoenix Hall's face; soft moist air, mist on the water, showers passing
-      sun: { az: 112, el: 17, color: [1.0, 0.84, 0.66], intensity: 3.0 },
+      sun: { az: 112, el: 17, color: [1.0, 0.84, 0.66], intensity: 3.0, lat: 35, dec: -15, hour: 7.5 },
       sky: { turbidity: 3.6, rayleigh: 1.3, mie: 0.005, mieG: 0.8, zenith: [0.1, 0.15, 0.27], horizon: [0.3, 0.3, 0.31] },
       fog: { color: [0.6, 0.62, 0.64], density: 0.0005, height: 0.012 },
       exposure: 0.6,
@@ -177,11 +181,11 @@ export const REGIONS = [
   },
   {
     id: 'india', name: { en: 'India', zh: '印度' },
-    z: [-9950, -8750], center: [-150, -9350],
+    cell: [-1, -1], river: { width: 100, phase: 8150 },
     climate: {
       // a winter afternoon in Malwa: the sun in the south-west, warm and dry, a dusty haze on the
       // plain; now and then high cloud, rarely a winter shower
-      sun: { az: 228, el: 32, color: [1.0, 0.86, 0.68], intensity: 3.3 },
+      sun: { az: 228, el: 32, color: [1.0, 0.86, 0.68], intensity: 3.3, lat: 23.5, dec: -20, hour: 15 },
       sky: { turbidity: 4.0, rayleigh: 1.4, mie: 0.0048, mieG: 0.8, zenith: [0.1, 0.14, 0.25], horizon: [0.32, 0.29, 0.25] },
       fog: { color: [0.64, 0.58, 0.5], density: 0.00045, height: 0.01 },
       exposure: 0.56,
@@ -199,14 +203,43 @@ export const REGIONS = [
 
 export const REGION = Object.fromEntries(REGIONS.map((r) => [r.id, r]));
 
-/** Weights of every region at (x, z): smooth across the boundaries (the spurs). Sums to 1. */
-export function regionWeights(x, z, blend = 140) {
-  const w = REGIONS.map((r) => {
-    const a = (z - r.z[0] + blend / 2) / blend, b = (r.z[1] - z + blend / 2) / blend;
-    return smooth(0, 1, a) * smooth(0, 1, b);
+// ── the grid ─────────────────────────────────────────────────────────────────
+
+/** The grid of regions: cell size [east–west, north–south], the centre of cell [0, 0]. */
+export const GRID = { cell: [1600, 1200], origin: [100, 0] };
+const [CW, CH] = GRID.cell;
+const CELLS = new Map(REGIONS.map((r) => [r.cell[0] * 1000 + r.cell[1], r]));
+const HAS = (gx, gz) => CELLS.has(gx * 1000 + gz);
+const GX = [Math.min(...REGIONS.map((r) => r.cell[0])), Math.max(...REGIONS.map((r) => r.cell[0]))];
+const GZ = [Math.min(...REGIONS.map((r) => r.cell[1])), Math.max(...REGIONS.map((r) => r.cell[1]))];
+/** Centre of a cell. */
+export function cellCenter(gx, gz) { return [GRID.origin[0] + gx * CW, GRID.origin[1] + gz * CH]; }
+/** The cell [gx, gz] containing (x, z). */
+export function cellAt(x, z) { return [Math.round((x - GRID.origin[0]) / CW), Math.round((z - GRID.origin[1]) / CH)]; }
+/** The region whose cell is [gx, gz], if any. */
+export function regionOfCell(gx, gz) { return CELLS.get(gx * 1000 + gz); }
+
+/**
+ * Weights of every region at (x, z): 1 inside its cell, blending across the edges (over `blend`
+ * metres); an outer cell's weight runs on beyond the edge of the world. Sums to 1.
+ */
+const NB = REGIONS.map((r) => {
+  const [gx, gz] = r.cell, [cx, cz] = cellCenter(gx, gz);
+  return { cx, cz, e: HAS(gx + 1, gz), w: HAS(gx - 1, gz), s: HAS(gx, gz + 1), n: HAS(gx, gz - 1) };
+});
+export function regionWeights(x, z, blend = 160) {
+  const side = (d, open) => (open ? smooth(0, 1, d / blend + 0.5) : 1);
+  const w = NB.map((q) => {
+    const wx = side(CW / 2 - (x - q.cx), q.e) * side(CW / 2 + (x - q.cx), q.w);
+    if (wx === 0) return 0;
+    return wx * side(CH / 2 - (z - q.cz), q.s) * side(CH / 2 + (z - q.cz), q.n);
   });
-  const s = w.reduce((p, q) => p + q, 0) || 1;
-  return w.map((v) => v / s);
+  const s = w.reduce((p, q) => p + q, 0);
+  if (s > 1e-6) return w.map((v) => v / s);
+  // beyond a corner of the grid: the nearest region
+  let best = 0, bd = Infinity;
+  REGIONS.forEach((r, i) => { const [cx, cz] = cellCenter(...r.cell); const d = Math.hypot((x - cx) / CW, (z - cz) / CH); if (d < bd) { bd = d; best = i; } });
+  return w.map((_, i) => (i === best ? 1 : 0));
 }
 
 export function regionAt(x, z) {
@@ -216,10 +249,27 @@ export function regionAt(x, z) {
   return REGIONS[best];
 }
 
+
 /** Unit vector from the ground toward the sun for a climate. */
 export function sunDirection(climate) {
   const az = climate.sun.az * Math.PI / 180, el = climate.sun.el * Math.PI / 180;
   return [Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el)];
+}
+
+/**
+ * Direction toward the sun at an hour of the day (0…24, local solar time) for a climate's latitude
+ * and season: { dir (unit vector, as sunDirection), el (degrees) }. The moon (full, so opposite)
+ * is the same with the hour shifted by twelve and the declination reversed.
+ */
+export function sunAt(climate, hour, moon = false) {
+  const R = Math.PI / 180, lat = (climate.sun.lat ?? 35) * R, dec = (moon ? -1 : 1) * (climate.sun.dec ?? 0) * R;
+  const H = ((moon ? hour + 12 : hour) - 12) * 15 * R;
+  const sinEl = Math.sin(lat) * Math.sin(dec) + Math.cos(lat) * Math.cos(dec) * Math.cos(H);
+  const el = Math.asin(Math.max(-1, Math.min(1, sinEl)));
+  const cosAz = (Math.sin(dec) - sinEl * Math.sin(lat)) / Math.max(1e-6, Math.cos(el) * Math.cos(lat));
+  let az = Math.acos(Math.max(-1, Math.min(1, cosAz)));
+  if (Math.sin(H) > 0) az = 2 * Math.PI - az;            // afternoon: the sun is in the west
+  return { dir: [Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el)], el: el / R };
 }
 
 /** Sky radiance along direction d for a climate (used by the baker and the outdoor fallback). */
@@ -231,32 +281,54 @@ export function skyRadiance(climate, d) {
   return [0, 1, 2].map((i) => horizon[i] * (1 - t) + zenith[i] * t + glow * climate.sun.color[i] * 0.4);
 }
 
-// ── the world's extent, the river and where each building stands ─────────────
+// ── the world's extent, the rivers and where each building stands ────────────
 
-/** Walkable extent; the landscape continues beyond it to the mountains. */
+/** Walkable extent (the grid of cells); the mountains continue beyond it. */
 export const WORLD = {
-  bounds: [-1150, -9880, 1050, 1180],
-  river: { width: 300, bank: 24, depth: 3.4, water: -2.3 },
+  bounds: [GRID.origin[0] + (GX[0] - 0.5) * CW + 60, GRID.origin[1] + (GZ[0] - 0.5) * CH + 60, GRID.origin[0] + (GX[1] + 0.5) * CW - 60, GRID.origin[1] + (GZ[1] + 0.5) * CH - 60],
+  river: { bank: 24, depth: 3.4, water: -2.3 },
   far: 700,                                       // how far beyond the bounds the terrain is drawn
 };
 
-/** Centre line of the river (x) at z: a gentle meander. */
-export function riverCenter(z) {
-  return 355 + 45 * Math.sin(z / 720 + 0.6) + 22 * Math.sin(z / 260 + 2.1);
+/** The rivers' meander: the west bank lies this far east of the column's line. */
+function meander(z) { return 45 * Math.sin(z / 720 + 0.6) + 22 * Math.sin(z / 260 + 2.1); }
+
+/**
+ * The river of the column of cells containing x, at z: { c (centre line x), w (width) }. Each
+ * region gives its river a width and a phase; between regions they blend. Its west bank keeps the
+ * place the region's buildings were set out against.
+ */
+export function riverAt(x, z) {
+  const gx = Math.max(GX[0], Math.min(GX[1], Math.round((x - GRID.origin[0]) / CW)));
+  const colX = GRID.origin[0] + gx * CW;
+  let s = 0, bank = 0, width = 0, near = null, nd = Infinity;
+  for (const r of REGIONS) {
+    if (r.cell[0] !== gx) continue;
+    const cz = cellCenter(...r.cell)[1], gz = r.cell[1];
+    const lo = HAS(gx, gz - 1) ? smooth(0, 1, (z - (cz - CH / 2)) / 160 + 0.5) : 1;
+    const hi = HAS(gx, gz + 1) ? smooth(0, 1, ((cz + CH / 2) - z) / 160 + 0.5) : 1;
+    const w = lo * hi;
+    if (Math.abs(z - cz) < nd) { nd = Math.abs(z - cz); near = r; }
+    if (w < 1e-4) continue;
+    s += w; bank += w * (colX + 105 + meander(z - r.river.phase)); width += w * r.river.width;
+  }
+  if (!s) { s = 1; bank = colX + 105 + meander(z - near.river.phase); width = near.river.width; }
+  const wd = width / s;
+  return { c: bank / s + wd / 2, w: wd };
 }
 
 /** Where each building stands: origin [x, z], yaw (degrees), base height, region, and the
  *  rectangle (building-local) over which the ground is levelled to the base. */
 export const SITES = {
   edfu: { origin: [0, 0], yaw: 0, base: 0, region: 'nile', pad: [-48, -140, 48, 32] },
-  pantheon: { origin: [-20, -1080], yaw: 0, base: 0, region: 'rome', pad: [-48, -152, 48, 32] },
-  parthenon: { origin: [-165, -2122], yaw: 0, base: 40, region: 'greece', pad: [-46, -26, 50, 26] },
-  'hagia-sophia': { origin: [-60, -3300], yaw: 0, base: 24, region: 'byzantium', pad: [-100, -42, 48, 100] },
-  'dome-of-the-rock': { origin: [-150, -4550], yaw: 0, base: 30, region: 'levant', pad: [-150, -120, 150, 120] },
-  'sainte-chapelle': { origin: [40, -5750], yaw: 0, base: 1.5, region: 'francia', pad: [-40, -32, 52, 46] },
-  'foguang-east-hall': { origin: [-260, -6950], yaw: 0, base: 8, region: 'tang', pad: [-118, -48, 34, 48] },
-  'byodo-in-phoenix-hall': { origin: [120, -8180], yaw: 0, base: 1.5, region: 'heian', pad: [-60, -78, 100, 78] },
-  'sanchi-great-stupa': { origin: [-150, -9350], yaw: 0, base: 40, region: 'india', pad: [-70, -72, 92, 72] },
+  pantheon: { origin: [-20, -1200], yaw: 0, base: 0, region: 'rome', pad: [-48, -152, 48, 32] },
+  parthenon: { origin: [1435, -1147], yaw: 0, base: 40, region: 'greece', pad: [-46, -26, 50, 26] },
+  'hagia-sophia': { origin: [1540, 50], yaw: 0, base: 24, region: 'byzantium', pad: [-100, -42, 48, 100] },
+  'dome-of-the-rock': { origin: [1450, 1200], yaw: 0, base: 30, region: 'levant', pad: [-150, -120, 150, 120] },
+  'sainte-chapelle': { origin: [40, 1200], yaw: 0, base: 1.5, region: 'francia', pad: [-40, -32, 52, 46] },
+  'foguang-east-hall': { origin: [-1860, 1200], yaw: 0, base: 8, region: 'tang', pad: [-118, -48, 34, 48] },
+  'byodo-in-phoenix-hall': { origin: [-1480, -30], yaw: 0, base: 1.5, region: 'heian', pad: [-60, -78, 100, 78] },
+  'sanchi-great-stupa': { origin: [-1750, -1200], yaw: 0, base: 40, region: 'india', pad: [-70, -72, 92, 72] },
 };
 
 /**
@@ -271,12 +343,12 @@ export const PONDS = [
 
 /** Built-up quarters (towns), where the houses stand and no trees are planted. */
 export const TOWNS = [
-  { id: 'constantinople', region: 'byzantium', rects: [[-260, -3470, 60, -3360], [-430, -3355, -185, -3150], [-250, -3190, 75, -3080], [80, -3330, 190, -3160]] },
-  { id: 'sanchi-village', region: 'india', rects: [[-460, -9140, -320, -9040], [-60, -9110, 60, -9020], [-520, -9420, -420, -9300]] },
-  { id: 'uji', region: 'heian', rects: [[-160, -8420, -20, -8320], [-180, -8070, -40, -7990], [180, -7990, 240, -7880]] },
-  { id: 'tang-village', region: 'tang', rects: [[-560, -7080, -430, -6990], [-560, -6920, -430, -6840], [-640, -7020, -575, -6900]] },
-  { id: 'paris', region: 'francia', rects: [[-160, -5850, -50, -5700], [-120, -5690, 0, -5600], [-40, -5880, 120, -5815], [-300, -5640, -150, -5540]] },
-  { id: 'jerusalem', region: 'levant', rects: [[-600, -4740, -340, -4520], [-380, -4860, -60, -4730], [-440, -4700, -330, -4610]] },
+  { id: 'constantinople', region: 'byzantium', rects: [[1340, -120, 1660, -10], [1170, -5, 1415, 200], [1350, 160, 1675, 270], [1680, 20, 1790, 190]] },
+  { id: 'jerusalem', region: 'levant', rects: [[1000, 1010, 1260, 1230], [1220, 890, 1540, 1020], [1160, 1050, 1270, 1140]] },
+  { id: 'paris', region: 'francia', rects: [[-160, 1100, -50, 1250], [-120, 1260, 0, 1350], [-40, 1070, 120, 1135], [-300, 1310, -150, 1410]] },
+  { id: 'tang-village', region: 'tang', rects: [[-2160, 1070, -2030, 1160], [-2160, 1230, -2030, 1310], [-2240, 1130, -2175, 1250]] },
+  { id: 'uji', region: 'heian', rects: [[-1760, -270, -1620, -170], [-1780, 80, -1640, 160], [-1420, 160, -1360, 270]] },
+  { id: 'sanchi-village', region: 'india', rects: [[-2060, -990, -1920, -890], [-1660, -960, -1540, -870], [-2120, -1270, -2020, -1150]] },
 ];
 export function inTown(x, z) {
   for (const t of TOWNS) for (const r of t.rects) if (x > r[0] - 3 && x < r[2] + 3 && z > r[1] - 3 && z < r[3] + 3) return true;
@@ -286,100 +358,86 @@ export function inTown(x, z) {
 // ── landforms ────────────────────────────────────────────────────────────────
 
 /**
+ * Each landform belongs to a region and is felt only within its region's cell (and fades across
+ * the edges with the region's weight).
  * kind 'mesa': a flat-topped rock with cliffs and one gentle side (rounded-rectangle top).
  * kind 'hill': a rounded hill (elliptical, smooth top).
- * kind 'ridge': a mountain ridge along a polyline, with optional passes (saddles).
+ * kind 'ridge': a mountain ridge along a polyline, with optional passes (saddles) at an x
+ *   (`at`) or a z (`z`).
  * kind 'escarpment': a cliff along a polyline with a plateau on its high side (`side` = ±1, the
  *   side of travel direction that is high: +1 = right of the polyline's direction).
  * kind 'dunes': a field of transverse dunes inside a polygon.
  */
 export const LANDFORMS = [
-  // ── Nile ──
-  { kind: 'escarpment', id: 'western-desert', points: [[-640, 1700], [-560, 1150], [-500, 650], [-470, 150], [-520, -250], [-640, -560]], side: -1, height: 72, run: 45, rock: 7 },
-  { kind: 'escarpment', id: 'eastern-desert', points: [[930, -640], [880, -200], [900, 400], [960, 1100], [1000, 1700]], side: -1, height: 64, run: 55, rock: 6 },
-  { kind: 'dunes', id: 'erg', polygon: [[-470, 1150], [-140, 1150], [-140, 260], [-150, 120], [-130, -160], [-200, -480], [-500, -480]], height: 4.5, wavelength: 70, dir: [0.8, 0.6] },
-  { kind: 'hill', id: 'kom', center: [-150, -58], radius: [95, 205], height: 5.5 },              // the town mound west of the temple (Tell Edfu)
-  // ── spur between the Nile and Rome ──
-  { kind: 'ridge', id: 'spur-south', points: [[-1900, -600], [-900, -590], [-450, -575], [-150, -565], [80, -555], [150, -550]], height: 58, width: 105, endTaper: [60, 150], rock: 6,
-    passes: [{ at: -170, depth: 0.92, width: 75 }] },
-  // ── Rome ──
-  { kind: 'mesa', id: 'capitoline', center: [-250, -720], half: [85, 48], round: 22, top: 32, steep: 16, gentle: { dir: [0, -1], run: 85 }, rock: 3 },
-  { kind: 'hill', id: 'quirinal', center: [-430, -1180], radius: [170, 120], height: 34 },
-  { kind: 'hill', id: 'pincian', center: [-230, -1450], radius: [180, 80], height: 26 },
-  { kind: 'hill', id: 'janiculum', center: [700, -1050], radius: [140, 300], height: 62 },
-  // ── spur between Rome and Greece ──
-  { kind: 'ridge', id: 'spur-north', points: [[-1900, -1650], [-800, -1640], [-300, -1620], [60, -1605], [150, -1600]], height: 70, width: 120, endTaper: [60, 150], rock: 7,
-    passes: [{ at: -330, depth: 0.93, width: 80 }] },
-  // ── Greece ──
-  { kind: 'mesa', id: 'acropolis', center: [-180, -2100], half: [150, 70], round: 28, top: 40, steep: 22, gentle: { dir: [-1, 0], run: 190 }, rock: 3.5 },
-  { kind: 'hill', id: 'areopagus', center: [-420, -2075], radius: [55, 35], height: 14 },
-  { kind: 'hill', id: 'mouseion', center: [-360, -1890], radius: [120, 80], height: 28 },
-  { kind: 'ridge', id: 'aigaleo', points: [[-1300, -1700], [-950, -1900], [-880, -2250], [-1000, -2600], [-1300, -2900]], height: 140, width: 260, rock: 10 },
-  // ── Parnes: the spur between Greece and Byzantium ──
-  { kind: 'ridge', id: 'parnes', points: [[-1900, -2950], [-700, -2900], [-250, -2880], [60, -2860], [150, -2855]], height: 190, width: 300, endTaper: [80, 220], rock: 12,
-    passes: [{ at: -420, depth: 0.94, width: 95 }] },
-  { kind: 'ridge', id: 'hymettus', points: [[650, -1750], [760, -2150], [720, -2600]], height: 150, width: 220, rock: 10 },
-  { kind: 'ridge', id: 'east-parnes', points: [[640, -2860], [900, -2900], [1500, -2950]], height: 160, width: 260, rock: 10 },
-  // ── Byzantium: hills of the city above the water; the Asian shore across it ──
-  { kind: 'mesa', id: 'first-hill', center: [-60, -3290], half: [125, 92], round: 45, top: 24, steep: 75, gentle: { dir: [1, 0], run: 150 }, rock: 2 },
-  { kind: 'hill', id: 'second-hill', center: [-400, -3430], radius: [170, 130], height: 30 },
-  { kind: 'hill', id: 'third-hill', center: [-350, -3130], radius: [140, 115], height: 36 },
-  { kind: 'hill', id: 'asian-shore', center: [800, -3320], radius: [190, 420], height: 70 },
-  // ── the spur between Byzantium and the Levant ──
-  { kind: 'ridge', id: 'thrace', points: [[-1900, -4060], [-600, -4010], [0, -3995], [150, -3990]], height: 150, width: 300, endTaper: [80, 220], rock: 9,
-    passes: [{ at: -300, depth: 0.93, width: 95 }] },
-  { kind: 'ridge', id: 'east-thrace', points: [[640, -4000], [900, -4060], [1500, -4100]], height: 140, width: 260, rock: 9 },
-  // ── the Levant: Mount Moriah with the Haram, the Kidron valley, the Mount of Olives, the western hill ──
-  { kind: 'mesa', id: 'moriah', center: [-150, -4550], half: [175, 140], round: 30, top: 30, steep: 26, gentle: { dir: [0, 1], run: 140 }, rock: 3 },
-  { kind: 'hill', id: 'olives', center: [120, -4520], radius: [110, 300], height: 58 },
-  { kind: 'hill', id: 'western-hill', center: [-500, -4640], radius: [200, 170], height: 46 },
-  { kind: 'hill', id: 'bezetha', center: [-300, -4830], radius: [180, 110], height: 34 },
-  { kind: 'ridge', id: 'judean', points: [[-850, -4000], [-980, -4500], [-950, -5000]], height: 150, width: 300, rock: 11 },
-  { kind: 'ridge', id: 'samaria', points: [[-1900, -5260], [-600, -5220], [0, -5205], [150, -5200]], height: 170, width: 300, endTaper: [80, 220], rock: 10,
-    passes: [{ at: -380, depth: 0.93, width: 90 }] },
-  // ── Francia: the Seine's plain, Montmartre to the north, the hill of Sainte-Geneviève to the south ──
-  { kind: 'hill', id: 'montmartre', center: [-330, -6080], radius: [170, 130], height: 62 },
-  { kind: 'hill', id: 'sainte-genevieve', center: [-260, -5470], radius: [190, 130], height: 30 },
-  { kind: 'hill', id: 'chaillot', center: [-650, -5800], radius: [160, 220], height: 40 },
-  { kind: 'ridge', id: 'east-francia', points: [[700, -5200], [760, -5800], [720, -6400]], height: 70, width: 260, rock: 4 },
-  // ── the spur between Francia and Tang China ──
-  { kind: 'ridge', id: 'north-rim', points: [[-1900, -6460], [-600, -6430], [0, -6420], [150, -6415]], height: 140, width: 300, endTaper: [80, 220], rock: 8,
-    passes: [{ at: -480, depth: 0.93, width: 90 }] },
-  { kind: 'ridge', id: 'east-north-rim', points: [[640, -6420], [900, -6460], [1500, -6500]], height: 130, width: 260, rock: 8 },
-  // ── Tang China: Foguang Mountain behind the monastery, loess hills, the peaks of Wutai ──
-  { kind: 'hill', id: 'foguang-shan', center: [-110, -6950], radius: [200, 320], height: 58 },
-  { kind: 'hill', id: 'loess-west', center: [-640, -6800], radius: [220, 180], height: 55 },
-  { kind: 'hill', id: 'loess-north', center: [-520, -7250], radius: [240, 160], height: 48 },
-  // Mount Wutai: the spur between Tang China and Heian Japan
-  { kind: 'ridge', id: 'wutai', points: [[-1900, -7660], [-600, -7630], [0, -7620], [150, -7615]], height: 210, width: 320, endTaper: [80, 220], rock: 12,
-    passes: [{ at: -480, depth: 0.93, width: 100 }] },
-  { kind: 'ridge', id: 'east-wutai', points: [[640, -7620], [900, -7660], [1500, -7700]], height: 180, width: 300, rock: 10 },
-  { kind: 'ridge', id: 'east-tang', points: [[650, -6500], [740, -7000], [700, -7600]], height: 110, width: 260, rock: 8 },
-  // ── Heian Japan: the wooded hills west of Uji, Mount Asahi across the river, the northern mountains ──
-  { kind: 'hill', id: 'uji-west', center: [-330, -8230], radius: [210, 330], height: 62 },
-  { kind: 'hill', id: 'daikichi', center: [-120, -8560], radius: [180, 130], height: 40 },
-  { kind: 'hill', id: 'asahi', center: [720, -8150], radius: [170, 320], height: 95 },
-  // Mount Hira: the spur between Heian Japan and India
-  { kind: 'ridge', id: 'hira', points: [[-1900, -8880], [-600, -8860], [0, -8850], [150, -8845]], height: 230, width: 330, endTaper: [80, 220], rock: 12,
-    passes: [{ at: -200, depth: 0.93, width: 100 }] },
-  { kind: 'ridge', id: 'east-hira', points: [[640, -8860], [900, -8880], [1500, -8900]], height: 200, width: 300, rock: 10 },
-  // ── India: the flat-topped hill of Sanchi on the plain of Malwa, the hills of Udayagiri, the Vindhyas ──
-  { kind: 'mesa', id: 'sanchi-hill', center: [-150, -9350], half: [150, 125], round: 45, top: 40, steep: 34, gentle: { dir: [0, 1], run: 170 }, rock: 4 },
-  { kind: 'hill', id: 'udayagiri', center: [-560, -9200], radius: [130, 90], height: 34 },
-  { kind: 'hill', id: 'nagauri', center: [-420, -9650], radius: [180, 120], height: 42 },
-  { kind: 'ridge', id: 'east-india', points: [[650, -8900], [740, -9400], [700, -10000]], height: 110, width: 260, rock: 8 },
-  { kind: 'ridge', id: 'vindhya', points: [[-1900, -10080], [-600, -10060], [0, -10050], [900, -10070], [1500, -10090]], height: 220, width: 330, rock: 12 },
-  { kind: 'ridge', id: 'moab', points: [[620, -4000], [700, -4600], [640, -5300]], height: 160, width: 260, rock: 10 },
-  // ── the world's rim ──
-  { kind: 'ridge', id: 'west-uplands', points: [[-1500, 1800], [-1450, 400], [-1500, -1000], [-1550, -2400], [-1550, -3300], [-1600, -4200], [-1600, -5400], [-1600, -6600], [-1600, -7800]], height: 120, width: 400, rock: 8 },
-  { kind: 'dunes', id: 'south-erg', polygon: [[-600, 1150], [1100, 1150], [1100, 1900], [-600, 1900]], height: 9, wavelength: 110, dir: [0.7, 0.7] },
+  // ── the Nile: the desert escarpments either side of the valley, the dunes, the town mound ──
+  { region: 'nile', kind: 'escarpment', id: 'western-desert', points: [[-640, 1700], [-560, 1150], [-500, 650], [-470, 150], [-520, -250], [-640, -560], [-700, -700]], side: -1, height: 72, run: 45, rock: 7 },
+  { region: 'nile', kind: 'escarpment', id: 'eastern-desert', points: [[930, -640], [880, -200], [900, 400], [960, 1100], [1000, 1700]], side: -1, height: 64, run: 55, rock: 6 },
+  { region: 'nile', kind: 'dunes', id: 'erg', polygon: [[-470, 1150], [-140, 1150], [-140, 260], [-150, 120], [-130, -160], [-200, -480], [-500, -480]], height: 4.5, wavelength: 70, dir: [0.8, 0.6] },
+  { region: 'nile', kind: 'hill', id: 'kom', center: [-150, -58], radius: [95, 205], height: 5.5 },              // the town mound west of the temple (Tell Edfu)
+  // ── Rome: the Capitoline, the Quirinal and Pincian, the Janiculum across the Tiber ──
+  { region: 'rome', kind: 'mesa', id: 'capitoline', center: [-250, -840], half: [85, 48], round: 22, top: 32, steep: 16, gentle: { dir: [0, -1], run: 85 }, rock: 3 },
+  { region: 'rome', kind: 'hill', id: 'quirinal', center: [-430, -1300], radius: [170, 120], height: 34 },
+  { region: 'rome', kind: 'hill', id: 'pincian', center: [-230, -1570], radius: [180, 80], height: 26 },
+  { region: 'rome', kind: 'hill', id: 'janiculum', center: [700, -1170], radius: [140, 300], height: 62 },
+  // ── Greece: the Acropolis, the Areopagus, the Mouseion, Hymettus to the east ──
+  { region: 'greece', kind: 'mesa', id: 'acropolis', center: [1420, -1125], half: [150, 70], round: 28, top: 40, steep: 22, gentle: { dir: [-1, 0], run: 190 }, rock: 3.5 },
+  { region: 'greece', kind: 'hill', id: 'areopagus', center: [1180, -1100], radius: [55, 35], height: 14 },
+  { region: 'greece', kind: 'hill', id: 'mouseion', center: [1240, -915], radius: [120, 80], height: 28 },
+  { region: 'greece', kind: 'ridge', id: 'hymettus', points: [[2250, -775], [2360, -1175], [2320, -1625]], height: 150, width: 220, rock: 10 },
+  // ── Byzantium: the hills of the city above the water; the Asian shore across it ──
+  { region: 'byzantium', kind: 'mesa', id: 'first-hill', center: [1540, 60], half: [125, 92], round: 45, top: 24, steep: 75, gentle: { dir: [1, 0], run: 150 }, rock: 2 },
+  { region: 'byzantium', kind: 'hill', id: 'second-hill', center: [1200, -80], radius: [170, 130], height: 30 },
+  { region: 'byzantium', kind: 'hill', id: 'third-hill', center: [1250, 220], radius: [140, 115], height: 36 },
+  { region: 'byzantium', kind: 'hill', id: 'asian-shore', center: [2400, 30], radius: [190, 420], height: 70 },
+  // ── the Levant: Mount Moriah with the Haram, the Mount of Olives, the western hill, Bezetha, Moab ──
+  { region: 'levant', kind: 'mesa', id: 'moriah', center: [1450, 1200], half: [175, 140], round: 30, top: 30, steep: 26, gentle: { dir: [0, 1], run: 140 }, rock: 3 },
+  { region: 'levant', kind: 'hill', id: 'olives', center: [1720, 1230], radius: [110, 300], height: 58 },
+  { region: 'levant', kind: 'hill', id: 'western-hill', center: [1100, 1110], radius: [200, 170], height: 46 },
+  { region: 'levant', kind: 'hill', id: 'bezetha', center: [1300, 920], radius: [180, 110], height: 34 },
+  { region: 'levant', kind: 'ridge', id: 'moab', points: [[2220, 1750], [2300, 1150], [2240, 450]], height: 160, width: 260, rock: 10 },
+  // ── Francia: the Seine's plain, Montmartre to the north, Sainte-Geneviève to the south, Chaillot ──
+  { region: 'francia', kind: 'hill', id: 'montmartre', center: [-330, 870], radius: [170, 130], height: 62 },
+  { region: 'francia', kind: 'hill', id: 'sainte-genevieve', center: [-260, 1480], radius: [190, 130], height: 30 },
+  { region: 'francia', kind: 'hill', id: 'chaillot', center: [-650, 1150], radius: [160, 220], height: 40 },
+  { region: 'francia', kind: 'ridge', id: 'east-francia', points: [[700, 1750], [760, 1150], [720, 550]], height: 70, width: 260, rock: 4, passes: [{ z: 1380, depth: 0.85, width: 120 }] },
+  // ── Tang China: Foguang Mountain behind the monastery, loess hills, the hills across the river ──
+  { region: 'tang', kind: 'hill', id: 'foguang-shan', center: [-1710, 1200], radius: [200, 320], height: 58 },
+  { region: 'tang', kind: 'hill', id: 'loess-west', center: [-2240, 1350], radius: [220, 180], height: 55 },
+  { region: 'tang', kind: 'hill', id: 'loess-north', center: [-2120, 900], radius: [240, 160], height: 48 },
+  { region: 'tang', kind: 'ridge', id: 'east-tang', points: [[-950, 1650], [-860, 1150], [-900, 550]], height: 110, width: 260, rock: 8, passes: [{ z: 1420, depth: 0.9, width: 120 }] },
+  // ── Heian Japan: the wooded hills west of Uji, Mount Asahi across the river ──
+  { region: 'heian', kind: 'hill', id: 'uji-west', center: [-1930, -80], radius: [210, 330], height: 62 },
+  { region: 'heian', kind: 'hill', id: 'daikichi', center: [-1720, -410], radius: [180, 130], height: 40 },
+  { region: 'heian', kind: 'hill', id: 'asahi', center: [-880, 0], radius: [170, 320], height: 95 },
+  // ── India: the flat-topped hill of Sanchi on the plain of Malwa, Udayagiri, Nagauri ──
+  { region: 'india', kind: 'mesa', id: 'sanchi-hill', center: [-1750, -1200], half: [150, 125], round: 45, top: 40, steep: 34, gentle: { dir: [0, 1], run: 170 }, rock: 4 },
+  { region: 'india', kind: 'hill', id: 'udayagiri', center: [-2160, -1050], radius: [130, 90], height: 34 },
+  { region: 'india', kind: 'hill', id: 'nagauri', center: [-2020, -1500], radius: [180, 120], height: 42 },
+  { region: 'india', kind: 'ridge', id: 'east-india', points: [[-950, -750], [-860, -1250], [-900, -1850]], height: 110, width: 260, rock: 8 },
+];
+
+/**
+ * The ridges along the cells' edges: their height and half-width; the passes across them, where
+ * the roads cross from one region to the next (and a few more); the mountains beyond the world.
+ */
+const EDGE = { height: 150, width: 120, rim: 230 };
+export const PASSES = [
+  [-170, -600],          // the Nile — Rome
+  [900, -1550],          // Rome — Greece
+  [1150, -600],          // Greece — Byzantium
+  [1220, 600],           // Byzantium — the Levant
+  [900, 1400],           // the Levant — Francia
+  [-700, 1400],          // Francia — Tang China
+  [-2080, 600],          // Tang China — Heian Japan
+  [-1800, -600],         // Heian Japan — India
+  [900, -150], [-300, 600], [-700, 150], [-700, -1250], [2250, -600], [-2250, -600],          // more ways across, without roads
 ];
 
 // ── height ───────────────────────────────────────────────────────────────────
 
 function smooth(e0, e1, x) { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); }
 
-function hash2(x, z) { const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return s - Math.floor(s); }
+function hash2(x, z) { let h = Math.imul(x | 0, 374761393) + Math.imul(z | 0, 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
 function vnoise(x, z) {
   const xi = Math.floor(x), zi = Math.floor(z), xf = x - xi, zf = z - zi;
   const u = xf * xf * (3 - 2 * xf), v = zf * zf * (3 - 2 * zf);
@@ -454,7 +512,8 @@ function landformHeight(L, x, z) {
       const r = Math.hypot(dx, dz);
       if (r >= 1.6) return 0;
       const n = 1 + 0.12 * fbm(x * 0.01, z * 0.01);
-      return L.height * Math.exp(-r * r * 1.9) * n;
+      // the Gaussian falls to zero exactly at the edge (no step where it is cut off)
+      return L.height * Math.max(0, (Math.exp(-r * r * 1.9) - 0.0077) / 0.9923) * n;
     }
     case 'ridge': {
       const q = polyDist(L.points, x, z);
@@ -465,7 +524,7 @@ function landformHeight(L, x, z) {
       // the ridge falls toward the river at its east end
       if (L.endTaper) { const e = q.total - q.along; h *= smooth(L.endTaper[0], L.endTaper[1], e); }
       for (const p of L.passes || []) {
-        const dxp = x - p.at;
+        const dxp = p.z !== undefined ? z - p.z : x - p.at;
         h *= 1 - p.depth * Math.exp(-(dxp * dxp) / (2 * (p.width / 2) * (p.width / 2)));
       }
       // broken rock on the steep flanks
@@ -499,6 +558,84 @@ function landformHeight(L, x, z) {
   return 0;
 }
 
+/** Bounding rectangle beyond which a landform adds nothing (escarpments: none). */
+function landformBox(L) {
+  const pts = L.points || L.polygon || [L.center];
+  const xs = pts.map((p) => p[0]), zs = pts.map((p) => p[1]);
+  const m = L.kind === 'hill' ? Math.max(...L.radius) * 1.6 : L.kind === 'mesa' ? Math.max(...L.half) + Math.max(L.steep, L.gentle?.run || 0) + 4
+    : L.kind === 'ridge' ? L.width * 1.8 * 1.3 : L.kind === 'dunes' ? 0 : Infinity;
+  return [Math.min(...xs) - m, Math.min(...zs) - m, Math.max(...xs) + m, Math.max(...zs) + m];
+}
+const BY_REGION = new Map(REGIONS.map((r) => [r.id, []]));
+for (const L of LANDFORMS) { L.box = landformBox(L); BY_REGION.get(L.region).push(L); }
+
+/** Height of one region's own landforms at (x, z). */
+function regionHeight(r, x, z) {
+  let h = 0, dune = 0;
+  for (const L of BY_REGION.get(r.id)) {
+    const b = L.box;
+    if (x < b[0] || x > b[2] || z < b[1] || z > b[3]) continue;
+    if (L.kind === 'dunes') dune = Math.max(dune, landformHeight(L, x, z));
+    else h = Math.max(h, landformHeight(L, x, z));
+  }
+  // dunes lie on top of the flat ground and bank against the cliffs
+  return h + dune * (1 - smooth(4, 30, h));
+}
+
+/**
+ * The ridges along the cells' edges and the mountains beyond the outermost cells. An edge between
+ * two regions is a ridge with passes; an edge at the world's end rises higher, into mountains.
+ * The rivers pass the ridges that cross them through gorges.
+ */
+function edgeHeight(x, z, river) {
+  const [gx, gz] = cellAt(x, z), [cx, cz] = cellCenter(gx, gz);
+  const lx = x - cx, lz = z - cz, inside = HAS(gx, gz);
+  // far from every edge inside a cell there is nothing to add
+  if (inside && Math.min(CW / 2 - Math.abs(lx), CH / 2 - Math.abs(lz)) > EDGE.width * 3.2) return 0;
+  const n = 1 + 0.18 * fbm(x * 0.012, z * 0.012), rock = 9 * fbm(x * 0.05, z * 0.05);
+  // a mountain ridge, not a wall: its height and breadth wander along it, spurs run off its
+  // flanks, its crest is broken
+  const spur = 1 + 0.35 * fbm(x * 0.009 + 11, z * 0.009);
+  const crest = 1 + 0.3 * (1 - 2 * Math.abs(fbm(x * 0.007 + 5, z * 0.007 + 2)));
+  const ridge = (d, along, H) => {
+    const hv = H * (0.6 + 0.65 * (0.5 + 0.5 * fbm(along * 0.0024 + 17, H * 0.01)));
+    const w = EDGE.width * (0.8 + 0.7 * (0.5 + 0.5 * fbm(along * 0.003 + 29, 3)));
+    return hv * Math.exp(-((d * spur / w) ** 2) * 2.2) * crest;
+  };
+  const gorge = smooth(70, 260, Math.abs(x - river.c));
+  if (!inside) {
+    // beyond the world: mountains rising away from the nearest cell
+    let D = Infinity;
+    for (const r of REGIONS) {
+      const [qx, qz] = cellCenter(...r.cell);
+      D = Math.min(D, Math.hypot(Math.max(Math.abs(x - qx) - CW / 2, 0), Math.max(Math.abs(z - qz) - CH / 2, 0)));
+    }
+    const h = EDGE.rim * (1 + 0.25 * smooth(0, 500, D) + D / 1600) * n * (0.85 + 0.35 * fbm(x * 0.003 + 7, z * 0.003)) * crest + rock * 1.4;
+    // a river leaving the world north or south keeps its gorge
+    const alongCol = Math.abs(lx) < CW / 2 && gx >= GX[0] && gx <= GX[1];
+    return Math.max(0, alongCol ? h * Math.max(gorge, smooth(0, 900, D) * 0.6) : h);
+  }
+  let h = 0, pass = 0;
+  // the east–west edges (ridges running north–south)
+  {
+    const s = Math.sign(lx) || 1, d = CW / 2 - Math.abs(lx), other = HAS(gx + s, gz);
+    const ex = cx + s * CW / 2;
+    let e = ridge(d, z, other ? EDGE.height : EDGE.rim) * n;
+    if (other) for (const [px, pz] of PASSES) if (Math.abs(px - ex) < 1) { const p = Math.exp(-((z - pz) ** 2) / 9800); e *= 1 - 0.93 * p; pass = Math.max(pass, p); }
+    h = Math.max(h, e);
+  }
+  // the north–south edges (ridges running east–west), cut by the river's gorge
+  {
+    const s = Math.sign(lz) || 1, d = CH / 2 - Math.abs(lz), other = HAS(gx, gz + s);
+    const ez = cz + s * CH / 2;
+    let e = ridge(d, x, other ? EDGE.height : EDGE.rim) * n * gorge;
+    if (other) for (const [px, pz] of PASSES) if (Math.abs(pz - ez) < 1) { const p = Math.exp(-((x - px) ** 2) / 9800); e *= 1 - 0.93 * p; pass = Math.max(pass, p); }
+    h = Math.max(h, e);
+  }
+  // the saddle of a pass is smooth ground, not broken rock
+  return Math.max(0, h + rock * (h / EDGE.height) * 1.2 * (1 - pass));
+}
+
 /** Building pads: the ground is flattened to the site's base around each building. */
 const PADS = [];
 export function registerPad(rect, base, margin = 18, blend = 45) { PADS.push({ rect, base, margin, blend }); }
@@ -529,26 +666,25 @@ export function inPond(x, z, y = -Infinity) {
   const p = pondDistance(x, z);
   return p.d < -1.2 && y < p.y + 0.3;
 }
-/** Water that cannot be waded: the river and the ponds. */
-export function inWater(x, z, y) { return inRiver(x, z) || inPond(x, z, y); }
+/** Water that cannot be waded: the rivers and the ponds (y: the walker's feet). */
+export function inWater(x, z, y) { return inRiver(x, z, y) || inPond(x, z, y); }
 
-/** Height of the natural ground (before river and pads). */
-function naturalHeight(x, z) {
-  let h = 0, dune = 0;
-  for (const L of LANDFORMS) {
-    if (L.kind === 'dunes') dune = Math.max(dune, landformHeight(L, x, z));
-    else h = Math.max(h, landformHeight(L, x, z));
-  }
-  // dunes lie on top of the flat ground and bank against the cliffs
-  return h + dune * (1 - smooth(4, 30, h));
+/** Height of the natural ground (before rivers and pads): the regions' landforms and the edges. */
+function naturalHeight(x, z, river = riverAt(x, z)) {
+  const W = regionWeights(x, z);
+  let h = 0;
+  for (let i = 0; i < W.length; i++) if (W[i] > 1e-3) h += W[i] * regionHeight(REGIONS[i], x, z);
+  return Math.max(h, edgeHeight(x, z, river));
 }
 
 /** Height of the open ground at (x, z), with the river bed and building pads. */
 export function terrainHeight(x, z) {
-  let h = naturalHeight(x, z);
+  const r = riverAt(x, z);
+  let h = naturalHeight(x, z, r);
   for (const p of PADS) {
     const [x0, z0, x1, z1] = p.rect;
     const dx = Math.max(x0 - p.margin - x, 0, x - x1 - p.margin), dz = Math.max(z0 - p.margin - z, 0, z - z1 - p.margin);
+    if (dx > p.blend || dz > p.blend) continue;
     const d = Math.hypot(dx, dz);
     // just below the base inside the pad, so that paving laid at the base never fights the ground
     if (d < p.blend) h = p.base - 0.12 * (1 - smooth(0, 1, d / 6)) + (h - p.base) * smooth(0, 1, d / p.blend);
@@ -557,8 +693,8 @@ export function terrainHeight(x, z) {
     const p = pondDistance(x, z);
     if (p.d < 5) { const bed = p.y - 1.2; h = bed + (Math.max(h, bed) - bed) * smooth(-1, 5, p.d); }
   }
-  const R = WORLD.river, c = riverCenter(z);
-  const e = Math.abs(x - c) - R.width / 2;               // > 0 outside the channel
+  const R = WORLD.river;
+  const e = Math.abs(x - r.c) - r.w / 2;               // > 0 outside the channel
   if (e < R.bank) {
     const t = smooth(-R.bank * 0.2, R.bank, e);
     h = -R.depth + (Math.max(h, 0.2) + R.depth) * t;
@@ -566,55 +702,83 @@ export function terrainHeight(x, z) {
   return h;
 }
 
-/** Is (x, z) in the river (water deeper than wading)? */
-export function nearRoad(x, z, margin = 1.5) { return roadDistance(x, z).d < margin; }
-
-export function inRiver(x, z) {
-  return Math.abs(x - riverCenter(z)) < WORLD.river.width / 2 - 2;
+/** Is (x, z) in a river (water deeper than wading)? On a bridge (y above the water) it is not. */
+export function inRiver(x, z, y = -Infinity) {
+  const r = riverAt(x, z);
+  if (Math.abs(x - r.c) >= r.w / 2 - 2) return false;
+  if (y > WORLD.river.water + 0.5 && onBridge(x, z)) return false;
+  return true;
 }
 
-// ── roads ────────────────────────────────────────────────────────────────────
+// ── roads and bridges ────────────────────────────────────────────────────────
 
 /**
  * Roads and paths: beaten earth (or paving) along polylines, kept clear of plants. They join the
- * regions through the passes and lead each to its building's entrance.
+ * regions in the order of the spiral, through the passes, and lead each to its building's
+ * entrance. Where a road meets a river its crossing runs due east–west, and a bridge carries it.
  */
 export const ROADS = [
-  // Nile: the processional way from the quay to the pylon, and the road north to the pass
+  // the Nile: the processional way from the quay to the pylon
   { id: 'edfu-quay', width: 9, points: [[0, 30], [0, 110], [60, 150], [170, 160]], paved: 1 },
-  { id: 'nile-north', width: 6, points: [[-55, 60], [-70, -150], [-120, -330], [-170, -470], [-170, -620]] },
-  // Rome: from the southern pass round the rotunda to its forecourt, and on to the northern pass
-  { id: 'rome-south', width: 7, points: [[-170, -620], [-130, -820], [-100, -1000], [-90, -1150], [-70, -1250], [-20, -1250]] },
-  { id: 'rome-north', width: 7, points: [[-20, -1250], [-20, -1236], [-20, -1250], [-130, -1330], [-250, -1470], [-330, -1600], [-330, -1680]] },
-  // Greece: across the plain to the foot of the Acropolis, up its west slope and along the top
-  // Byzantium: from the Greek way north over the pass of Parnes, round the third hill to the
-  // atrium of Hagia Sophia; from its square down to the harbour
-  { id: 'greece-north', width: 7, points: [[-420, -2105], [-430, -2300], [-420, -2560], [-420, -2860], [-405, -3020], [-260, -3205], [-170, -3292], [-150, -3300]] },
-  { id: 'harbour', width: 6, points: [[-30, -3215], [60, -3215], [160, -3245], [232, -3258]], paved: 1 },
-  // the Levant: from Byzantium over the pass of the Thracian ridge, south of the western hill, up to
-  // the Haram's west stairs
-  { id: 'byzantium-north', width: 7, points: [[-330, -3116], [-450, -3300], [-470, -3520], [-340, -3760], [-300, -4000], [-290, -4250], [-340, -4420], [-330, -4545], [-300, -4550]] },
-  // Francia: from the Haram north over the pass of Samaria, along the foot of Sainte-Geneviève to
-  // the palace courtyard
-  { id: 'levant-north', width: 7, points: [[-300, -4550], [-330, -4700], [-380, -4950], [-380, -5200], [-360, -5420], [-120, -5620], [-20, -5735], [0, -5750]] },
-  // Tang China: from Paris over the northern pass, up the valley to the monastery gate
-  { id: 'francia-north', width: 6, points: [[-20, -5735], [-200, -5900], [-420, -6150], [-480, -6420], [-470, -6650], [-430, -6900], [-400, -6950], [-380, -6950]] },
-  // Heian Japan: from the Tang village north over the pass of Wutai, down to the plain of Uji and
-  // along the hills to the north shore of the pond
-  { id: 'tang-north', width: 6, points: [[-430, -6900], [-470, -7150], [-490, -7400], [-480, -7620], [-420, -7850], [-260, -8030], [-60, -8100], [60, -8110], [100, -8112]] },
-  // India: from the plain of Uji north over the pass of Hira, across the plain of Malwa and up the
-  // gentle south slope of the hill of Sanchi to the stupa's south gateway
-  { id: 'heian-north', width: 6, points: [[-60, -8100], [10, -8300], [20, -8560], [-120, -8720], [-200, -8850], [-210, -9000], [-170, -9120], [-150, -9220], [-150, -9318]] },
-  { id: 'greece-way', width: 7, points: [[-330, -1680], [-420, -1850], [-500, -2010], [-520, -2100], [-420, -2105], [-330, -2105], [-240, -2085], [-150, -2085], [-110, -2108]] },
+  // the Nile to Rome: north over the pass, past the Capitoline to the Pantheon's forecourt
+  { id: 'nile-rome', width: 7, points: [[-55, 60], [-70, -150], [-120, -330], [-170, -470], [-170, -600], [-170, -720], [-140, -760], [-125, -800], [-115, -900], [-100, -1120], [-90, -1270], [-70, -1370], [-20, -1370]] },
+  // Rome to Greece: east over the Tiber and the pass, up the Acropolis' west slope
+  { id: 'rome-greece', width: 7, points: [[-20, -1370], [60, -1430], [120, -1500], [440, -1500], [600, -1550], [750, -1550], [900, -1550], [1050, -1550], [1100, -1450], [1080, -1250], [1080, -1125], [1180, -1130], [1270, -1130], [1360, -1110], [1450, -1110], [1490, -1133]] },
+  // Greece to Byzantium: south over the pass and round the second hill to Hagia Sophia's atrium
+  { id: 'greece-byzantium', width: 7, points: [[1080, -1125], [1110, -880], [1150, -750], [1150, -600], [1150, -450], [1180, -330], [1300, -130], [1380, -20], [1400, 50], [1436, 50]] },
+  { id: 'harbour', width: 6, points: [[1570, 135], [1660, 135], [1760, 105], [1820, 94]], paved: 1 },
+  // Byzantium to the Levant: south past the third hill, over the pass, to the Haram's west stairs
+  { id: 'byzantium-levant', width: 7, points: [[1436, 50], [1400, 50], [1340, 145], [1270, 234], [1220, 450], [1220, 600], [1220, 750], [1270, 1050], [1310, 1200]] },
+  // the Levant to Francia: west over the pass and the hills, over the Seine to the palace
+  { id: 'levant-francia', width: 7, points: [[1310, 1200], [1250, 1350], [1100, 1420], [900, 1400], [740, 1380], [600, 1360], [460, 1340], [120, 1340], [60, 1280], [0, 1215], [-20, 1215]] },
+  // Francia to Tang China: west over the pass, the ridge and the river, round Foguang Mountain to the gate
+  { id: 'francia-tang', width: 6, points: [[-20, 1215], [-250, 1330], [-500, 1420], [-700, 1400], [-900, 1420], [-1060, 1440], [-1500, 1440], [-1620, 1560], [-1820, 1640], [-1980, 1520], [-2030, 1350], [-2030, 1250], [-2000, 1200], [-1980, 1200]] },
+  // Tang China to Heian Japan: north over the pass of Wutai to the south shore of the pond
+  { id: 'tang-heian', width: 6, points: [[-2030, 1250], [-2070, 1000], [-2085, 740], [-2080, 600], [-2080, 460], [-2020, 300], [-1860, 120], [-1660, 50], [-1540, 40], [-1500, 38]] },
+  // Heian Japan to India: north over the pass of Hira, across the plain and up to the south gateway
+  { id: 'heian-india', width: 6, points: [[-1660, 50], [-1590, -150], [-1580, -410], [-1700, -470], [-1800, -470], [-1800, -600], [-1800, -730], [-1810, -850], [-1770, -970], [-1750, -1070], [-1750, -1168]] },
 ];
+
+const ROAD_BOX = ROADS.map((r) => {
+  const xs = r.points.map((p) => p[0]), zs = r.points.map((p) => p[1]), m = r.width / 2 + 12;
+  return [Math.min(...xs) - m, Math.min(...zs) - m, Math.max(...xs) + m, Math.max(...zs) + m];
+});
 
 function roadDistance(x, z) {
   let best = Infinity, road = null;
-  for (const r of ROADS) {
-    const q = polyDist(r.points, x, z);
+  for (let i = 0; i < ROADS.length; i++) {
+    const b = ROAD_BOX[i];
+    if (x < b[0] || x > b[2] || z < b[1] || z > b[3]) continue;
+    const r = ROADS[i], q = polyDist(r.points, x, z);
     if (q.d - r.width / 2 < best) { best = q.d - r.width / 2; road = r; }
   }
   return { d: best, road };
+}
+export function nearRoad(x, z, margin = 1.5) { return roadDistance(x, z).d < margin; }
+
+/**
+ * Bridges where the roads cross the rivers, found from the roads: { rect [x0, z0, x1, z1] of the
+ * deck, y (deck level), ramps: [[rect, y0, y1, dir]] }. A crossing runs east–west.
+ */
+export const BRIDGES = [];
+for (const road of ROADS) {
+  for (let i = 0; i < road.points.length - 1; i++) {
+    const [ax, az] = road.points[i], [bx, bz] = road.points[i + 1];
+    if (Math.abs(az - bz) > 0.01) continue;
+    const r = riverAt((ax + bx) / 2, az), half = r.w / 2 + WORLD.river.bank;
+    const x0 = r.c - half, x1 = r.c + half;
+    if (Math.min(ax, bx) > x0 || Math.max(ax, bx) < x1) continue;
+    const ya = naturalHeight(x0 - 2, az), yb = naturalHeight(x1 + 2, az);
+    const y = Math.max(ya, yb, 0.5) + 1.2, w = road.width / 2 + 0.6;
+    BRIDGES.push({
+      road: road.id, rect: [x0, az - w, x1, az + w], y,
+      ramps: [[[x0 - 12, az - w, x0, az + w], ya, y, 'e'], [[x1, az - w, x1 + 12, az + w], yb, y, 'w']],
+    });
+  }
+}
+export function onBridge(x, z) {
+  for (const b of BRIDGES) { const r = b.rect; if (x > r[0] - 12 && x < r[2] + 12 && z > r[1] - 0.5 && z < r[3] + 0.5) return true; }
+  return false;
 }
 
 // ── ground cover ─────────────────────────────────────────────────────────────
@@ -633,6 +797,9 @@ export function groundCover(x, z, h, ny) {
     const g = GROUND[r.ground](x, z, h, steep);
     for (const k in acc) acc[k] += w[i] * (g[k] ?? 0);
   });
+  // high ground: the edges' ridges and the mountains beyond are bare rock above the grass
+  const high = smooth(70, 140, h) * 0.7;
+  if (high > 0) { for (const k of ['sand', 'grass', 'soil', 'fields']) acc[k] *= 1 - high; acc.rock += high; }
   // roads: beaten earth with worn edges
   const rd = roadDistance(x, z);
   if (rd.d < 2) {
@@ -642,7 +809,7 @@ export function groundCover(x, z, h, ny) {
     acc.road = m;
   }
   // the river banks are wet silt
-  const e = Math.abs(x - riverCenter(z)) - WORLD.river.width / 2;
+  const r = riverAt(x, z), e = Math.abs(x - r.c) - r.w / 2;
   if (e < WORLD.river.bank + 6) {
     const m = 1 - smooth(WORLD.river.bank * 0.4, WORLD.river.bank + 6, e);
     for (const k of ['sand', 'grass', 'rock', 'fields']) acc[k] *= 1 - m;
@@ -652,12 +819,13 @@ export function groundCover(x, z, h, ny) {
   return acc;
 }
 
+
 // warmth: the rock and silt of the region — 0 grey limestone and tufa, 1 buff sandstone;
 // red: how red the soil is (the terra rossa of Attica)
 const GROUND = {
   nile(x, z, h, steep) {
-    const c = riverCenter(z);
-    const fromRiver = Math.abs(x - c) - WORLD.river.width / 2;
+    const r = riverAt(x, z);
+    const fromRiver = Math.abs(x - r.c) - r.w / 2;
     // the cultivated flood plain: a strip along each bank as far as the flood reached (low ground)
     const reach = 110 + 40 * fbm(x * 0.004, z * 0.004);
     const flood = (1 - smooth(reach - 20, reach + 25, fromRiver)) * (1 - smooth(1.5, 4, h));

@@ -321,6 +321,54 @@ function gabledHouse(el, { bag, col }, O) {
   bag.add(O.roof === 'tile_grey' ? 'tile_grey' : 'roof_ridge', ridge);
 }
 
+/**
+ * bridge_stone: a bridge of stone carrying a road over a river { rect (the deck, running east–west),
+ * y (deck level), ramps: [[rect, y0, y1, dir]], bed (river bed level) }: a deck on piers, parapets,
+ * ramps down to the banks.
+ */
+function bridgeStone(el, { bag, col }) {
+  const [x0, z0, x1, z1] = el.rect, y = el.y, bed = el.bed ?? -4;
+  bag.add('limestone', box(x0, y - 0.7, z0, x1, y, z1));
+  col.floor(el.rect, y);
+  // piers every 14 m or so, with cutwaters upstream and down
+  const n = Math.max(2, Math.round((x1 - x0) / 14));
+  for (let k = 1; k < n; k++) {
+    const x = x0 + (x1 - x0) * k / n;
+    bag.add('limestone', box(x - 1.1, bed, z0 + 0.3, x + 1.1, y - 0.7, z1 - 0.3));
+    bag.add('limestone', fromTriangles(prism([[x - 1.1, z0 + 0.3], [x + 1.1, z0 + 0.3], [x, z0 - 1.2]], bed, y - 1.6)));
+    bag.add('limestone', fromTriangles(prism([[x + 1.1, z1 - 0.3], [x - 1.1, z1 - 0.3], [x, z1 + 1.2]], bed, y - 1.6)));
+  }
+  // the parapets along the deck and the ramps
+  const par = (ax, bx, ya, yb, z) => {
+    const t = [], h = 0.9, th = 0.4, zz0 = z - th / 2, zz1 = z + th / 2;
+    const q = [[ax, ya, zz0], [bx, yb, zz0], [bx, yb, zz1], [ax, ya, zz1]];
+    const u = q.map(([px, py, pz]) => [px, py + h, pz]);
+    quadT(t, q[0], q[1], u[1], u[0]); quadT(t, q[2], q[3], u[3], u[2]); quadT(t, u[0], u[1], u[2], u[3]);
+    quadT(t, q[3], q[0], u[0], u[3]); quadT(t, q[1], q[2], u[2], u[1]);
+    bag.add('limestone', fromTriangles(t));
+    col.segment([ax, z], [bx, z], th, Math.min(ya, yb) - 0.5, Math.max(ya, yb) + h);
+  };
+  for (const z of [z0 + 0.2, z1 - 0.2]) par(x0, x1, y, y, z);
+  for (const [r, ya, yb, dir] of el.ramps) {
+    const [rx0, rz0, rx1, rz1] = r;
+    const y0 = dir === 'e' ? ya : yb, y1 = dir === 'e' ? yb : ya;          // heights at rx0 and rx1
+    const t = [];
+    quadT(t, [rx0, y0, rz0], [rx0, y0, rz1], [rx1, y1, rz1], [rx1, y1, rz0]);
+    quadT(t, [rx0, y0, rz0], [rx1, y1, rz0], [rx1, Math.min(y0, y1) - 1.5, rz0], [rx0, Math.min(y0, y1) - 1.5, rz0]);
+    quadT(t, [rx0, y0, rz1], [rx0, Math.min(y0, y1) - 1.5, rz1], [rx1, Math.min(y0, y1) - 1.5, rz1], [rx1, y1, rz1]);
+    bag.add('limestone', fromTriangles(t));
+    col.ramp(r, Math.min(ya, yb), Math.max(ya, yb), dir);
+    for (const z of [rz0 + 0.2, rz1 - 0.2]) par(rx0, rx1, y0, y1, z);
+  }
+}
+function quadT(t, a, b, c, d) { t.push(...a, ...b, ...c, ...a, ...c, ...d, ...a, ...c, ...b, ...a, ...d, ...c); }   // both faces
+function prism(poly, y0, y1) {
+  const t = [];
+  for (let i = 0; i < poly.length; i++) { const [ax, az] = poly[i], [bx, bz] = poly[(i + 1) % poly.length]; quadT(t, [ax, y0, az], [bx, y0, bz], [bx, y1, bz], [ax, y1, az]); }
+  t.push(poly[0][0], y1, poly[0][1], poly[2][0], y1, poly[2][1], poly[1][0], y1, poly[1][1], poly[0][0], y1, poly[0][1], poly[1][0], y1, poly[1][1], poly[2][0], y1, poly[2][1]);
+  return t;
+}
+
 /** A low mud-brick wall (garden, animal pen). */
 function wallLow(el, { bag, col }) {
   const [x0, z0, x1, z1] = el.rect;
@@ -328,4 +376,4 @@ function wallLow(el, { bag, col }) {
   col.rect(el.rect, el.y - 0.5, el.y + el.h);
 }
 
-registerStyle('vernacular', { trim: () => {}, opening: () => {}, column: () => {}, elements: { house_egypt: houseEgypt, house_tiled: houseTiled, house_domed: houseDomed, house_timber: houseTimber, house_china: houseChina, house_japan: houseJapan, house_india: houseIndia, wall_low: wallLow }, objects: {} });
+registerStyle('vernacular', { trim: () => {}, opening: () => {}, column: () => {}, elements: { house_egypt: houseEgypt, house_tiled: houseTiled, house_domed: houseDomed, house_timber: houseTimber, house_china: houseChina, house_japan: houseJapan, house_india: houseIndia, bridge_stone: bridgeStone, wall_low: wallLow }, objects: {} });
