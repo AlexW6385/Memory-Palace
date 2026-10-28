@@ -4,7 +4,7 @@
 import { tr } from './i18n.js';
 import { regionAt } from '../world/regions.js';
 
-const RADIUS = 420;                     // metres from the centre to the edge of the small map
+const RADIUS = 160;                     // metres from the centre to the edge of the small map
 
 export class MiniMap {
   constructor(world, mapView, onOpen) {

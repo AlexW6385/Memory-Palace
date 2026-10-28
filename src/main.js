@@ -2,8 +2,7 @@
 
 import { Renderer } from './engine/renderer.js';
 import { World } from './engine/world.js';
-import { Controls, SPEEDS } from './engine/controls.js';
-import { WALK } from './core/walk.js';
+import { Controls } from './engine/controls.js';
 import { Music } from './engine/audio.js';
 import { Climate } from './engine/climate.js';
 import { Rain } from './engine/rain.js';
@@ -17,7 +16,7 @@ const params = new URLSearchParams(location.search);
 // the default picture quality follows the machine: 'high' only on machines with many cores and
 // much memory (a laptop with 8 cores and 8 GB starts at 'medium'; the setting can be changed)
 const strong = (navigator.hardwareConcurrency || 4) >= 10 && (navigator.deviceMemory || 8) >= 8;
-const settings = load('mp.settings', { quality: strong ? 'high' : 'medium', music: 0.6, sensitivity: 1, timeRuns: true, hour: 16.5, speed: 0 });
+const settings = load('mp.settings', { quality: strong ? 'high' : 'medium', music: 0.6, sensitivity: 1, timeRuns: true, hour: 16.5 });
 if (params.get('quality')) settings.quality = params.get('quality');
 
 function load(k, d) { try { return { ...d, ...JSON.parse(localStorage.getItem(k) || '{}') }; } catch { return d; } }
@@ -155,8 +154,6 @@ async function main() {
   $('corner').hidden = false;
   $('stick').hidden = !controls.touch;
   $('touch-btns').hidden = !controls.touch;
-  $('btn-jump').onclick = () => controls.jump();
-  $('btn-speed').onclick = () => controls.setSpeed((controls.speed + 1) % 4);
   controls.enabled = true;
   hint.hidden = controls.touch;
   const panelsOpen = () => !mapPanel.hidden || !setPanel.hidden;
@@ -258,19 +255,23 @@ async function main() {
   setInterval(() => { paintClock(); settings.hour = climate.hour; }, 1000);
   setInterval(save, 15000);
   paintClock();
-  // the walking speed, under the clock: its name, how fast, four marks; ‹ › (or the wheel, 1–4) to change
-  const speedName = $('speed-name'), speedKmh = $('speed-kmh'), pips = [...$('speed-pips').children];
-  const paintSpeed = (i) => {
-    speedName.textContent = t('speeds')[i];
-    speedKmh.textContent = `${Math.round(WALK * SPEEDS[i] * 3.6)} km/h`;
-    pips.forEach((p, k) => p.classList.toggle('on', k <= i));
-    speedName.classList.add('flash'); clearTimeout(paintSpeed.t); paintSpeed.t = setTimeout(() => speedName.classList.remove('flash'), 1200);
+  // how the visitor is moving, under the clock: walking, running or flying, how fast, how high
+  const gaitIcon = $('gait-icon'), speedName = $('speed-name'), speedKmh = $('speed-kmh'), speedAlt = $('speed-alt'), speedBar = $('speed-bar');
+  const GLYPH = { still: '•', walk: '›', run: '»', fly: '⌃' };
+  const paintSpeed = () => {
+    const g = controls.gait, F = controls.feet;
+    if (gaitIcon.textContent !== GLYPH[g]) gaitIcon.textContent = GLYPH[g];
+    const name = t('gaits')[g];
+    if (speedName.textContent !== name) speedName.textContent = name;
+    const kmh = Math.round(controls.speedNow * 3.6);
+    speedKmh.textContent = String(kmh);
+    const up = g === 'fly' ? Math.max(0, F.y - world.collide.groundAt(F.x, F.z, F.y + 0.01)) : 0;
+    speedAlt.textContent = up >= 1 ? `${Math.round(up)} ${t('above-ground')}` : '';
+    speedBar.style.width = `${Math.min(100, kmh / 65 * 100)}%`;
+    speedBar.classList.toggle('fly', g === 'fly');
   };
-  $('speed-down').onclick = () => controls.setSpeed(controls.speed - 1);
-  $('speed-up').onclick = () => controls.setSpeed(controls.speed + 1);
-  controls.onSpeed = (i) => { settings.speed = i; save(); paintSpeed(i); };
-  controls.setSpeed(settings.speed || 0);
-  onLang(() => { paintSpeed(controls.speed); paintClock(); });
+  setInterval(paintSpeed, 250);
+  onLang(() => { paintSpeed(); paintClock(); });
   q.onchange = () => { settings.quality = q.value; R.setQuality(q.value); world.flora.scale = floraScale[q.value] ?? 1; world.flora.dirty = true; save(); };
   mv.oninput = () => { settings.music = +mv.value; music.setVolume(settings.music); save(); };
   sv.oninput = () => { settings.sensitivity = +sv.value; controls.sensitivity = settings.sensitivity; save(); };

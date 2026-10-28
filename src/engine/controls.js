@@ -1,11 +1,9 @@
-// First-person walking: keyboard and mouse (pointer lock) on desktop, a thumb stick and
-// drag-to-look on touch screens. Collision against the world's floors and obstacles;
-// steps, stairs and ramps are climbed by following the floor height.
+// First-person walking and flying: keyboard and mouse (pointer lock) on desktop, a thumb stick,
+// drag-to-look and a fly button on touch screens. Collision against the world's floors and
+// obstacles; steps, stairs and ramps are climbed by following the floor height. Holding Space (or
+// the fly button) rises into the air; letting go comes gently down again.
 
-import { EYE, STEP, WALK, RUN, JUMP, move } from '../core/walk.js';
-
-/** Walking speeds the visitor can choose (multiples of a walk): walking, striding, riding, galloping. */
-export const SPEEDS = [1, 2.5, 6, 14];
+import { EYE, STEP, WALK, RUN, FLY, FLY_FAST, move } from '../core/walk.js';
 
 export class Controls {
   constructor(camera, canvas, collide) {
@@ -21,8 +19,9 @@ export class Controls {
     this.enabled = false;
     this.locked = false;
     this.touch = matchMedia('(pointer: coarse)').matches;
-    this.speed = 0;                 // index into SPEEDS
-    this.onSpeed = null;
+    this.flyHeld = false;           // Space or the fly button held
+    this.glide = false;             // came up by flying: comes down gently
+    this.speedNow = 0;              // horizontal speed (m/s), smoothed, for the display
     this._bind();
   }
 
@@ -31,7 +30,7 @@ export class Controls {
     this.feet = { x, y, z };
     this.feet.y = this.collide.groundAt(x, z, y + STEP);
     if (!Number.isFinite(this.feet.y)) this.feet.y = y;
-    this.yaw = yaw; this.pitch = pitch; this.vy = 0;
+    this.yaw = yaw; this.pitch = pitch; this.vy = 0; this.glide = false;
     this.apply();
   }
 
@@ -47,23 +46,18 @@ export class Controls {
       if (e.target.closest && e.target.closest('input, select')) return;
       this.keys.add(e.code);
       if (!this.enabled) return;
-      if (e.code === 'Space') { e.preventDefault(); this.jump(); }
-      const n = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code);
-      if (n >= 0) this.setSpeed(n);
-      if (e.code === 'BracketRight' || e.code === 'Equal') this.setSpeed(this.speed + 1);
-      if (e.code === 'BracketLeft' || e.code === 'Minus') this.setSpeed(this.speed - 1);
+      if (e.code === 'Space') e.preventDefault();
     });
-    // the wheel changes the walking speed while looking around
-    let lastWheel = 0;
-    addEventListener('wheel', (e) => {
-      if (!this.locked || !this.enabled || Math.abs(e.deltaY) < 4) return;
-      const now = performance.now();
-      if (now - lastWheel < 220) return;          // one step per flick, not per wheel event
-      lastWheel = now;
-      this.setSpeed(this.speed + (e.deltaY < 0 ? 1 : -1));
-    }, { passive: true });
     addEventListener('keyup', (e) => this.keys.delete(e.code));
-    addEventListener('blur', () => this.keys.clear());
+    addEventListener('blur', () => { this.keys.clear(); this.flyHeld = false; });
+    // the fly button: held to rise
+    const fly = document.getElementById('btn-fly');
+    if (fly) {
+      fly.addEventListener('pointerdown', (e) => { e.stopPropagation(); fly.setPointerCapture(e.pointerId); this.flyHeld = true; fly.classList.add('on'); });
+      const off = () => { this.flyHeld = false; fly.classList.remove('on'); };
+      fly.addEventListener('pointerup', off);
+      fly.addEventListener('pointercancel', off);
+    }
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === cv;
       this.onLockChange?.(this.locked);
@@ -105,15 +99,14 @@ export class Controls {
     stick.addEventListener('pointercancel', stop);
   }
 
-  /** Choose a walking speed (index into SPEEDS). */
-  setSpeed(i) {
-    this.speed = Math.max(0, Math.min(SPEEDS.length - 1, i));
-    this.onSpeed?.(this.speed);
-  }
+  /** Is the visitor off the ground (flying or coming down)? */
+  get airborne() { return this.glide || this.vy !== 0; }
 
-  /** Jump, if standing on something. */
-  jump() {
-    if (this.vy === 0 && this.feet.y <= this.collide.groundAt(this.feet.x, this.feet.z, this.feet.y + 0.05) + 0.05) this.vy = JUMP;
+  /** How the visitor is moving now: 'still', 'walk', 'run' or 'fly'. */
+  get gait() {
+    if (this.airborne) return 'fly';
+    if (this.speedNow < 0.3) return 'still';
+    return this.speedNow > (WALK + RUN) / 2 ? 'run' : 'walk';
   }
 
   look(dx, dy, k) {
@@ -141,13 +134,23 @@ export class Controls {
     const l = Math.hypot(f, s);
     if (l > 1) { f /= l; s /= l; }
     const run = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight') || Math.hypot(this.stick.x, this.stick.y) > 0.92;
-    const speed = (run ? RUN : WALK) * SPEEDS[this.speed];
+    const lift = this.enabled && (this.flyHeld || this.keys.has('Space'));
+    if (lift) this.glide = true;
+    const speed = this.glide ? (run ? FLY_FAST : FLY) : run ? RUN : WALK;
     const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
     let dx = (-sin * f + cos * s) * speed * dt, dz = (-cos * f - sin * s) * speed * dt;
 
-    this.feet.vy = this.vy;
+    const x0 = this.feet.x, z0 = this.feet.z;
+    this.feet.vy = this.vy; this.feet.lift = lift; this.feet.glide = this.glide;
     move(this.feet, dx, dz, dt, this.collide);
     this.vy = this.feet.vy;
+    if (this.glide && this.vy === 0 && !lift) {          // landed?
+      const C = this.collide, F = this.feet;
+      const g = Math.max(C.groundAt(F.x, F.z, F.y + 0.01), C.topAt(F.x, F.z, 0.18, F.y + 0.01));
+      if (F.y <= g + 1e-3) this.glide = false;
+    }
+    const v = Math.hypot(this.feet.x - x0, this.feet.z - z0) / Math.max(dt, 1e-3);
+    this.speedNow += (v - this.speedNow) * Math.min(1, dt * 6);
     this.apply();
   }
 }

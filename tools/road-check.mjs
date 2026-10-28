@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Road check: a walker with the viewer's body and movement follows every road of the world from
-// end to end — over the passes between the regions and across the rivers on their bridges — with
-// the buildings and features standing beside them, and must reach every point.
+// Road check: a walker with the viewer's body and movement follows every street of the city from
+// end to end — the avenues between the districts and the ways up to each building's entrance —
+// with the buildings and the districts' houses standing beside them, and must reach every point.
 //
 // usage: node tools/road-check.mjs [road-id ...]
 
@@ -16,7 +16,7 @@ const ids = process.argv.slice(2);
 const cw = new CollisionWorld();
 cw.terrain = terrainHeight;
 cw.water = inWater;
-for (const e of [...BUILDINGS, ...FEATURES.filter((f) => f.id.startsWith('bridge-'))]) cw.add(buildPlan((await e.load()).plan).colliders);
+for (const e of [...BUILDINGS, ...FEATURES]) cw.add(buildPlan((await e.load()).plan).colliders);
 
 let failed = 0;
 for (const road of ROADS) {

@@ -75,7 +75,7 @@ button.primary:disabled { opacity: 0.4; cursor: default; }
 .fade { position: fixed; inset: 0; background: #0d0b09; opacity: 0; transition: opacity 0.35s ease; pointer-events: none; z-index: 5; }
 .fade.on { opacity: 1; }
 
-/* the corner: the small map, the clock beside it, the walking speed */
+/* the corner: the small map, the clock beside it, how the visitor is moving */
 #corner { position: fixed; top: max(14px, env(safe-area-inset-top)); left: max(14px, env(safe-area-inset-left)); display: flex; gap: 10px; align-items: flex-start; z-index: 5; }
 #corner[hidden] { display: none; }
 .minimap { position: relative; width: 168px; height: 168px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: #2f281f; cursor: pointer; box-shadow: 0 8px 26px rgba(0, 0, 0, 0.3); }
@@ -96,13 +96,18 @@ button.primary:disabled { opacity: 0.4; cursor: default; }
 .sky-range::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); border: 2px solid #2f281f; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5); }
 .sky-range::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--ink); border: 2px solid #2f281f; }
 .speed-row { border-top: 1px solid var(--line); padding-top: 8px; }
+.gait-icon { width: 18px; height: 18px; display: grid; place-items: center; color: var(--accent); font-size: 14px; }
 .speed-name { font-size: 14px; flex: 1; transition: color 0.3s; }
-.speed-name.flash { color: var(--accent); }
-.pips { display: flex; gap: 4px; margin-top: 6px; }
-.pips i { flex: 1; height: 3px; border-radius: 2px; background: rgba(243, 234, 217, 0.16); transition: background 0.3s; }
-.pips i.on { background: var(--accent); }
+.speed-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.speed-num b { font-size: 17px; font-weight: 500; letter-spacing: 0.02em; }
+.speed-num small { font-size: 11px; opacity: 0.6; }
+.speed-bar { height: 3px; margin-top: 7px; border-radius: 2px; background: rgba(243, 234, 217, 0.14); overflow: hidden; }
+.speed-bar i { display: block; height: 100%; width: 0; border-radius: 2px; background: linear-gradient(90deg, #d9b77a, var(--accent)); transition: width 0.25s linear, background 0.4s; }
+.speed-bar i.fly { background: linear-gradient(90deg, #9fc3e8, #e3f0ff); }
 #touch-btns { position: fixed; right: max(24px, env(safe-area-inset-right)); bottom: max(34px, env(safe-area-inset-bottom)); display: flex; gap: 12px; z-index: 4; }
 #touch-btns[hidden] { display: none; }
-#touch-btns .icon { width: 56px; height: 56px; color: var(--ink); font-size: 22px; }
+#touch-btns .icon { width: 60px; height: 60px; color: var(--ink); font-size: 22px; }
+#touch-btns .icon svg { width: 26px; height: 26px; }
+#touch-btns .icon.on { background: rgba(243, 234, 217, 0.3); }
 @media (max-width: 560px) { .minimap { width: 112px; height: 112px; } .status-card { width: 164px; padding: 8px 10px; } .status-card .big { font-size: 18px; } }
 #mm-show[hidden] { display: none; }

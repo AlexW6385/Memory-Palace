@@ -2,6 +2,14 @@
 
 Newest first. What you can visit and what looks better, in plain words.
 
+## v7.0 — One compact city (2026-10-28)
+
+- **The world is now one dense palace-city** instead of a land of separate valleys: nine districts of about 200 × 200 m that touch directly, each with its building and a small surrounding of its own time — streets and lanes, some 1,400 houses of the period (mud-brick tower and courtyard houses round Edfu, tiled houses in Rome, Athens and Constantinople, domed stone houses by the Haram, timber-framed houses in Paris, grey-brick courtyard houses at Foguang, timber houses at Uji, limewashed houses at Sanchi), gardens, its own trees and ground, and the rock, hill or pond it stands on. From Edfu it is a short walk to the Pantheon, up the Acropolis or across to Hagia Sophia.
+- **One sky over the whole city:** the same time and weather everywhere; set the hour on the clock, or let the days run.
+- **Fly:** hold Space (or the arrow button on a phone) to rise, let go to glide gently down — onto a street, a roof or a wall top. Walking and running keep their true speed; the speed levels and the jump are gone.
+- **The corner shows how you are moving:** walking, running or flying, your speed in km/h and, in the air, your height.
+- **Quicker arrival:** the city is small, buildings are made a little at a time while the world keeps running, and those you leave are kept ready for when you come back.
+
 ## v6.1 — A small map, a clock, speeds and jumping (2026-10-28)
 
 - **Top left: a small map** of the land round you (north up), the buildings and your arrow, with the region's name; click it for the large map, hide it with its button.

@@ -7,7 +7,7 @@ import { FEATURES } from '../world/features/index.js';
 import { buildPlanAsync, toWorld, subtractRects } from '../core/build.js';
 import { Terrain } from './terrain.js';
 import { Flora } from './flora/index.js';
-import { WORLD, terrainHeight, inWater } from '../world/regions.js';
+import { WORLD, terrainHeight, inWater, waterLevel } from '../world/regions.js';
 import { CollisionWorld } from '../core/collide.js';
 import { GeoBag, frustum, fromTriangles, quad } from '../core/geom.js';
 import { material, flameMaterial } from './materials.js';
@@ -28,6 +28,7 @@ export class World {
     this.collide = new CollisionWorld();
     this.collide.terrain = terrainHeight;
     this.collide.water = inWater;
+    this.collide.waterLevel = waterLevel;
     this.plans = new Map();           // id → { id, entry, plan, music }: every building, small
     this.buildings = new Map();       // id → { plan, music, group, built, gi }: those built so far
     this.loading = new Map();

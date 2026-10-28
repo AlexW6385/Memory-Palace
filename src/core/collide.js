@@ -80,6 +80,27 @@ export class CollisionWorld {
     return best;
   }
 
+  /** Highest top of an obstacle under the circle (x, z, r) not above maxY (roofs and walls to land on). */
+  topAt(x, z, r, maxY) {
+    let best = -Infinity;
+    for (const o of this._near(this.grid, x, z)) {
+      if (o.y1 > maxY || o.y1 <= best) continue;
+      if (x + r < o.bb[0] || x - r > o.bb[2] || z + r < o.bb[1] || z - r > o.bb[3]) continue;
+      if (o.circle ? Math.hypot(x - o.circle[0], z - o.circle[1]) < o.circle[2] + r : circlePoly(x, z, r, o.poly)) best = o.y1;
+    }
+    return best;
+  }
+
+  /** Is anything (an obstacle, or a floor seen from below) in the way of rising from y0 to y1 at (x, z)? */
+  ceilingBetween(x, z, r, y0, y1) {
+    if (this.blockedAt(x, z, r, y0, y1)) return true;
+    for (const f of this._near(this.floorGrid, x, z)) {
+      const h = CollisionWorld.floorHeight(f, x, z);
+      if (h !== null && h > y0 && h <= y1) return true;
+    }
+    return false;
+  }
+
   /** Lowest surface above y at (x, z) (a ceiling for the head check), from obstacles only. */
   blockedAt(x, z, r, y0, y1) {
     for (const o of this._near(this.grid, x, z)) {

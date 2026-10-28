@@ -1,10 +1,10 @@
-// The map: districts, the river, every building's footprint and the visitor. Click anywhere on
+// The map: the city's districts, every building's footprint and the visitor. Click anywhere on
 // the land to go there; click a building (or its name in the list) to go to its entrance. Drag to
 // pan, wheel or pinch to zoom.
 
 import { tr, t } from './i18n.js';
 import { WORLD } from '../world/regions.js';
-import { terrainHeight, riverAt, regionWeights, REGIONS, inRiver } from '../world/regions.js';
+import { terrainHeight, regionWeights, REGIONS, inPond } from '../world/regions.js';
 
 export class MapView {
   constructor(world, onJump, onGo) {
@@ -130,7 +130,7 @@ export class MapView {
     }
   }
 
-  /** Shaded relief of the world (hill shading lit from the north-west, region tints, the river). */
+  /** Shaded relief of the world (hill shading lit from the north-west, district tints, the ponds). */
   relief() {
     if (this._relief) return this._relief;
     const rect = [WORLD.bounds[0] - 200, WORLD.bounds[1] - 200, WORLD.bounds[2] + 200, WORLD.bounds[3] + 200];
@@ -150,7 +150,7 @@ export class MapView {
       REGIONS.forEach((r, k) => { for (let q = 0; q < 3; q++) c[q] += w[k] * tint[r.id][q]; });
       const lift = Math.min(1, y / 120) * 30;
       c = c.map((v) => v * shade + lift);
-      if (inRiver(x, z)) c = [52, 82, 92];
+      if (inPond(x, z)) c = [52, 82, 92];
       const o = (j * W + i) * 4;
       img.data[o] = c[0]; img.data[o + 1] = c[1]; img.data[o + 2] = c[2]; img.data[o + 3] = 255;
     }
@@ -218,13 +218,11 @@ export class MapView {
       const d = Math.hypot(Math.max(b[0] - x, 0, x - b[2]), Math.max(b[1] - z, 0, z - b[3]));
       if (d < nd) { nd = d; near = rec; }
     }
-    if (near && (nd < 150 || nd * this.view.s < 40 * devicePixelRatio)) { this.onJump(near); return; }
-    // anywhere else on the land (not in the river, not beyond the edge of the world)
+    if (near && (nd < 25 || nd * this.view.s < 40 * devicePixelRatio)) { this.onJump(near); return; }
+    // anywhere else in the city (not in a pond, not beyond its edge)
     const [X0, Z0, X1, Z1] = WORLD.bounds;
     if (x < X0 + 5 || x > X1 - 5 || z < Z0 + 5 || z > Z1 - 5) return;
-    let gx = x;
-
-    if (inRiver(gx, z)) { const r = riverAt(gx, z), half = r.w / 2 + 6; gx = x < r.c ? r.c - half : r.c + half; }
-    this.onGo?.(gx, z);
+    if (inPond(x, z)) return;
+    this.onGo?.(x, z);
   }
 }

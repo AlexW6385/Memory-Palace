@@ -3,7 +3,7 @@
 // 32 m. Chunks are built in workers and swapped in when ready.
 
 import * as THREE from 'three/webgpu';
-import { WORLD, riverAt, GRID, REGIONS } from '../world/regions.js';
+import { WORLD } from '../world/regions.js';
 import { material } from './materials.js';
 
 const TILE = 512, SUB = 256;
@@ -31,7 +31,6 @@ export class Terrain {
       w.idle = true;
       return w;
     });
-    this.addWater();
   }
 
   /** The chunks (rect, step) wanted for a viewer at (x, z). */
@@ -132,28 +131,5 @@ export class Terrain {
       this.chunks.set(p.key, { mesh, step: p.step, rect: p.rect });
     }
     this.pump();
-  }
-
-  /** The rivers: a ribbon of water down each column of cells, following its meander and width. */
-  addWater() {
-    const R = WORLD.river, [, Z0, , Z1] = this.extent;
-    const pos = [];
-    const cols = [...new Set(REGIONS.map((r) => r.cell[0]))];
-    for (const gx of cols) {
-      const colX = GRID.origin[0] + gx * GRID.cell[0];
-      for (let z = Z0; z < Z1; z += 20) {
-        const a = riverAt(colX, z), b = riverAt(colX, z + 20);
-        const ha = a.w / 2 + R.bank * 0.6, hb = b.w / 2 + R.bank * 0.6;
-        pos.push(a.c - ha, R.water, z, a.c + ha, R.water, z, b.c + hb, R.water, z + 20);
-        pos.push(a.c - ha, R.water, z, b.c + hb, R.water, z + 20, b.c - hb, R.water, z + 20);
-      }
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.computeVertexNormals();
-    const m = new THREE.Mesh(g, material('river'));
-    m.receiveShadow = true;
-    m.name = 'river';
-    this.scene.add(m);
   }
 }
