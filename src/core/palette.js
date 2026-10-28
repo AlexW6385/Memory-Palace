@@ -116,7 +116,7 @@ export const MATERIALS = {
   limestone_yellow: { color: '#cdb27e', roughness: 0.85, kind: 'ashlar', course: 0.36, block: 0.7 },
   schist_rubble:    { color: '#6f6a62', roughness: 0.92, kind: 'ashlar', course: 0.16, block: 0.3 },
   lauze:            { color: '#58564f', roughness: 0.8, kind: 'tiles' },
-  flagstone:        { color: '#8b8478', roughness: 0.85, kind: 'paving', course: 0.8, block: 1.0 },
+  flagstone:        { color: '#998d7a', roughness: 0.85, kind: 'paving', course: 0.8, block: 1.0 },
   iron:             { color: '#3a3836', roughness: 0.5, metalness: 0.8, kind: 'metal' },
   serpentine:       { color: '#3f5b4c', roughness: 0.3, kind: 'veined', block: 1.0, course: 1.2, colors: ['#3f5b4c', '#2f4a3c', '#7e9686'] },
 };

@@ -40,12 +40,18 @@ const RED = 7.6;                     // red sandstone below, yellow limestone ab
 const bays = (P, from) => { const out = []; let a = from; for (const p of P) { out.push([a, p - PS]); a = p + PS; } return out; };
 
 // ── the terrace, the floors ──────────────────────────────────────────────────
-floor([-14, -20, 56, 40], 0, 'flagstone', { th: 0.4 });
+floor([-14, -9, 0, 9], 0, 'flagstone', { th: 0.4 });                         // the parvis
+floor([0, -9.7, 53.5, 9.7], 0, 'flagstone', { th: 0.4 });                     // nave, crossing, choir, ambulatory
+floor([19.45, -17.4, 39.5, 17.4], 0, 'flagstone', { th: 0.4 });               // the transept and its apsidioles
+for (const a of [-60, 60]) {                                                  // the side chapels beyond
+  const cx = 40.6 + Math.cos(a * D2R) * 10.3, cz = Math.sin(a * D2R) * 10.3;
+  floor([cx - 2.8, cz - 2.8, cx + 2.8, cz + 2.8], 0, 'flagstone', { th: 0.4 });
+}
 
 // ── the nave: piers, arcades, tribunes, the barrel vault ─────────────────────
 for (const sz of [-1, 1]) {
   const z = sz * PZ;
-  for (const x of NAVE_P) add({ t: 'pier', at: [x, z], s: PS, hr: 0.24, y0: 0, cap: ARC_SPR, y1: ARC_SPR, mat: 'sandstone_red', capMat: 'limestone_yellow' });
+  for (const x of NAVE_P) add({ t: 'pier', at: [x, z], s: PS, hr: 0.24, y0: 0, cap: ARC_SPR, y1: ARC_SPR, mat: 'limestone_yellow', baseMat: 'sandstone_red', capMat: 'limestone_yellow' });
   // the tall half-column on the nave face of each pier, up to the springing of the transverse arch
   for (const x of NAVE_P.slice(0, 4)) add({ t: 'column', at: [x, sz * (HN + 0.05)], y: 0.4, h: VSPR - 0.4, d: 0.5, mat: 'limestone_yellow', collide: false });
   const arc = bays(NAVE_P, XW).map(([a, b]) => ({ uc: (a + b) / 2, r: (b - a) / 2, spring: ARC_SPR, sill: 0 }));
@@ -68,7 +74,7 @@ for (const sz of [-1, 1]) {
   // buttresses (flat pilaster strips) on the outer wall between the bays
   for (const x of NAVE_P.slice(0, 4)) add({ t: 'block', rect: [x - 0.5, Math.min(sz * WZ, sz * (WZ + 0.5)), x + 0.5, Math.max(sz * WZ, sz * (WZ + 0.5))], y0: 0, y1: OUT - 0.4, mat: 'sandstone_red' });
   // the lean-to roofs over aisle and tribune
-  add({ t: 'lean_roof', rect: [-0.2, Math.min(sz * (AI - 0.1), sz * (WZ + 0.6)), TW0, Math.max(sz * (AI - 0.1), sz * (WZ + 0.6))], low: sz > 0 ? 's' : 'n', y0: OUT, y1: 19.2 });
+  add({ t: 'lean_roof', rect: [1.5, Math.min(sz * (AI - 0.1), sz * (WZ + 0.6)), TW0, Math.max(sz * (AI - 0.1), sz * (WZ + 0.6))], low: sz > 0 ? 's' : 'n', y0: OUT, y1: 19.2 });
 }
 // transverse arches under the nave vault, at each pier
 for (const x of NAVE_P.slice(0, 4)) add({ t: 'arch_band', c: [x, VSPR, 0], span: 'z', r0: HN - 0.35, r1: HN + 0.1, d0: x - 0.32, d1: x + 0.32, mat: 'limestone_yellow' });
@@ -84,7 +90,7 @@ for (const sz of [-1, 1]) add({ t: 'block', rect: [0, Math.min(sz * 1.5, sz * 4.
 for (const sz of [-1, 1]) for (const [z0, x0] of [[3.35, 0.35], [2.4, 0.9]]) add({ t: 'block', rect: [x0, Math.min(sz * z0, sz * 4.4), 1.5, Math.max(sz * z0, sz * 4.4)], y0: 0, y1: 4.85, mat: 'sandstone_red' });
 add({ t: 'tympanum', x: 1.0, zc: 0, y: 4.6, w: 6.7, h: 3.6 });
 add({ t: 'obj', kind: 'doors', at: [2.6, 0], y: 0, yaw: Math.PI / 2, w: 3.0, h: 4.6, th: 0.12, depth: 0 });
-add({ t: 'gable_roof', x0: -0.2, x1: XC0 - PS, z0: -AI - 0.25, z1: AI + 0.25, y: EAVE, ridge: RIDGE, ends: true });
+add({ t: 'gable_roof', x0: 1.5, x1: XC0 - PS, z0: -AI - 0.25, z1: AI + 0.25, y: EAVE, ridge: RIDGE, ends: false });
 add({ t: 'block', rect: [0, -AI, 1.5, AI], y0: EAVE, y1: EAVE + 0.01, mat: 'limestone_yellow', collide: false });
 // the gable of the west front, in stone
 {
@@ -106,7 +112,7 @@ for (const sz of [-1, 1]) {
 }
 
 // ── the crossing: its four great arches, the squinches, the octagonal drum and dome, the lantern ─
-for (const sz of [-1, 1]) for (const x of [XC0, XC1]) add({ t: 'pier', at: [x, sz * PZ], s: PS, hr: 0.26, y0: 0, cap: ARC_SPR, y1: VSPR, mat: 'sandstone_red', capMat: 'limestone_yellow' });
+for (const sz of [-1, 1]) for (const x of [XC0, XC1]) add({ t: 'pier', at: [x, sz * PZ], s: PS, hr: 0.26, y0: 0, cap: ARC_SPR, y1: VSPR, mat: 'limestone_yellow', baseMat: 'sandstone_red', capMat: 'limestone_yellow' });
 for (const x of [XC0, XC1]) add({ t: 'arch_band', c: [x, VSPR, 0], span: 'z', r0: HN, r1: HN + 0.65, d0: x - PS, d1: x + PS, mat: 'limestone_yellow' });
 for (const sz of [-1, 1]) add({ t: 'arch_band', c: [XM, VSPR, sz * PZ], span: 'x', r0: HN, r1: HN + 0.65, d0: sz * PZ - PS, d1: sz * PZ + PS, mat: 'limestone_yellow' });
 // the walls of the crossing square over the arches, up to the octagon
@@ -122,7 +128,6 @@ for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
 const RO8 = HN / Math.cos(22.5 * D2R);
 add({ t: 'arc_wall', c: [XM, 0], r0: RO8, r1: RO8 + 1.0, a0: 22.5, a1: 382.5, y0: 22.4, y1: 31.0, step: 45, mat: 'limestone_yellow', collide: false,
   gaps: [0, 45, 90, 135, 180, 225, 270, 315].map((a) => ({ a: a + 0.001, w: 0.8, y0: 23.0, y1: 24.6 })) });
-add({ t: 'block', rect: [XM - HN, -HN, XM + HN, HN], y0: 22.1, y1: 22.4, mat: 'limestone_yellow', collide: false });
 {
   const Rs = (RO8 * RO8 + 2.0 * 2.0) / (2 * 2.0), cy = 26.4 - Rs, e0 = Math.asin((24.4 - cy) / Rs) / D2R;
   add({ t: 'sphere', c: [XM, cy, 0], R: Rs, e0, e1: 90, segA: 48, segE: 12, mat: 'limestone_yellow', outer: { t: 0.35, mat: 'limestone_yellow' } });
@@ -133,7 +138,7 @@ add({ t: 'pyramid_roof', c: [XM, 0], r: (RO8 + 1.3) / Math.cos(22.5 * D2R), side
 for (const sz of [-1, 1]) {
   // the arms' piers and arcades (west and east lines), the tribunes' twin openings above
   for (const x of [XC0, XC1]) {
-    for (const z of ARM) add({ t: 'pier', at: [x, sz * z], s: PS, hr: 0.24, y0: 0, cap: ARC_SPR, y1: ARC_SPR, mat: 'sandstone_red', capMat: 'limestone_yellow' });
+    for (const z of ARM) add({ t: 'pier', at: [x, sz * z], s: PS, hr: 0.24, y0: 0, cap: ARC_SPR, y1: ARC_SPR, mat: 'limestone_yellow', baseMat: 'sandstone_red', capMat: 'limestone_yellow' });
     const P = [PZ, ...ARM];
     const arm = [[P[0] + PS, P[1] - PS], [P[1] + PS, P[2] - PS], [P[2] + PS, TZ]];
     const o = [x, sz > 0 ? 0 : 0], u = [0, sz];
@@ -183,7 +188,7 @@ for (const sz of [-1, 1]) add({ t: 'block', rect: [TW0, Math.min(sz * AO, sz * W
 
 // ── the choir: two straight bays, the hemicycle, the ambulatory, three chapels ─
 for (const sz of [-1, 1]) {
-  for (const x of [...CH_P, XH]) add({ t: 'pier', at: [x, sz * PZ], s: PS, hr: 0.24, y0: 0, cap: ARC_SPR, y1: ARC_SPR, mat: 'sandstone_red', capMat: 'limestone_yellow' });
+  for (const x of [...CH_P, XH]) add({ t: 'pier', at: [x, sz * PZ], s: PS, hr: 0.24, y0: 0, cap: ARC_SPR, y1: ARC_SPR, mat: 'limestone_yellow', baseMat: 'sandstone_red', capMat: 'limestone_yellow' });
   const P = [XC1, ...CH_P, XH];
   const arc = [[P[0] + PS, P[1] - PS], [P[1] + PS, P[2] - PS]].map(([a, b]) => ({ uc: (a + b) / 2, r: (b - a) / 2, spring: ARC_SPR, sill: 0 }));
   pwall({ o: [0, sz * PZ], u: [1, 0], th: 2 * PS, u0: XC1 + PS, u1: XH + PS, y0: 0, y1: 13.0, arches: arc, arcade: true, mat: 'limestone_yellow', collide: false });
