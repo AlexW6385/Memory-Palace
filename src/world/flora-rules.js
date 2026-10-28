@@ -5,7 +5,7 @@
 // The reasoning for each district's planting is in its building's dossier (§10) and docs/world.md.
 
 import { REGIONS, regionWeights, pondDistance, SITES, fbm, nearRoad } from './regions.js';
-import { inQuarter, inGarden } from './city.js';
+import { inQuarter, inGarden, inSquare } from './city.js';
 
 const smooth = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
 
@@ -152,7 +152,7 @@ export const ROWS = { olive: 9, apple: 8 };
 
 /** All the species and densities at a place, blended across the districts' borders. */
 export function densities(x, z, place) {
-  if (inSite(x, z) || inClear(x, z) || nearRoad(x, z)) return null;
+  if (inSite(x, z) || inClear(x, z) || nearRoad(x, z) || inSquare(x, z)) return null;
   // in a built block only grass grows between the houses
   if (inQuarter(x, z)) { const g = (place.g?.grass || 0) * 40; return g > 0 ? { grass: g } : null; }
   const W = regionWeights(x, z), out = {};

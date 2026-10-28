@@ -9,7 +9,7 @@
 // where it would touch a street, a building's site or a pond, or where the ground is too steep;
 // about one block in seven is a garden. Deterministic: the same lots every time.
 
-import { REGIONS, REGION, WORLD, terrainHeight, nearRoad, inPond, regionAt, inCity } from './regions.js';
+import { REGIONS, REGION, WORLD, SITES, ROADS, terrainHeight, nearRoad, inPond, regionAt, inCity } from './regions.js';
 import { inSite } from './flora-rules.js';
 
 function rng(seed) { let s = seed >>> 0 || 1; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
@@ -35,7 +35,49 @@ export function blocks() {
     BLOCKS.push({ rect, region, garden: garden && inside, houses });
     NI = i + 1; NJ = Math.max(NJ, j + 1);
   }
+  makeSquares();
   return BLOCKS;
+}
+
+/** Each district's square: paving and stone or brick of its own, and a well. */
+const SQUARE = {
+  nile: ['sandstone_floor', 'mudbrick'], rome: ['travertine', 'limestone'], greece: ['travertine', 'limestone'],
+  byzantium: ['marble_floor', 'proconnesian'], levant: ['travertine', 'limestone'], francia: ['flagstone', 'limestone'],
+  tang: ['flagstone', 'brick_grey'], heian: ['pebbles', 'limestone'], india: ['sandstone_floor', 'brick'], rouergue: ['flagstone', 'schist_rubble'],
+};
+
+/**
+ * In each district, the built block nearest its building on level ground becomes a square: open,
+ * paved, with a well in the middle, where the lanes meet before the approach to the building.
+ */
+function makeSquares() {
+  for (const r of REGIONS) {
+    const site = Object.values(SITES).find((q) => q.region === r.id);
+    if (!site) continue;
+    // the way to the building leaves an avenue here: the square is beside it
+    const ways = ROADS.filter((q) => q.id.startsWith('to-'));
+    const way = ways.reduce((p, q) => { const e = (w) => { const l = w.points[w.points.length - 1]; return Math.hypot(l[0] - site.origin[0], l[1] - site.origin[1]); }; return e(q) < e(p) ? q : p; });
+    const [tx, tz] = way.points[0];
+    let best = null, bd = Infinity;
+    for (const lim of [0.45, 1.0]) {
+      for (const b of BLOCKS) {
+        if (b.region !== r.id || b.garden || b.houses.length < 4) continue;
+        const cx = (b.rect[0] + b.rect[2]) / 2, cz = (b.rect[1] + b.rect[3]) / 2;
+        const hs = [[b.rect[0], b.rect[1]], [b.rect[2], b.rect[1]], [b.rect[0], b.rect[3]], [b.rect[2], b.rect[3]], [cx, cz]].map(([x, z]) => terrainHeight(x, z));
+        if (Math.max(...hs) - Math.min(...hs) > lim) continue;
+        const d = Math.hypot(cx - tx, cz - tz);
+        if (d < bd) { bd = d; best = { b, y: (Math.max(...hs) + Math.min(...hs)) / 2, cx, cz }; }
+      }
+      if (best) break;
+    }
+    if (!best) continue;
+    const { b, y, cx, cz } = best, [pave, stone] = SQUARE[r.id] || ['flagstone', 'limestone'];
+    b.square = true;
+    b.houses = [
+      { t: 'floor', rect: b.rect, y: y + 0.05, mat: pave, th: 0.7 },
+      { t: 'well', at: [cx, cz], y: y + 0.05, mat: stone, timber: 'timber' },
+    ];
+  }
 }
 
 /** Is the ground free for a house: not on a street, a building's site or a pond? */
@@ -90,7 +132,10 @@ export function blockAt(x, z) {
 }
 
 /** Is (x, z) in a built block (where only grass grows between the houses)? */
-export function inQuarter(x, z) { const b = blockAt(x, z); return !!b && !b.garden && b.houses.length > 0; }
+export function inQuarter(x, z) { const b = blockAt(x, z); return !!b && !b.garden && !b.square && b.houses.length > 0; }
+
+/** Is (x, z) in a district's square (paved: nothing grows there)? */
+export function inSquare(x, z) { const b = blockAt(x, z); return !!b && !!b.square; }
 
 /** Is (x, z) in a garden block (a grove, an orchard, a garden of its district)? */
 export function inGarden(x, z) { const b = blockAt(x, z); return !!b && b.garden; }

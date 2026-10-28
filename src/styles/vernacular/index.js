@@ -377,6 +377,20 @@ function prism(poly, y0, y1) {
   return t;
 }
 
+/**
+ * A well in a square: a round curb of stone (or brick), two posts and a beam with a pulley, a
+ * bucket on the rim. { at [x, z], y, mat (curb), timber }
+ */
+function well(el, { bag, col }) {
+  const [x, z] = el.at, y = el.y, mat = el.mat || 'limestone', tim = el.timber || 'timber';
+  bag.add(mat, lathe([[0.95, -0.4], [0.95, 0.85], [0.7, 0.85], [0.7, 0.1], [0.001, 0.1]], 20, null, x, y, z));
+  bag.add('water', lathe([[0.69, 0.05], [0.001, 0.05]], 20, null, x, y, z));
+  for (const s of [-1, 1]) bag.add(tim, box(x + s * 0.85 - 0.08, y + 0.85, z - 0.08, x + s * 0.85 + 0.08, y + 2.5, z + 0.08));
+  bag.add(tim, box(x - 1.0, y + 2.4, z - 0.07, x + 1.0, y + 2.55, z + 0.07));
+  bag.add('timber', lathe([[0.14, 0], [0.16, 0.28], [0.001, 0.28]], 10, null, x + 0.55, y + 0.85, z + 0.55));
+  col.circle(x, z, 0.95, y - 0.4, y + 0.85);
+}
+
 /** A low mud-brick wall (garden, animal pen). */
 function wallLow(el, { bag, col }) {
   const [x0, z0, x1, z1] = el.rect;
@@ -384,4 +398,4 @@ function wallLow(el, { bag, col }) {
   col.rect(el.rect, el.y - 0.5, el.y + el.h);
 }
 
-registerStyle('vernacular', { trim: () => {}, opening: () => {}, column: () => {}, elements: { house_egypt: houseEgypt, house_tiled: houseTiled, house_domed: houseDomed, house_timber: houseTimber, house_china: houseChina, house_japan: houseJapan, house_india: houseIndia, house_rouergue: houseRouergue, bridge_stone: bridgeStone, wall_low: wallLow }, objects: {} });
+registerStyle('vernacular', { trim: () => {}, opening: () => {}, column: () => {}, elements: { house_egypt: houseEgypt, house_tiled: houseTiled, house_domed: houseDomed, house_timber: houseTimber, house_china: houseChina, house_japan: houseJapan, house_india: houseIndia, house_rouergue: houseRouergue, well, bridge_stone: bridgeStone, wall_low: wallLow }, objects: {} });
