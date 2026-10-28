@@ -15,7 +15,9 @@
 
 /**
  * Each region occupies a cell of the grid ([column, row], +x east, +z south) and has a river of its
- * own width (`phase` keeps each river's meander where the region's buildings expect it). Its climate fixes the
+ * own width (`phase` keeps each river's meander where the region's buildings expect it). The sun's
+ * course through the day follows the region's latitude and season (`lat`, `dec`: the sun's
+ * declination); `az`, `el` and `hour` are the moment the buildings' light is baked for. Its climate fixes the
  * sun (time of day, so that light can be baked) and gives the sky, haze and a weather cycle.
  * Sun: azimuth in degrees from north, clockwise; elevation in degrees.
  */
@@ -25,7 +27,7 @@ export const REGIONS = [
     cell: [0, 0], river: { width: 300, phase: 0 },
     climate: {
       // late afternoon in Upper Egypt: the sun low in the west-south-west, warm, dusty air
-      sun: { az: 248, el: 24, color: [1.0, 0.8, 0.6], intensity: 3.3 },
+      sun: { az: 248, el: 24, color: [1.0, 0.8, 0.6], intensity: 3.3, lat: 25, dec: -5, hour: 16.5 },
       sky: { turbidity: 4.2, rayleigh: 1.5, mie: 0.0045, mieG: 0.82, zenith: [0.1, 0.13, 0.2], horizon: [0.32, 0.27, 0.21] },
       fog: { color: [0.62, 0.55, 0.45], density: 0.00042, height: 0.01 },
       exposure: 0.55,
@@ -43,7 +45,7 @@ export const REGIONS = [
     cell: [0, -1], river: { width: 90, phase: -120 },
     climate: {
       // a spring morning on the Campus Martius: the sun in the east-south-east, clouds passing
-      sun: { az: 118, el: 30, color: [1.0, 0.9, 0.78], intensity: 3.2 },
+      sun: { az: 118, el: 30, color: [1.0, 0.9, 0.78], intensity: 3.2, lat: 42, dec: 8, hour: 9 },
       sky: { turbidity: 3.2, rayleigh: 1.2, mie: 0.004, mieG: 0.8, zenith: [0.11, 0.16, 0.27], horizon: [0.27, 0.29, 0.31] },
       fog: { color: [0.52, 0.57, 0.63], density: 0.00045, height: 0.012 },
       exposure: 0.62,
@@ -62,7 +64,7 @@ export const REGIONS = [
     cell: [1, -1], river: { width: 60, phase: 975 },
     climate: {
       // an Attic noon: a high sun from the south, deep blue sky, clear dry air
-      sun: { az: 196, el: 52, color: [1.0, 0.95, 0.88], intensity: 3.6 },
+      sun: { az: 196, el: 52, color: [1.0, 0.95, 0.88], intensity: 3.6, lat: 38, dec: 15, hour: 12.5 },
       sky: { turbidity: 2.2, rayleigh: 0.95, mie: 0.003, mieG: 0.78, zenith: [0.09, 0.15, 0.3], horizon: [0.24, 0.28, 0.33] },
       fog: { color: [0.52, 0.6, 0.7], density: 0.0003, height: 0.01 },
       exposure: 0.5,
@@ -81,7 +83,7 @@ export const REGIONS = [
     climate: {
       // a late autumn morning on the Bosphorus: the sun low in the south-east, sea air, often grey;
       // the poyraz blows from the north-east (Climate of Istanbul: cloudy, frequent light rain, fog)
-      sun: { az: 142, el: 26, color: [1.0, 0.87, 0.72], intensity: 3.0 },
+      sun: { az: 142, el: 26, color: [1.0, 0.87, 0.72], intensity: 3.0, lat: 41, dec: -15, hour: 9.5 },
       sky: { turbidity: 3.8, rayleigh: 1.3, mie: 0.005, mieG: 0.8, zenith: [0.1, 0.14, 0.24], horizon: [0.3, 0.31, 0.32] },
       fog: { color: [0.58, 0.62, 0.66], density: 0.0005, height: 0.012 },
       exposure: 0.6,
@@ -103,7 +105,7 @@ export const REGIONS = [
     climate: {
       // a clear morning in the Judean hills: the sun in the east-south-east, dry bright air;
       // sometimes the hot dusty sharav, in winter a passing shower
-      sun: { az: 112, el: 32, color: [1.0, 0.92, 0.8], intensity: 3.4 },
+      sun: { az: 112, el: 32, color: [1.0, 0.92, 0.8], intensity: 3.4, lat: 32, dec: 0, hour: 8.5 },
       sky: { turbidity: 2.6, rayleigh: 1.1, mie: 0.0035, mieG: 0.8, zenith: [0.09, 0.15, 0.29], horizon: [0.27, 0.28, 0.29] },
       fog: { color: [0.62, 0.6, 0.56], density: 0.00032, height: 0.01 },
       exposure: 0.52,
@@ -123,7 +125,7 @@ export const REGIONS = [
     climate: {
       // a summer afternoon on the Seine: the sun in the west-south-west, soft moist air, clouds
       // coming and going, now and then a shower
-      sun: { az: 248, el: 34, color: [1.0, 0.9, 0.78], intensity: 3.1 },
+      sun: { az: 248, el: 34, color: [1.0, 0.9, 0.78], intensity: 3.1, lat: 49, dec: 20, hour: 16 },
       sky: { turbidity: 3.4, rayleigh: 1.25, mie: 0.0045, mieG: 0.8, zenith: [0.1, 0.15, 0.27], horizon: [0.28, 0.3, 0.32] },
       fog: { color: [0.58, 0.62, 0.67], density: 0.0005, height: 0.012 },
       exposure: 0.6,
@@ -143,7 +145,7 @@ export const REGIONS = [
     climate: {
       // late afternoon on Mount Wutai: the sun low in the west, on the hall's face; dry clear air
       // of the north, at times yellow with dust from the loess, now and then a shower
-      sun: { az: 256, el: 21, color: [1.0, 0.82, 0.62], intensity: 3.2 },
+      sun: { az: 256, el: 21, color: [1.0, 0.82, 0.62], intensity: 3.2, lat: 39, dec: 10, hour: 17 },
       sky: { turbidity: 3.0, rayleigh: 1.2, mie: 0.004, mieG: 0.8, zenith: [0.09, 0.14, 0.27], horizon: [0.3, 0.28, 0.25] },
       fog: { color: [0.62, 0.57, 0.5], density: 0.0004, height: 0.01 },
       exposure: 0.56,
@@ -163,7 +165,7 @@ export const REGIONS = [
     climate: {
       // an autumn morning at Uji: the sun low in the east-south-east over the hills across the
       // river, on the Phoenix Hall's face; soft moist air, mist on the water, showers passing
-      sun: { az: 112, el: 17, color: [1.0, 0.84, 0.66], intensity: 3.0 },
+      sun: { az: 112, el: 17, color: [1.0, 0.84, 0.66], intensity: 3.0, lat: 35, dec: -15, hour: 7.5 },
       sky: { turbidity: 3.6, rayleigh: 1.3, mie: 0.005, mieG: 0.8, zenith: [0.1, 0.15, 0.27], horizon: [0.3, 0.3, 0.31] },
       fog: { color: [0.6, 0.62, 0.64], density: 0.0005, height: 0.012 },
       exposure: 0.6,
@@ -183,7 +185,7 @@ export const REGIONS = [
     climate: {
       // a winter afternoon in Malwa: the sun in the south-west, warm and dry, a dusty haze on the
       // plain; now and then high cloud, rarely a winter shower
-      sun: { az: 228, el: 32, color: [1.0, 0.86, 0.68], intensity: 3.3 },
+      sun: { az: 228, el: 32, color: [1.0, 0.86, 0.68], intensity: 3.3, lat: 23.5, dec: -20, hour: 15 },
       sky: { turbidity: 4.0, rayleigh: 1.4, mie: 0.0048, mieG: 0.8, zenith: [0.1, 0.14, 0.25], horizon: [0.32, 0.29, 0.25] },
       fog: { color: [0.64, 0.58, 0.5], density: 0.00045, height: 0.01 },
       exposure: 0.56,
@@ -252,6 +254,22 @@ export function regionAt(x, z) {
 export function sunDirection(climate) {
   const az = climate.sun.az * Math.PI / 180, el = climate.sun.el * Math.PI / 180;
   return [Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el)];
+}
+
+/**
+ * Direction toward the sun at an hour of the day (0…24, local solar time) for a climate's latitude
+ * and season: { dir (unit vector, as sunDirection), el (degrees) }. The moon (full, so opposite)
+ * is the same with the hour shifted by twelve and the declination reversed.
+ */
+export function sunAt(climate, hour, moon = false) {
+  const R = Math.PI / 180, lat = (climate.sun.lat ?? 35) * R, dec = (moon ? -1 : 1) * (climate.sun.dec ?? 0) * R;
+  const H = ((moon ? hour + 12 : hour) - 12) * 15 * R;
+  const sinEl = Math.sin(lat) * Math.sin(dec) + Math.cos(lat) * Math.cos(dec) * Math.cos(H);
+  const el = Math.asin(Math.max(-1, Math.min(1, sinEl)));
+  const cosAz = (Math.sin(dec) - sinEl * Math.sin(lat)) / Math.max(1e-6, Math.cos(el) * Math.cos(lat));
+  let az = Math.acos(Math.max(-1, Math.min(1, cosAz)));
+  if (Math.sin(H) > 0) az = 2 * Math.PI - az;            // afternoon: the sun is in the west
+  return { dir: [Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el)], el: el / R };
 }
 
 /** Sky radiance along direction d for a climate (used by the baker and the outdoor fallback). */

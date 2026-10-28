@@ -20,6 +20,9 @@ export const ENV = {
   cloudOffset: uniform(new Vector2(0, 0)),      // integrated drift
   wet: uniform(0),                              // 0 dry … 1 soaked
   rain: uniform(0),
+  night: uniform(0),                            // 0 day … 1 full night
+  moonDir: uniform(new Vector3(0, -1, 0)),
+  moonUp: uniform(0),                           // how much the moon lights the night (0…1)
 };
 
 /**

@@ -15,7 +15,8 @@ const params = new URLSearchParams(location.search);
 // the default picture quality follows the machine: 'high' only on machines with many cores and
 // much memory (a laptop with 8 cores and 8 GB starts at 'medium'; the setting can be changed)
 const strong = (navigator.hardwareConcurrency || 4) >= 10 && (navigator.deviceMemory || 8) >= 8;
-const settings = load('mp.settings', { quality: strong ? 'high' : 'medium', music: 0.6, sensitivity: 1 });
+const settings = load('mp.settings', { quality: strong ? 'high' : 'medium', music: 0.6, sensitivity: 1, time: 'cycle' });
+if (params.get('time')) settings.time = params.get('time');
 if (params.get('quality')) settings.quality = params.get('quality');
 
 function load(k, d) { try { return { ...d, ...JSON.parse(localStorage.getItem(k) || '{}') }; } catch { return d; } }
@@ -91,6 +92,15 @@ async function main() {
   mark('plans');
   progress.set('start', 1);
   const climate = new Climate(R);
+  // the time of day: days pass ('cycle', from the first region's baked moment), each region's baked
+  // moment ('baked'), or an hour held
+  const applyTime = (v) => {
+    const h = parseFloat(v);
+    if (Number.isFinite(h)) climate.setTime(h);
+    else climate.setTime(v === 'baked' ? 'baked' : 'cycle');
+  };
+  climate.hour = 16.5;
+  applyTime(settings.time);
   const floraScale = { high: 1, medium: 0.7, low: 0.45 };
   world.flora.scale = floraScale[settings.quality] ?? 1;
   const controls = new Controls(R.camera, canvas, world.collide);
@@ -203,6 +213,9 @@ async function main() {
   // settings
   const q = $('set-quality'), mv = $('set-music'), sv = $('set-sens'), lang = $('set-lang');
   q.value = settings.quality; mv.value = settings.music; sv.value = settings.sensitivity;
+  const tm = $('set-time');
+  tm.value = ['cycle', 'baked', '7', '12', '18.5', '23'].includes(String(settings.time)) ? String(settings.time) : 'cycle';
+  tm.onchange = () => { settings.time = tm.value; applyTime(tm.value); save(); };
   q.onchange = () => { settings.quality = q.value; R.setQuality(q.value); world.flora.scale = floraScale[q.value] ?? 1; world.flora.dirty = true; save(); };
   mv.oninput = () => { settings.music = +mv.value; music.setVolume(settings.music); save(); };
   sv.oninput = () => { settings.sensitivity = +sv.value; controls.sensitivity = settings.sensitivity; save(); };
@@ -224,7 +237,8 @@ async function main() {
     music.ambience(cl.rain, cl.windy, !outdoors);
     // eye adaptation: open up in dark rooms (at most ~3 stops), close down outdoors
     const amb = R.gi.ambientAt(c.x, c.y, c.z);
-    const target = cl.exposure * Math.min(8, Math.max(1, Math.pow(R.gi.openAmbient() / Math.max(amb, 1e-4), 0.55)));
+    // at night the eye opens further (dark-adapted), though the night stays dark
+    const target = cl.exposure * (1 + 2.6 * (1 - cl.day)) * Math.min(8 + 6 * (1 - cl.day), Math.max(1, Math.pow(R.gi.openAmbient() / Math.max(amb, 1e-4), 0.55)));
     exposure = snap ? target : exposure + (target - exposure) * (1 - Math.exp(-dt / (target > exposure ? 1.6 : 0.6)));
     snap = false;
     R.renderer.toneMappingExposure = exposure;

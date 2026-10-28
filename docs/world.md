@@ -28,6 +28,8 @@ Coordinates: metres, +x east, +z south (north is −z), origin at the pylon gate
 | **India** (Sanchi, Malwa) | [−1, −1] | The Great Stupa at Sanchi | winter afternoon, south-west (az 228°, el 32°) | clear · haze · high cloud · rare shower |
 | **Heian Japan** (Uji) | [−1, 0] | The Phoenix Hall of Byōdō-in | autumn morning, low in the east-south-east (az 112°, el 17°), on the hall's face | fair · cloudy · river mist · drizzle |
 
+**Time of day.** Days pass (`DAY_SECONDS`, half an hour): the sun's course is computed for each region's latitude and season (`climate.sun.lat`, `dec`; `sunAt`), so the sun rises in the east, stands high or low at noon as the place and season require, and sets; twilight reddens the light; at night the full moon (`sunAt(…, moon)`) is the light that casts shadows, with stars and the Milky Way over a dark blue sky (`starDome` in `src/engine/renderer.js`). The baked light of the buildings is made at each region's own hour (`az`, `el`, `hour`) and is scaled with the daylight. The settings can hold the time (morning, noon, evening, night, or each place's own hour); `?time=` does the same for screenshots.
+
 Climates are in `REGIONS[].climate`: sun, sky (turbidity, Rayleigh and Mie scattering, zenith and horizon radiance for the baker), haze (colour, density, height falloff), exposure, wind, and weather states with weights. A state sets cloud cover and density, the sun's strength under cloud, the haze, rain and wind. States are held for 2½–8 minutes and cross-fade over about 75 s. Cloud shadows drift over the ground with the wind; rain falls outdoors, and the ground darkens and pools while wet. `?weather=<id>` fixes a state (screenshots).
 
 ### Nile

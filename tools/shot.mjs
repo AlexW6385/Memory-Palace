@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Screenshots at fixed viewpoints (tools/viewpoints.json) in headless Chromium.
 //
-// usage: node tools/shot.mjs [--building edfu] [--only name,name] [--size 1280x800]
+// usage: node tools/shot.mjs [--building edfu] [--only name,name] [--size 1280x800] [--time 21.5|baked|cycle]
 //                            [--out shots] [--webgl] [--quality high] [--wait 2500]
 //        node tools/shot.mjs --pose x,y,z,yaw,pitch --name custom      (world coordinates, feet)
 //        node tools/shot.mjs --cam x,y,z,yaw,pitch --name custom       (free camera)
@@ -66,7 +66,8 @@ await page.route('**/*', async (route) => {
   return route.continue();
 });
 const t0 = Date.now();
-const q = `quality=${opt('quality', 'high')}` + (flag('webgl') ? '' : '');
+// the time of day: each region at its baked moment unless asked (--time 21.5)
+const q = `quality=${opt('quality', 'high')}&time=${opt('time', 'baked')}` + (flag('webgl') ? '' : '');
 if (flag('webgl')) await page.addInitScript(() => { Object.defineProperty(navigator, 'gpu', { get: () => undefined }); });
 await page.goto(`http://127.0.0.1:${port}/index.html?${q}`);
 try { await page.waitForFunction('window.READY === true', null, { timeout: 600_000 }); }

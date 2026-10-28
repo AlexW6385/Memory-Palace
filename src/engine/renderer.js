@@ -3,7 +3,7 @@
 // same scene pass (one pass draws colour and normals), bloom, AgX tone mapping.
 
 import * as THREE from 'three/webgpu';
-import { pass, context, renderOutput, fog, vec3, vec4, min, mix, luminance, smoothstep } from 'three/tsl';
+import { pass, context, renderOutput, fog, vec3, vec4, min, mix, luminance, smoothstep, positionLocal, normalize, floor, fract, hash, length, dot, exp, sin, time, max, pow, float, mx_fractal_noise_float } from 'three/tsl';
 import { ao } from 'three/addons/tsl/display/GTAONode.js';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { smaa } from 'three/addons/tsl/display/SMAANode.js';
@@ -45,6 +45,8 @@ export class Renderer {
     sky.scale.setScalar(3500);
     sky.material.fog = false;
     scene.add(sky);
+    // the night sky over it: stars, the band of the Milky Way, a faint glow; and the moon
+    scene.add(this.stars = starDome(), this.moon = moonDisc());
     // haze: denser near the ground, glowing toward the sun; parameters come from the climate
     scene.fogNode = fog(fogColor, fogFactor);
     this.sunDir = [0, 1, 0];
@@ -132,6 +134,11 @@ export class Renderer {
   update() {
     const c = this.camera.position;
     this.sky.position.copy(c);
+    this.stars.position.copy(c);
+    const m = ENV.moonDir.value;
+    this.moon.position.set(c.x + m.x * 3000, c.y + m.y * 3000, c.z + m.z * 3000);
+    this.moon.lookAt(c);
+    this.moon.visible = m.y > -0.05;
     const d = this.sunDir;
     this.sun.position.set(c.x + d[0] * 400, c.y + d[1] * 400, c.z + d[2] * 400);
     this.sun.target.position.copy(c);
@@ -155,3 +162,47 @@ export class Renderer {
     if (device) await device.queue.onSubmittedWorkDone();
   }
 }
+
+/**
+ * The night sky: a dome inside the sky's, adding stars (a few thousand points of different
+ * brightness, twinkling a little), the Milky Way as a faint cloudy band, and a dim blue glow, all
+ * fading in as the daylight goes and hidden by cloud.
+ */
+function starDome() {
+  const m = new THREE.MeshBasicNodeMaterial({ side: THREE.BackSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+  const d = normalize(positionLocal);
+  const N = 260, g = d.mul(N), cell = floor(g), f = fract(g).sub(0.5);
+  const h = hash(cell.x.mul(7.13).add(cell.y.mul(113.31)).add(cell.z.mul(37.77)));
+  const shape = smoothstep(0.32, 0.0, length(f));
+  const bright = smoothstep(0.988, 1.0, h).mul(shape).mul(sin(time.mul(h.mul(9).add(2))).mul(0.18).add(0.82));
+  const tint = mix(vec3(0.75, 0.82, 1.0), vec3(1.0, 0.86, 0.7), hash(cell.x.add(cell.z.mul(3.1))));
+  // the Milky Way: a band about a great circle, broken by dust
+  const axis = normalize(vec3(0.35, 0.6, -0.72));
+  const band = exp(dot(d, axis).mul(dot(d, axis)).mul(-26)).mul(mx_fractal_noise_float(d.mul(9), 4, 2, 0.5).mul(0.5).add(0.5));
+  const above = smoothstep(-0.05, 0.12, d.y);
+  const night = ENV.night.mul(ENV.night).mul(float(1).sub(ENV.clouds.mul(0.95)));      // stars only once the sky is dark
+  const glow = vec3(0.004, 0.007, 0.016).add(vec3(0.035, 0.04, 0.05).mul(band));
+  m.colorNode = tint.mul(bright).mul(3.0).add(glow).mul(night).mul(above);
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(3200, 48, 24), m);
+  mesh.name = 'stars';
+  mesh.frustumCulled = false;
+  mesh.renderOrder = -1;
+  return mesh;
+}
+
+/** The full moon: a pale disc with darker seas, seen through the haze as the sky darkens. */
+function moonDisc() {
+  const m = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, fog: false });
+  const p = positionLocal.xy.div(26);
+  const r = length(p);
+  const seas = mx_fractal_noise_float(vec3(p.mul(2.2), 1.7), 3, 2, 0.5).mul(0.5).add(0.5);
+  const disc = smoothstep(1.0, 0.94, r);
+  const lum = mix(float(1.0), float(0.72), smoothstep(0.45, 0.7, seas));
+  m.colorNode = vec3(1.0, 0.98, 0.92).mul(lum).mul(4.0).mul(max(ENV.night, 0.15));
+  m.opacityNode = disc.mul(float(1).sub(ENV.clouds.mul(0.85))).mul(smoothstep(0.0, 0.6, ENV.night).mul(0.85).add(0.15));
+  const mesh = new THREE.Mesh(new THREE.CircleGeometry(26, 48), m);
+  mesh.name = 'moon';
+  mesh.frustumCulled = false;
+  return mesh;
+}
+
