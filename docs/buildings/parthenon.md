@@ -95,6 +95,8 @@ Post and lintel in marble: architraves (epistyle) of three parallel beams spanni
 
 The Acropolis plateau and the plain of Attica (docs/world.md): olive groves in rows on the plain, Aleppo pines and maquis on the hills, cypresses; the road from the west climbs the slope and runs along the top to the east front [inferred: Panathenaic way]. *Later: the Propylaea at the west, the Erechtheion to the north, the altar of Athena east (L4).*
 
+**In the city (2026-10-28):** the Acropolis is scaled to the Greek district (a rock of 24 m with cliffs and a gentle north side that the way climbs); tiled houses in the blocks below it, olives and Aleppo pines on its slopes.
+
 ## 11. Music
 
 Classical Athens: the lyre and kithara (plucked strings) and the aulos (double reed pipe); hymns and processional music at the Panathenaia, where musical contests were held. Modes: Dorian (in the ancient sense, the octave species E–F–G–A–B–C–D–E with the semitone at the bottom), regarded as dignified and fitting for Athena. [stated: general musicology, e.g. M. L. West, *Ancient Greek Music*, 1992; scale reconstruction **[inferred]**]

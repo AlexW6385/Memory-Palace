@@ -131,6 +131,8 @@ The Nile region of the world (docs/world.md) is the temple's setting.
 - **The desert** west of the valley behind its escarpment; dunes banked against it [inferred: setting of Edfu between the Nile and the Western Desert].
 - *Later (L4):* the quay and its stair, the mammisi south-west of the pylon, dovecotes and granaries, people and animals.
 
+**In the city (2026-10-28):** the temple stands in the Nile district of the compact city (docs/world.md); the town is now the district's blocks of mud-brick tower and courtyard houses round the enclosure (`house_egypt`, `src/world/city.js`), with palm groves, sycamore figs and tamarisks in its gardens; the river, the fields and the desert escarpment are no longer shown, and the processional way comes from the lower avenue.
+
 ## 11. Music
 
 Sources on Ptolemaic temple music: temple musicians (singers, harpists, sistrum players — the sistrum sacred to Hathor, Horus's consort), the cult hymns sung at the daily ritual (Morning Hymn to awaken the god), feasts with drums, clappers and double pipes (aulos-like). The scale system is not recorded; reconstructions use pentatonic and heptatonic modes; harp tunings (angular harp, 10–20 strings) suggest diatonic or anhemitonic tunings. [stated: general musicology (Manniche, *Music and Musicians in Ancient Egypt*, 1991); scale **[inferred]**]

@@ -75,6 +75,8 @@ Only the oculus and the open door: a 9 m disc of sun moving across the dome and 
 
 Forecourt with porticoes on three sides [stated: archeoroma; Wikipedia]. **Built (L2):** a travertine square 80 m wide reaching about 100 m north of the portico, closed by porticoes of granite Corinthian columns 7.6 m high in front of a back wall, with lean-to roofs, and a gateway in the north portico on the axis [inferred: proportions and order of the porticoes]. Around: the plain of the Campus Martius with stone pines, cypresses and holm oaks; hills to the south and north (docs/world.md). *L4: the streets and buildings of the Campus Martius.*
 
+**In the city (2026-10-28):** the forecourt opens north onto the north street of the compact city; the Roman district round it has blocks of tiled houses, stone pines, cypresses and oleanders in its gardens.
+
 ## 11. Music
 
 Roman temple music: the tibia (double reed pipe) played at sacrifice, the cornu and tuba in processions, the lyre; the hydraulis (water organ) in public spectacle. Greek theory (modes) in use. [stated: general musicology; e.g. Wille, *Musica Romana*] Our synthesis: Lydian species on F, tibia melody and drone in the portico and forecourt, the lyre in the rotunda with a very long reverberation (the real rotunda rings for many seconds).
