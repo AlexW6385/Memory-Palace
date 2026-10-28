@@ -7,6 +7,7 @@ import { Music } from './engine/audio.js';
 import { Climate } from './engine/climate.js';
 import { Rain } from './engine/rain.js';
 import { MapView } from './ui/map.js';
+import { MiniMap } from './ui/minimap.js';
 import { initLang, setLang, t, onLang } from './ui/i18n.js';
 
 const $ = (id) => document.getElementById(id);
@@ -15,8 +16,7 @@ const params = new URLSearchParams(location.search);
 // the default picture quality follows the machine: 'high' only on machines with many cores and
 // much memory (a laptop with 8 cores and 8 GB starts at 'medium'; the setting can be changed)
 const strong = (navigator.hardwareConcurrency || 4) >= 10 && (navigator.deviceMemory || 8) >= 8;
-const settings = load('mp.settings', { quality: strong ? 'high' : 'medium', music: 0.6, sensitivity: 1, time: 'cycle' });
-if (params.get('time')) settings.time = params.get('time');
+const settings = load('mp.settings', { quality: strong ? 'high' : 'medium', music: 0.6, sensitivity: 1, timeRuns: true, hour: 16.5, speed: 0 });
 if (params.get('quality')) settings.quality = params.get('quality');
 
 function load(k, d) { try { return { ...d, ...JSON.parse(localStorage.getItem(k) || '{}') }; } catch { return d; } }
@@ -92,15 +92,12 @@ async function main() {
   mark('plans');
   progress.set('start', 1);
   const climate = new Climate(R);
-  // the time of day: days pass ('cycle', from the first region's baked moment), each region's baked
-  // moment ('baked'), or an hour held
-  const applyTime = (v) => {
-    const h = parseFloat(v);
-    if (Number.isFinite(h)) climate.setTime(h);
-    else climate.setTime(v === 'baked' ? 'baked' : 'cycle');
-  };
-  climate.hour = 16.5;
-  applyTime(settings.time);
+  // the time of day: it runs (days pass) or is held, from the hour the visitor last chose; the URL
+  // may hold it (?time=21.5), run it (?time=cycle) or set each region at its baked moment (?time=baked)
+  climate.hour = Number.isFinite(+settings.hour) ? +settings.hour : 16.5;
+  climate.setTime(settings.timeRuns ? 'cycle' : climate.hour);
+  const tq = params.get('time');
+  if (tq) { const h = parseFloat(tq); climate.setTime(Number.isFinite(h) ? h : tq === 'baked' ? 'baked' : 'cycle'); }
   const floraScale = { high: 1, medium: 0.7, low: 0.45 };
   world.flora.scale = floraScale[settings.quality] ?? 1;
   const controls = new Controls(R.camera, canvas, world.collide);
@@ -154,7 +151,11 @@ async function main() {
   intro.classList.add('fading');
   setTimeout(() => { intro.hidden = true; intro.classList.remove('fading'); }, 850);
   hud.hidden = false;
+  $('corner').hidden = false;
   $('stick').hidden = !controls.touch;
+  $('touch-btns').hidden = !controls.touch;
+  $('btn-jump').onclick = () => controls.jump();
+  $('btn-speed').onclick = () => controls.setSpeed((controls.speed + 1) % 4);
   controls.enabled = true;
   hint.hidden = controls.touch;
   const panelsOpen = () => !mapPanel.hidden || !setPanel.hidden;
@@ -186,7 +187,14 @@ async function main() {
   const mapView = new MapView(world, (rec) => travel(() => goTo(rec)), (x, z) => travel(async () => {
     await arrive(x, z);
     const y = world.collide.groundAt(x, z, world.collide.terrain(x, z) + 2);
-    controls.setPose(x, y, z, controls.yaw, 0);
+    // face the nearest building, so that one arrives looking at something
+    let yaw = controls.yaw, best = Infinity;
+    for (const rec of world.plans.values()) {
+      if (rec.plan.feature) continue;
+      const e = world.entrance(rec.plan), d = Math.hypot(e[0] - x, e[2] - z);
+      if (d < best && d < 900) { best = d; yaw = Math.atan2(-(e[0] - x), -(e[2] - z)); }
+    }
+    controls.setPose(x, y, z, yaw, 0.02);
   }));
 
   const closePanels = () => {
@@ -200,6 +208,7 @@ async function main() {
     p.hidden = false;
     if (p === mapPanel) mapView.open({ x: controls.feet.x, z: controls.feet.z, yaw: controls.yaw });
   };
+  const minimap = new MiniMap(world, mapView, () => { setPanel.hidden = true; openPanel(mapPanel); });
   $('btn-map').onclick = () => (mapPanel.hidden ? (setPanel.hidden = true, openPanel(mapPanel)) : closePanels());
   $('btn-settings').onclick = () => (setPanel.hidden ? (mapPanel.hidden = true, openPanel(setPanel)) : closePanels());
   for (const c of document.querySelectorAll('.panel .close')) c.onclick = closePanels;
@@ -213,9 +222,37 @@ async function main() {
   // settings
   const q = $('set-quality'), mv = $('set-music'), sv = $('set-sens'), lang = $('set-lang');
   q.value = settings.quality; mv.value = settings.music; sv.value = settings.sensitivity;
-  const tm = $('set-time');
-  tm.value = ['cycle', 'baked', '7', '12', '18.5', '23'].includes(String(settings.time)) ? String(settings.time) : 'cycle';
-  tm.onchange = () => { settings.time = tm.value; applyTime(tm.value); save(); };
+  // the clock beside the small map: the hour (drag to change it) and run / hold
+  const clockTime = $('clock-time'), clockHour = $('clock-hour'), clockPlay = $('clock-play'), clockIcon = $('clock-icon');
+  const paintClock = () => {
+    const h = climate.hour, hh = Math.floor(h) % 24, mm = Math.floor((h - Math.floor(h)) * 60);
+    clockTime.textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+    if (document.activeElement !== clockHour) clockHour.value = h;
+    const runs = climate.mode === 'cycle';
+    clockPlay.textContent = runs ? '❚❚' : '▶';
+    const day = climate.state?.day ?? 1;
+    clockIcon.style.background = day > 0.5 ? '#ffcf6e' : '#cdd6ee';
+    clockIcon.style.boxShadow = day > 0.5 ? '0 0 8px #ffcf6e' : 'inset -4px -1px 0 #6f7891';
+  };
+  clockHour.oninput = () => {
+    climate.hour = +clockHour.value % 24;
+    if (climate.mode !== 'cycle') climate.setTime(climate.hour);
+    settings.hour = climate.hour; save(); paintClock();
+  };
+  clockPlay.onclick = () => {
+    const runs = climate.mode !== 'cycle';
+    climate.setTime(runs ? 'cycle' : climate.hour);
+    settings.timeRuns = runs; settings.hour = climate.hour; save(); paintClock();
+  };
+  setInterval(() => { paintClock(); settings.hour = climate.hour; }, 1000);
+  setInterval(save, 15000);
+  paintClock();
+  // the walking speed: shown beside the clock, flashing when it changes
+  const speedEl = $('speed');
+  const paintSpeed = (i) => { speedEl.textContent = `${t('speeds')[i]} · ${t('speed-hint')}`; speedEl.classList.add('flash'); clearTimeout(paintSpeed.t); paintSpeed.t = setTimeout(() => speedEl.classList.remove('flash'), 1200); };
+  controls.onSpeed = (i) => { settings.speed = i; save(); paintSpeed(i); };
+  controls.setSpeed(settings.speed || 0);
+  onLang(() => { paintSpeed(controls.speed); paintClock(); });
   q.onchange = () => { settings.quality = q.value; R.setQuality(q.value); world.flora.scale = floraScale[q.value] ?? 1; world.flora.dirty = true; save(); };
   mv.oninput = () => { settings.music = +mv.value; music.setVolume(settings.music); save(); };
   sv.oninput = () => { settings.sensitivity = +sv.value; controls.sensitivity = settings.sensitivity; save(); };
@@ -243,6 +280,7 @@ async function main() {
     snap = false;
     R.renderer.toneMappingExposure = exposure;
     if (here.building) music.set(here.building.music, here.room?.kind || 'open');
+    minimap?.update(controls.feet.x, controls.feet.z, controls.yaw);
     R.render();
     stats.frames++; stats.ms = stats.ms * 0.9 + (performance.now() - now) * 0.1;
   };

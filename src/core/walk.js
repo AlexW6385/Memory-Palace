@@ -1,7 +1,7 @@
 // The walker's body and movement, shared by the controls and the walk-through check.
 
 export const EYE = 1.62, RADIUS = 0.3, STEP = 0.5, HEAD = 1.75, LOW = 0.25;
-export const WALK = 2.6, RUN = 6.5, GRAVITY = 18;
+export const WALK = 2.6, RUN = 6.5, GRAVITY = 18, JUMP = 5.4;   // a jump lifts the feet about 0.8 m
 
 /**
  * Move feet {x, y, z, vy} by (dx, dz) metres this frame against the collision world,
@@ -23,7 +23,7 @@ export function move(P, dx, dz, dt, C) {
     if (g >= P.y - STEP && P.vy === 0) P.y = g;   // follow steps up and down
   }
   const g = C.groundAt(P.x, P.z, P.y + 0.01);
-  if (P.y > g + 1e-3) {
+  if (P.vy > 0 || P.y > g + 1e-3) {
     P.vy -= GRAVITY * dt;
     P.y = Math.max(g, P.y + P.vy * dt);
     if (P.y <= g) P.vy = 0;

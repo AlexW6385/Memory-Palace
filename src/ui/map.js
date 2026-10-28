@@ -210,10 +210,20 @@ export class MapView {
       const inside = x > b[0] && x < b[2] && z > b[1] && z < b[3];
       if (inside || Math.hypot(px - nx, py - (ny + 18 * devicePixelRatio)) < 28 * devicePixelRatio) { this.onJump(rec); return; }
     }
+    // close to a building (within about 150 m on the ground, or 40 px on the map): its entrance
+    let near = null, nd = Infinity;
+    for (const rec of this.world.plans.values()) {
+      if (rec.plan.feature) continue;
+      const b = this.world.constructor.worldBounds(rec.plan);
+      const d = Math.hypot(Math.max(b[0] - x, 0, x - b[2]), Math.max(b[1] - z, 0, z - b[3]));
+      if (d < nd) { nd = d; near = rec; }
+    }
+    if (near && (nd < 150 || nd * this.view.s < 40 * devicePixelRatio)) { this.onJump(near); return; }
     // anywhere else on the land (not in the river, not beyond the edge of the world)
     const [X0, Z0, X1, Z1] = WORLD.bounds;
     if (x < X0 + 5 || x > X1 - 5 || z < Z0 + 5 || z > Z1 - 5) return;
     let gx = x;
+
     if (inRiver(gx, z)) { const r = riverAt(gx, z), half = r.w / 2 + 6; gx = x < r.c ? r.c - half : r.c + half; }
     this.onGo?.(gx, z);
   }

@@ -30,14 +30,34 @@
     </button>
   </div>
 
+  <div id="corner" hidden>
+    <div id="minimap" class="minimap" title="Map (M)" data-i18n-title="map-open">
+      <canvas id="minimap-canvas"></canvas>
+      <div id="minimap-region" class="mm-region"></div>
+      <button id="mm-hide" class="mm-btn" aria-label="Hide the small map" data-i18n-label="mm-hide">&minus;</button>
+    </div>
+    <button id="mm-show" class="icon" aria-label="Show the small map" data-i18n-label="mm-show" hidden>
+      <svg viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 2.2 6 2v11.6l-6-2V6.2Z"/></svg>
+    </button>
+    <div class="side">
+      <div id="clock" class="clock">
+        <div class="clock-row"><span id="clock-icon" class="clock-icon"></span><span id="clock-time">16:30</span>
+          <button id="clock-play" class="clock-btn" aria-label="Pause the time" data-i18n-label="t-pause"></button></div>
+        <input id="clock-hour" type="range" min="0" max="24" step="0.1" aria-label="Time of day" data-i18n-label="time">
+      </div>
+      <div id="speed" class="speed"></div>
+    </div>
+  </div>
+
   <div id="stick" hidden><div id="stick-knob"></div></div>
+  <div id="touch-btns" hidden><button id="btn-jump" class="icon" aria-label="Jump">⤒</button><button id="btn-speed" class="icon" aria-label="Speed">»</button></div>
 
   <section id="intro" class="panel intro">
     <h1 data-i18n="title">Memory Palace</h1>
     <p class="lede" data-i18n="lede">A world of architecture, from every age and civilization.</p>
     <div class="progress"><div id="progress-bar"></div></div>
     <p id="intro-status" class="status" data-i18n="loading">Preparing the world…</p>
-    <p class="hint" data-i18n="controls-desktop">W A S D to walk · mouse to look · Shift to run · M for the map · Esc to pause</p>
+    <p class="hint" data-i18n="controls-desktop">W A S D to walk · mouse to look · Space to jump · Shift to run · wheel or 1–4 for speed · M for the map · Esc to pause</p>
     <p class="hint touch" data-i18n="controls-touch">Left thumb to walk · drag to look</p>
     <div class="lang-switch"><button data-lang="en">English</button><span>·</span><button data-lang="zh">中文</button></div>
   </section>
@@ -45,7 +65,7 @@
   <section id="map" class="panel map" hidden>
     <header><h2 data-i18n="map">Map</h2><button class="close" aria-label="Close">×</button></header>
     <canvas id="map-canvas"></canvas>
-    <p class="map-hint" data-i18n="map-hint">Click anywhere on the map to go there; click a name to go to its entrance.</p>
+    <p class="map-hint" data-i18n="map-hint">Click anywhere on the map to go there; near a building, or on its name, you arrive at its entrance.</p>
     <ul id="map-list"></ul>
   </section>
 
@@ -58,15 +78,6 @@
         <option value="high" data-i18n="q-high">High</option>
         <option value="medium" data-i18n="q-medium">Medium</option>
         <option value="low" data-i18n="q-low">Low</option>
-      </select></label>
-    <label><span data-i18n="time">Time of day</span>
-      <select id="set-time">
-        <option value="cycle" data-i18n="t-cycle">Days pass</option>
-        <option value="7" data-i18n="t-morning">Morning</option>
-        <option value="12" data-i18n="t-noon">Noon</option>
-        <option value="18.5" data-i18n="t-evening">Evening</option>
-        <option value="23" data-i18n="t-night">Night</option>
-        <option value="baked" data-i18n="t-baked">Each place's own hour</option>
       </select></label>
     <label><span data-i18n="music">Music</span><input id="set-music" type="range" min="0" max="1" step="0.05"></label>
     <label><span data-i18n="sensitivity">Look sensitivity</span><input id="set-sens" type="range" min="0.3" max="2" step="0.05"></label>

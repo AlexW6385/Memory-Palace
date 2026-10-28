@@ -74,3 +74,25 @@ button.primary:disabled { opacity: 0.4; cursor: default; }
 /* the travel fade: the view goes dark while the new place is made ready, then comes back */
 .fade { position: fixed; inset: 0; background: #0d0b09; opacity: 0; transition: opacity 0.35s ease; pointer-events: none; z-index: 5; }
 .fade.on { opacity: 1; }
+
+/* the corner: the small map, the clock beside it, the walking speed */
+#corner { position: fixed; top: max(14px, env(safe-area-inset-top)); left: max(14px, env(safe-area-inset-left)); display: flex; gap: 10px; align-items: flex-start; z-index: 5; }
+#corner[hidden] { display: none; }
+.minimap { position: relative; width: 168px; height: 168px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: #2f281f; cursor: pointer; box-shadow: 0 8px 26px rgba(0, 0, 0, 0.3); }
+.minimap[hidden] { display: none; }
+#minimap-canvas { width: 100%; height: 100%; display: block; }
+.mm-region { position: absolute; left: 0; right: 0; bottom: 0; padding: 4px 8px; font-size: 12px; color: var(--ink); background: linear-gradient(transparent, rgba(20, 16, 12, 0.75)); pointer-events: none; }
+.mm-btn { position: absolute; top: 5px; right: 5px; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); background: rgba(24, 20, 15, 0.6); color: var(--ink); font-size: 14px; line-height: 18px; padding: 0; cursor: pointer; }
+#corner .side { display: flex; flex-direction: column; gap: 8px; }
+.clock { background: rgba(24, 20, 15, 0.5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid var(--line); border-radius: 12px; padding: 7px 10px; width: 150px; }
+.clock-row { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 15px; font-variant-numeric: tabular-nums; }
+.clock-icon { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+.clock-btn { margin-left: auto; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; padding: 0; font-size: 11px; }
+#clock-hour { width: 100%; margin: 6px 0 0; }
+.speed { font-size: 12px; color: var(--ink-dim); background: rgba(24, 20, 15, 0.5); border: 1px solid var(--line); border-radius: 10px; padding: 4px 9px; width: fit-content; transition: color 0.3s; }
+.speed.flash { color: var(--ink); }
+#touch-btns { position: fixed; right: max(24px, env(safe-area-inset-right)); bottom: max(34px, env(safe-area-inset-bottom)); display: flex; gap: 12px; z-index: 4; }
+#touch-btns[hidden] { display: none; }
+#touch-btns .icon { width: 56px; height: 56px; color: var(--ink); font-size: 22px; }
+@media (max-width: 560px) { .minimap { width: 120px; height: 120px; } .clock { width: 124px; } }
+#mm-show[hidden] { display: none; }

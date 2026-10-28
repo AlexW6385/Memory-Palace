@@ -2,6 +2,13 @@
 
 Newest first. What you can visit and what looks better, in plain words.
 
+## v6.1 — A small map, a clock, speeds and jumping (2026-10-28)
+
+- **Top left: a small map** of the land round you (north up), the buildings and your arrow, with the region's name; click it for the large map, hide it with its button.
+- **The clock beside it:** the hour of the day — drag it to any hour, pause the time or let the days run.
+- **Getting about faster:** four speeds — walking, striding, riding, galloping (up to about fourteen times a walk) — with the mouse wheel or the keys 1–4; Shift still runs. **Space jumps** about 0.8 m, onto ledges and over low walls.
+- **Arriving where you meant:** a click on the large map near a building takes you to its entrance; a click on open land turns you to face the nearest building.
+
 ## v6.0 — The world as a patch of land; faster start and travel (2026-10-27)
 
 - **The regions now lie side by side** in a patch of land instead of along one valley: the Nile in the middle, and round it in a spiral by age Rome, Greece, Byzantium, the Levant, Francia, Tang China, Heian Japan and India. New regions will be added on the outside, ring by ring.

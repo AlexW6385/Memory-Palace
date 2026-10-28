@@ -27,7 +27,7 @@ More buildings, one from each major tradition, are next (see [DESIGN.md](DESIGN.
 
 ## Controls
 
-W A S D or arrows to walk, mouse to look (click to capture the mouse), Shift to run, M for the map, Esc to pause. On a phone: left thumb on the stick to walk, drag anywhere to look. Click to look around (the world opens by itself once loaded). On the map, click anywhere to go there, or a building to go to its entrance.
+W A S D or arrows to walk, mouse to look (click to capture the mouse), Space to jump, Shift to run, the wheel or 1–4 to choose a speed (walking, striding, riding, galloping), M for the map, Esc to pause. On a phone: left thumb on the stick to walk, drag anywhere to look, buttons to jump and change speed. Click to look around (the world opens by itself once loaded). Top left: the small map (click it for the large map; it can be hidden) and the clock — drag it to choose the hour, or pause and run the days. On the map, click anywhere to go there; near a building, or on its name, you arrive at its entrance.
 
 ## How it is made
 

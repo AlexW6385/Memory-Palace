@@ -2,7 +2,10 @@
 // drag-to-look on touch screens. Collision against the world's floors and obstacles;
 // steps, stairs and ramps are climbed by following the floor height.
 
-import { EYE, STEP, WALK, RUN, move } from '../core/walk.js';
+import { EYE, STEP, WALK, RUN, JUMP, move } from '../core/walk.js';
+
+/** Walking speeds the visitor can choose (multiples of a walk): walking, striding, riding, galloping. */
+export const SPEEDS = [1, 2.5, 6, 14];
 
 export class Controls {
   constructor(camera, canvas, collide) {
@@ -18,6 +21,8 @@ export class Controls {
     this.enabled = false;
     this.locked = false;
     this.touch = matchMedia('(pointer: coarse)').matches;
+    this.speed = 0;                 // index into SPEEDS
+    this.onSpeed = null;
     this._bind();
   }
 
@@ -41,7 +46,22 @@ export class Controls {
     addEventListener('keydown', (e) => {
       if (e.target.closest && e.target.closest('input, select')) return;
       this.keys.add(e.code);
+      if (!this.enabled) return;
+      if (e.code === 'Space') { e.preventDefault(); this.jump(); }
+      const n = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code);
+      if (n >= 0) this.setSpeed(n);
+      if (e.code === 'BracketRight' || e.code === 'Equal') this.setSpeed(this.speed + 1);
+      if (e.code === 'BracketLeft' || e.code === 'Minus') this.setSpeed(this.speed - 1);
     });
+    // the wheel changes the walking speed while looking around
+    let lastWheel = 0;
+    addEventListener('wheel', (e) => {
+      if (!this.locked || !this.enabled || Math.abs(e.deltaY) < 4) return;
+      const now = performance.now();
+      if (now - lastWheel < 220) return;          // one step per flick, not per wheel event
+      lastWheel = now;
+      this.setSpeed(this.speed + (e.deltaY < 0 ? 1 : -1));
+    }, { passive: true });
     addEventListener('keyup', (e) => this.keys.delete(e.code));
     addEventListener('blur', () => this.keys.clear());
     document.addEventListener('pointerlockchange', () => {
@@ -85,6 +105,17 @@ export class Controls {
     stick.addEventListener('pointercancel', stop);
   }
 
+  /** Choose a walking speed (index into SPEEDS). */
+  setSpeed(i) {
+    this.speed = Math.max(0, Math.min(SPEEDS.length - 1, i));
+    this.onSpeed?.(this.speed);
+  }
+
+  /** Jump, if standing on something. */
+  jump() {
+    if (this.vy === 0 && this.feet.y <= this.collide.groundAt(this.feet.x, this.feet.z, this.feet.y + 0.05) + 0.05) this.vy = JUMP;
+  }
+
   look(dx, dy, k) {
     this.yaw -= dx * k * this.sensitivity;
     this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch - dy * k * this.sensitivity));
@@ -110,7 +141,7 @@ export class Controls {
     const l = Math.hypot(f, s);
     if (l > 1) { f /= l; s /= l; }
     const run = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight') || Math.hypot(this.stick.x, this.stick.y) > 0.92;
-    const speed = run ? RUN : WALK;
+    const speed = (run ? RUN : WALK) * SPEEDS[this.speed];
     const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
     let dx = (-sin * f + cos * s) * speed * dt, dz = (-cos * f - sin * s) * speed * dt;
 
