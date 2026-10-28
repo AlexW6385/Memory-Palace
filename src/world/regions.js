@@ -197,6 +197,26 @@ export const REGIONS = [
     },
     ground: 'india',
   },
+  {
+    id: 'rouergue', name: { en: 'Rouergue', zh: '鲁埃格' },
+    center: [-480, -240], house: 'house_rouergue',
+    climate: {
+      // a spring afternoon at Conques: the sun in the south-west on the west portal, mild air from
+      // the Atlantic, clouds building over the hills, a shower now and then, mist in the gorge
+      sun: { az: 238, el: 36, color: [1.0, 0.9, 0.78], intensity: 3.2, lat: 44.6, dec: 10, hour: 15.5 },
+      sky: { turbidity: 3.2, rayleigh: 1.2, mie: 0.0042, mieG: 0.8, zenith: [0.1, 0.15, 0.28], horizon: [0.28, 0.3, 0.32] },
+      fog: { color: [0.6, 0.63, 0.66], density: 0.0005, height: 0.012 },
+      exposure: 0.6,
+      wind: [0.5, 0.2],
+      weather: [
+        { id: 'fair', weight: 3, clouds: 0.38, cloudDensity: 0.5, sun: 1.0, fog: 1.0 },
+        { id: 'cloudy', weight: 2.5, clouds: 0.66, cloudDensity: 0.6, sun: 0.72, fog: 1.3 },
+        { id: 'shower', weight: 1.2, clouds: 0.93, cloudDensity: 0.85, sun: 0.3, fog: 2.0, rain: 0.8 },
+        { id: 'mist', weight: 0.8, clouds: 0.5, cloudDensity: 0.45, sun: 0.6, fog: 3.5, fogColor: [0.72, 0.73, 0.74] },
+      ],
+    },
+    ground: 'rouergue',
+  },
 ];
 export const REGION = Object.fromEntries(REGIONS.map((r) => [r.id, r]));
 
@@ -226,11 +246,36 @@ export const CITY = {
 
 // ── the city and its districts ───────────────────────────────────────────────
 
-/** The city: the walkable rectangle; the land beyond it is drawn out to `far`. */
+/** The city: the walkable ground; the land beyond it is drawn out to `far`. */
 export const WORLD = {
-  bounds: [-360, -370, 640, 460],
+  // the city's ground: a union of rectangles (it grows outward as districts are added)
+  parts: [
+    [-360, -370, 640, 460],          // the first nine districts
+    [-605, -370, -360, -95],         // Rouergue, west of Francia
+  ],
+  bounds: null,                      // the rectangle round all the parts (set below)
   far: 900,
 };
+WORLD.bounds = [Math.min(...WORLD.parts.map((r) => r[0])), Math.min(...WORLD.parts.map((r) => r[1])), Math.max(...WORLD.parts.map((r) => r[2])), Math.max(...WORLD.parts.map((r) => r[3]))];
+
+/** The city's edge as segments [[x0, z0], [x1, z1]]: the parts' sides not shared with another part. */
+export function cityEdges() {
+  const out = [], P = WORLD.parts;
+  const inside = (x, z) => P.some((r) => x > r[0] + 1e-6 && x < r[2] - 1e-6 && z > r[1] + 1e-6 && z < r[3] - 1e-6);
+  for (const [x0, z0, x1, z1] of P) {
+    for (const [a, b, n] of [[[x0, z0], [x1, z0], [0, -1]], [[x1, z0], [x1, z1], [1, 0]], [[x1, z1], [x0, z1], [0, 1]], [[x0, z1], [x0, z0], [-1, 0]]]) {
+      // walk the side in 1 m steps; keep the stretches whose outside is not in another part
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L;
+      let start = null;
+      for (let s = 0; s <= L; s += 1) {
+        const x = a[0] + ux * s, z = a[1] + uz * s, edge = !inside(x + n[0] * 0.5, z + n[1] * 0.5);
+        if (edge && start === null) start = s;
+        if ((!edge || s + 1 > L) && start !== null) { const e = edge ? L : s; if (e - start > 2) out.push([[a[0] + ux * start, a[1] + uz * start], [a[0] + ux * e, a[1] + uz * e]]); start = null; }
+      }
+    }
+  }
+  return out;
+}
 
 /** A point displaced a little by noise, so that the districts' borders wander like old streets. */
 function warp(x, z) { return [x + 22 * fbm(x * 0.008 + 3.1, z * 0.008), z + 22 * fbm(x * 0.008, z * 0.008 + 7.7)]; }
@@ -256,9 +301,17 @@ export function regionAt(x, z) {
 }
 
 /** How far (x, z) is inside the city (negative outside its edge), in metres. */
+let EDGES = null;
 export function inCity(x, z) {
-  const [x0, z0, x1, z1] = WORLD.bounds;
-  return Math.min(x - x0, x1 - x, z - z0, z1 - z);
+  EDGES ||= cityEdges();
+  let d = Infinity;
+  for (const [[ax, az], [bx, bz]] of EDGES) {
+    const vx = bx - ax, vz = bz - az, l2 = vx * vx + vz * vz;
+    const t = Math.max(0, Math.min(1, ((x - ax) * vx + (z - az) * vz) / l2));
+    d = Math.min(d, Math.hypot(x - ax - vx * t, z - az - vz * t));
+  }
+  const inside = WORLD.parts.some(([x0, z0, x1, z1]) => x >= x0 && x <= x1 && z >= z0 && z <= z1);
+  return inside ? d : -d;
 }
 
 /** Where each building stands: origin [x, z], yaw (degrees), base height, district, and the
@@ -273,6 +326,7 @@ export const SITES = {
   'foguang-east-hall': { origin: [240, 330], yaw: 0, base: 1.5, region: 'tang', pad: [-125, -48, 34, 48] },
   'byodo-in-phoenix-hall': { origin: [520, 330], yaw: 0, base: 1.5, region: 'heian', pad: [-60, -78, 100, 78] },
   'sanchi-great-stupa': { origin: [-25, 300], yaw: 0, base: 22, region: 'india', pad: [-70, -72, 92, 72] },
+  'sainte-foy-conques': { origin: [-555, -250], yaw: 0, base: 2, region: 'rouergue', pad: [-14, -20, 56, 40] },
 };
 
 /**
@@ -302,6 +356,8 @@ export const LANDFORMS = [
   // the hill of Sanchi, its gentle side north toward the city
   { region: 'india', kind: 'mesa', id: 'sanchi-hill', center: [-22, 302], half: [92, 94], round: 40, top: 22, steep: 26, gentle: { dir: [0, -1], run: 50 }, rock: 3 },
   // Foguang Mountain behind the monastery's terraces
+  // the slope above Conques: the village climbs it north of the abbey's terrace
+  { region: 'rouergue', kind: 'hill', id: 'conques-slope', center: [-525, -322], radius: [85, 45], height: 12 },
   { region: 'tang', kind: 'hill', id: 'foguang-shan', center: [318, 330], radius: [45, 90], height: 18 },
 ];
 
@@ -553,11 +609,13 @@ export function terrainHeight(x, z) {
  */
 export const ROADS = [
   // avenues: north–south and east–west, between the districts
-  { id: 'north-street', width: 6, points: [[-345, -355], [625, -355]] },
+  { id: 'north-street', width: 6, points: [[-590, -355], [625, -355]] },
   { id: 'west-avenue', width: 7, points: [[-115, -355], [-115, 150]] },
   { id: 'east-avenue', width: 7, points: [[110, -355], [110, 210]] },
-  { id: 'upper-avenue', width: 7, points: [[-345, -135], [625, -135]] },
+  { id: 'upper-avenue', width: 7, points: [[-590, -135], [625, -135]] },
   { id: 'lower-avenue', width: 7, points: [[-345, 150], [110, 150]] },
+  { id: 'far-west-lane', width: 6, points: [[-590, -355], [-590, -135]] },
+  { id: 'old-west-lane', width: 6, points: [[-360, -355], [-360, -135]] },
   { id: 'eastern-avenue', width: 7, points: [[110, 210], [625, 210]] },
   { id: 'eastern-lane', width: 6, points: [[372, 210], [372, 440]] },
   { id: 'south-street', width: 6, points: [[100, 440], [625, 440]] },
@@ -567,6 +625,7 @@ export const ROADS = [
   { id: 'to-parthenon', width: 6, points: [[-225, -135], [-225, -66], [-225, -40], [-165, -40], [-165, 0], [-179, 0]] },
   { id: 'to-hagia-sophia', width: 7, points: [[110, -265], [178, -265]], paved: 1 },
   { id: 'to-dome-of-the-rock', width: 7, points: [[110, 30], [158, 30]], paved: 1 },
+  { id: 'to-conques', width: 6, points: [[-590, -250], [-567, -250]], paved: 1 },
   { id: 'to-sainte-chapelle', width: 6, points: [[-115, -180], [-300, -180], [-300, -230], [-276, -230]], paved: 1 },
   { id: 'to-foguang', width: 6, points: [[110, 210], [104, 240], [104, 330], [114, 330]] },
   { id: 'to-byodo-in', width: 6, points: [[500, 440], [500, 404]] },
@@ -690,6 +749,13 @@ const GROUND = {
     const fields = (1 - smooth(3, 9, h)) * smooth(-0.05, 0.3, fbm(x * 0.005 + 2, z * 0.005)) * 0.8 * (1 - rock);
     const soil = Math.max(0, 0.35 + 0.25 * n) * (1 - rock - fields);
     return { grass: Math.max(0, 1 - rock - soil - fields), soil, rock, sand: 0, fields, dry: 0.7, warmth: 0.75, red: 0.45 };
+  },
+  rouergue(x, z, h, steep) {
+    const n = fbm(x * 0.012 + 4, z * 0.012), m = fbm(x * 0.05 + 6, z * 0.05);
+    // grey schist breaking out on the slope, brown earth in the lanes and gardens, green grass
+    const rock = Math.min(1, steep * 0.7 + 0.12 * smooth(4, 14, h) * smooth(0.1, 0.5, m));
+    const soil = Math.max(0, 0.15 + 0.2 * m) * (1 - rock);
+    return { grass: Math.max(0, 1 - rock - soil), soil, rock, sand: 0, fields: 0, dry: 0.06 + 0.12 * n, warmth: 0.45, red: 0.02 };
   },
   greece(x, z, h, steep) {
     const n = fbm(x * 0.02, z * 0.02), m = fbm(x * 0.07 + 9, z * 0.07);

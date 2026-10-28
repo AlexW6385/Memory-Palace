@@ -9,7 +9,7 @@
 // where it would touch a street, a building's site or a pond, or where the ground is too steep;
 // about one block in seven is a garden. Deterministic: the same lots every time.
 
-import { REGIONS, REGION, WORLD, terrainHeight, nearRoad, inPond, regionAt } from './regions.js';
+import { REGIONS, REGION, WORLD, terrainHeight, nearRoad, inPond, regionAt, inCity } from './regions.js';
 import { inSite } from './flora-rules.js';
 
 function rng(seed) { let s = seed >>> 0 || 1; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
@@ -30,8 +30,9 @@ export function blocks() {
     const region = regionAt((rect[0] + rect[2]) / 2, (rect[1] + rect[3]) / 2).id;
     const seed = hash(i + 1000, j + 1000);
     const garden = (seed % 7) === 0;
-    const houses = garden ? [] : buildBlock(rect, region, rng(seed));
-    BLOCKS.push({ rect, region, garden, houses });
+    const inside = Math.min(inCity(rect[0], rect[1]), inCity(rect[2], rect[1]), inCity(rect[0], rect[3]), inCity(rect[2], rect[3])) > 4;
+    const houses = garden || !inside ? [] : buildBlock(rect, region, rng(seed));
+    BLOCKS.push({ rect, region, garden: garden && inside, houses });
     NI = i + 1; NJ = Math.max(NJ, j + 1);
   }
   return BLOCKS;

@@ -7,7 +7,7 @@ import { FEATURES } from '../world/features/index.js';
 import { buildPlanAsync, toWorld, subtractRects } from '../core/build.js';
 import { Terrain } from './terrain.js';
 import { Flora } from './flora/index.js';
-import { WORLD, terrainHeight, inWater, waterLevel } from '../world/regions.js';
+import { WORLD, terrainHeight, inWater, waterLevel, cityEdges } from '../world/regions.js';
 import { CollisionWorld } from '../core/collide.js';
 import { GeoBag, frustum, fromTriangles, quad } from '../core/geom.js';
 import { material, flameMaterial } from './materials.js';
@@ -86,16 +86,14 @@ export class World {
   addLand() {
     this.terrain = new Terrain(this.scene);
     this.flora = new Flora(this.scene);
-    const [X0, Z0, X1, Z1] = WORLD.bounds, e = 2;
-    // the edge of the walkable world
+    // the edge of the walkable city: a thin wall along every side of it that faces the land outside
+    const e = 2;
     this.collide.add({
       floors: [],
-      obstacles: [
-        { poly: [[X0 - e, Z0], [X0, Z0], [X0, Z1], [X0 - e, Z1]], y0: -50, y1: 400 },
-        { poly: [[X1, Z0], [X1 + e, Z0], [X1 + e, Z1], [X1, Z1]], y0: -50, y1: 400 },
-        { poly: [[X0, Z0 - e], [X1, Z0 - e], [X1, Z0], [X0, Z0]], y0: -50, y1: 400 },
-        { poly: [[X0, Z1], [X1, Z1], [X1, Z1 + e], [X0, Z1 + e]], y0: -50, y1: 400 },
-      ],
+      obstacles: cityEdges().map(([a, b]) => {
+        const dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz), nx = dz / L * e, nz = -dx / L * e;
+        return { poly: [a, b, [b[0] + nx, b[1] + nz], [a[0] + nx, a[1] + nz]], y0: -50, y1: 400 };
+      }),
     });
   }
 

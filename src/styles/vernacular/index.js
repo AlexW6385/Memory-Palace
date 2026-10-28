@@ -272,6 +272,14 @@ function houseIndia(el, ctx) {
   gabledHouse(el, ctx, { H: 2.8, foot: 'mudbrick', walls: ['plaster', 'earth_wall'], roof: 'roof_tile', o: 0.7, pitch: 0.45, door: 'timber', window: 'timber', horns: false });
 }
 
+/**
+ * house_rouergue: a village house of the Rouergue about 1100 — walls of grey schist rubble or of
+ * yellow stone, small windows, a steep roof of schist slabs (lauzes). { rect, y, foot, front, seed }
+ */
+function houseRouergue(el, ctx) {
+  gabledHouse(el, ctx, { H: 3.0, foot: 'schist_rubble', walls: ['schist_rubble', 'limestone_yellow'], roof: 'lauze', o: 0.4, pitch: 1.0, door: 'timber', window: 'timber', horns: false });
+}
+
 function gabledHouse(el, { bag, col }, O) {
   const rand = rng(el.seed || 1);
   const [x0, z0, x1, z1] = el.rect, y = el.y, H = O.H;
@@ -376,4 +384,4 @@ function wallLow(el, { bag, col }) {
   col.rect(el.rect, el.y - 0.5, el.y + el.h);
 }
 
-registerStyle('vernacular', { trim: () => {}, opening: () => {}, column: () => {}, elements: { house_egypt: houseEgypt, house_tiled: houseTiled, house_domed: houseDomed, house_timber: houseTimber, house_china: houseChina, house_japan: houseJapan, house_india: houseIndia, bridge_stone: bridgeStone, wall_low: wallLow }, objects: {} });
+registerStyle('vernacular', { trim: () => {}, opening: () => {}, column: () => {}, elements: { house_egypt: houseEgypt, house_tiled: houseTiled, house_domed: houseDomed, house_timber: houseTimber, house_china: houseChina, house_japan: houseJapan, house_india: houseIndia, house_rouergue: houseRouergue, bridge_stone: bridgeStone, wall_low: wallLow }, objects: {} });

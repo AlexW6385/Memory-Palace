@@ -4,7 +4,7 @@
 
 import { tr, t } from './i18n.js';
 import { WORLD } from '../world/regions.js';
-import { terrainHeight, regionWeights, REGIONS, inPond } from '../world/regions.js';
+import { terrainHeight, regionWeights, REGIONS, inPond, inCity } from '../world/regions.js';
 
 export class MapView {
   constructor(world, onJump, onGo) {
@@ -220,8 +220,7 @@ export class MapView {
     }
     if (near && (nd < 25 || nd * this.view.s < 40 * devicePixelRatio)) { this.onJump(near); return; }
     // anywhere else in the city (not in a pond, not beyond its edge)
-    const [X0, Z0, X1, Z1] = WORLD.bounds;
-    if (x < X0 + 5 || x > X1 - 5 || z < Z0 + 5 || z > Z1 - 5) return;
+    if (inCity(x, z) < 5) return;
     if (inPond(x, z)) return;
     this.onGo?.(x, z);
   }

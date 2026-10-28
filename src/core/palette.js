@@ -110,6 +110,15 @@ export const MATERIALS = {
   water:            { color: '#2b4a4e', roughness: 0.05, kind: 'water' },
   linen:            { color: '#d9d2bf', roughness: 0.95, kind: 'smooth' },
   paint_blue:       { color: '#2f5f8a', roughness: 0.9, kind: 'smooth' },
+  // Romanesque Rouergue (Conques): red sandstone below, yellow limestone above, schist rubble,
+  // roofs of schist slabs (lauzes), flagged floors, wrought iron, the cloister's green serpentine
+  sandstone_red:    { color: '#9b6352', roughness: 0.88, kind: 'ashlar', course: 0.34, block: 0.62 },
+  limestone_yellow: { color: '#cdb27e', roughness: 0.85, kind: 'ashlar', course: 0.36, block: 0.7 },
+  schist_rubble:    { color: '#6f6a62', roughness: 0.92, kind: 'ashlar', course: 0.16, block: 0.3 },
+  lauze:            { color: '#58564f', roughness: 0.8, kind: 'tiles' },
+  flagstone:        { color: '#8b8478', roughness: 0.85, kind: 'paving', course: 0.8, block: 1.0 },
+  iron:             { color: '#3a3836', roughness: 0.5, metalness: 0.8, kind: 'metal' },
+  serpentine:       { color: '#3f5b4c', roughness: 0.3, kind: 'veined', block: 1.0, course: 1.2, colors: ['#3f5b4c', '#2f4a3c', '#7e9686'] },
 };
 
 export function albedo(key) {

@@ -405,6 +405,16 @@
       ],
       "yaw": 3.1416,
       "pitch": 0.12
+    },
+    {
+      "name": "rouergue-lane",
+      "at": [
+        -588,
+        1.7,
+        -200
+      ],
+      "yaw": 3.1416,
+      "pitch": 0.1
     }
   ],
   "hagia-sophia": [
@@ -777,6 +787,78 @@
       ],
       "yaw": 0.785,
       "pitch": -0.4
+    }
+  ],
+  "sainte-foy-conques": [
+    {
+      "name": "west-front",
+      "at": [
+        -24,
+        1.7,
+        3
+      ],
+      "yaw": -1.45,
+      "pitch": 0.32
+    },
+    {
+      "name": "nave",
+      "at": [
+        4,
+        1.7,
+        0
+      ],
+      "yaw": -1.5708,
+      "pitch": 0.18
+    },
+    {
+      "name": "lantern",
+      "at": [
+        28.2,
+        1.7,
+        0
+      ],
+      "yaw": -1.5708,
+      "pitch": 1.35
+    },
+    {
+      "name": "ambulatory",
+      "at": [
+        45.5,
+        1.7,
+        -6.4
+      ],
+      "yaw": -0.3,
+      "pitch": 0.1
+    },
+    {
+      "name": "cloister",
+      "at": [
+        3,
+        1.7,
+        26.5
+      ],
+      "yaw": -0.8,
+      "pitch": 0.12
+    },
+    {
+      "name": "aerial",
+      "at": [
+        -35,
+        45,
+        55
+      ],
+      "yaw": -0.83,
+      "pitch": -0.45
+    },
+    {
+      "name": "chevet",
+      "at": [
+        68,
+        1.7,
+        -22
+      ],
+      "yaw": 2.3,
+      "pitch": 0.22
     }
   ]
 }

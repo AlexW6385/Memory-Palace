@@ -6,8 +6,9 @@ import { REGIONS } from '../regions.js';
 /** The ground each district's quarter may cover: the district's share of the city, generously. */
 const QUARTER_BOUNDS = {
   nile: [-120, -130, 165, 145], rome: [-120, -370, 165, -95], greece: [-360, -130, -115, 315],
-  byzantium: [120, -370, 640, -95], levant: [120, -130, 640, 215], francia: [-360, -370, -115, -95],
-  tang: [80, 175, 365, 460], heian: [360, 40, 640, 460], india: [-360, 140, 125, 460],
+  byzantium: [120, -370, 640, -95], levant: [120, -130, 640, 215], francia: [-365, -370, -115, -95],
+  tang: [75, 140, 365, 460], heian: [360, 40, 640, 460], india: [-360, 140, 125, 460],
+  rouergue: [-605, -370, -355, -90],
 };
 
 export const FEATURES = REGIONS.map((r) => ({
