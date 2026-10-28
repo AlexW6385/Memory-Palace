@@ -297,133 +297,113 @@
   ],
   "world": [
     {
-      "name": "nile-valley",
+      "name": "aerial-city",
       "at": [
-        120,
-        1.7,
-        180
+        140,
+        420,
+        900
       ],
-      "yaw": 2.6,
-      "pitch": -0.05
+      "yaw": 0.0,
+      "pitch": -0.5
     },
     {
-      "name": "nile-from-escarpment",
+      "name": "aerial-low",
       "at": [
-        -470,
-        6,
-        60
+        -260,
+        110,
+        470
       ],
-      "yaw": -1.45,
-      "pitch": -0.12
+      "yaw": -0.75,
+      "pitch": -0.28
     },
     {
-      "name": "south-pass",
+      "name": "edfu-way",
       "at": [
-        -170,
+        2,
         1.7,
-        -470
+        146
       ],
-      "yaw": 0,
-      "pitch": 0.02
-    },
-    {
-      "name": "rome-plain",
-      "at": [
-        -60,
-        1.7,
-        -1000
-      ],
-      "yaw": 0.2,
-      "pitch": 0.02
-    },
-    {
-      "name": "greece-plain",
-      "at": [
-        1130,
-        1.7,
-        -975
-      ],
-      "yaw": -1.4,
+      "yaw": 0.0,
       "pitch": 0.06
     },
     {
-      "name": "aerial-world",
+      "name": "upper-avenue",
       "at": [
-        100,
-        900,
-        2700
+        -100,
+        1.7,
+        -135
       ],
-      "yaw": 0.0,
-      "pitch": -0.42
+      "yaw": -1.5708,
+      "pitch": 0.02
     },
     {
-      "name": "byzantium-from-pass",
+      "name": "byzantium-lanes",
       "at": [
-        1180,
-        6,
-        400
+        118,
+        1.7,
+        -300
       ],
-      "yaw": -0.4,
-      "pitch": 0.05
+      "yaw": -1.8,
+      "pitch": 0.06
     },
     {
-      "name": "byzantium-shore",
+      "name": "jerusalem-slope",
       "at": [
-        1780,
-        4,
-        -70
+        106,
+        1.7,
+        30
       ],
-      "yaw": 2.3,
-      "pitch": 0.12
-    },
-    {
-      "name": "jerusalem-from-olives",
-      "at": [
-        1750,
-        4,
-        1210
-      ],
-      "yaw": 1.62,
-      "pitch": 0.0
-    },
-    {
-      "name": "paris-river",
-      "at": [
-        110,
-        1.5,
-        1300
-      ],
-      "yaw": 2.5,
-      "pitch": 0.05
-    },
-    {
-      "name": "tang-valley",
-      "at": [
-        -2120,
-        2,
-        1200
-      ],
-      "yaw": -1.57,
+      "yaw": -1.5708,
       "pitch": 0.08
     },
     {
-      "name": "uji",
+      "name": "paris-lanes",
       "at": [
-        -1400,
-        2,
-        150
+        -118,
+        1.7,
+        -230
       ],
-      "yaw": 0.418,
+      "yaw": 1.5708,
       "pitch": 0.05
     },
     {
-      "name": "malwa",
+      "name": "tang-lane",
       "at": [
-        -1750,
-        2,
-        -900
+        100,
+        1.7,
+        300
       ],
-      "yaw": 0.0,
+      "yaw": -1.5708,
+      "pitch": 0.04
+    },
+    {
+      "name": "uji-lane",
+      "at": [
+        372,
+        1.7,
+        330
+      ],
+      "yaw": -1.5708,
+      "pitch": 0.04
+    },
+    {
+      "name": "sanchi-approach",
+      "at": [
+        -25,
+        1.7,
+        148
+      ],
+      "yaw": 3.1416,
+      "pitch": 0.1
+    },
+    {
+      "name": "acropolis-from-lanes",
+      "at": [
+        -225,
+        1.7,
+        -128
+      ],
+      "yaw": 3.1416,
       "pitch": 0.12
     }
   ],

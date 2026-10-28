@@ -90,6 +90,8 @@ Justinian's church had no figurative mosaic: crosses and ornament on gold. Later
 
 On a hill above the water; to the south the Augustaion (a square with porticoes), the Great Palace beyond. Gardens of cypress, plane trees, figs, vines and Judas trees; stone pines on the slopes. [stated: setting; planting inferred from the region's flora] **Built (L2):** the atrium; a paved square south of the church standing for the Augustaion; houses with tiled roofs round the hill (`src/world/features/`). *L4: the Great Palace, the Hippodrome, the Mese.*
 
+**In the city (2026-10-28):** the first hill is scaled to the Byzantine district (14 m, its gentle side west toward the east avenue, from which the way climbs to the atrium); the district's blocks of tiled houses with jettied upper storeys stand round the hill.
+
 ## 11. Music
 
 Byzantine chant: monophonic hymns and psalms, alternating soloists and choir, low and high voices, over an *ison* (a sustained drone on the mode's tonic); the eight modes (oktoechos); no instruments in the liturgy. The building's reverberation is very long — more than five times a modern concert hall; at the end of Psalm 140 the sound lingers for nearly 12 seconds; the dome responds most to the high frequencies; singers stretch out words to stay intelligible. [stated: Early Music America on Icons of Sound / Cappella Romana; the oktoechos: general musicology]

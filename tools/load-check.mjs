@@ -15,8 +15,9 @@ const srv = await serve(0);
 const browser = await chromium.launch({ args: ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-webgpu-adapter=swiftshader', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 const errors = [];
+let travelLog = null;
 page.on('pageerror', (e) => errors.push(e.message));
-page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); else if (m.text().includes('[memory palace]')) console.log(m.text()); });
+page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); else if (m.text().includes('[memory palace] travel')) travelLog = m.text(); else if (m.text().includes('[memory palace]')) console.log(m.text()); });
 await page.route('**/*', async (route) => {
   const m = route.request().url().match(/cdn\.jsdelivr\.net\/npm\/three@[^/]+\/(.*)$/);
   if (m) return route.fulfill({ path: join(ROOT, 'node_modules/three', m[1]), contentType: 'text/javascript' });
@@ -51,6 +52,12 @@ await page.waitForTimeout(60);
 const started = await page.evaluate(() => ({ closed: document.getElementById('map').hidden, notice: document.getElementById('notice').textContent }));
 console.log(`map click: map closed ${started.closed}, notice "${started.notice}", from (${before.x.toFixed(0)}, ${before.z.toFixed(0)})`);
 const moved = started.closed && !!started.notice;
+// the arrival: wait for the travel's timing line (with --travel)
+if (args.includes('--travel')) {
+  const t1 = Date.now();
+  while (Date.now() - t1 < 180_000 && !travelLog) await page.waitForTimeout(500);
+  console.log(travelLog || 'travel: no arrival within 180 s', `(${((Date.now() - t1) / 1000).toFixed(1)} s)`);
+}
 for (const e of errors.slice(0, 10)) console.log('error:', e);
 await browser.close(); srv.close();
 process.exit(ui.hud && ui.hud && !ui.enter && moved && !errors.length ? 0 : 1);

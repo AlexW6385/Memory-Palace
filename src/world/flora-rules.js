@@ -1,19 +1,22 @@
-// Where plants grow in each region: densities (plants per 100 m²) as functions of the place.
-// Pure; the viewer scatters from these deterministically, cell by cell. The reasoning for each
-// region's planting is in its building's dossier (§10, surroundings) and docs/world.md.
+// Where plants grow in each district of the city: densities (plants per 100 m²) as functions of
+// the place. Pure; the viewer scatters from these deterministically, cell by cell. Within the city
+// trees stand in the gardens, the yards and the open ground between the quarters, on the slopes of
+// the districts' hills and by the ponds; between the houses of a built block only grass grows.
+// The reasoning for each district's planting is in its building's dossier (§10) and docs/world.md.
 
-import { REGIONS, regionWeights, riverAt, SITES, fbm, nearRoad, inTown } from './regions.js';
+import { REGIONS, regionWeights, pondDistance, SITES, fbm, nearRoad } from './regions.js';
+import { inQuarter, inGarden } from './city.js';
 
 const smooth = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
 
-/** Distance from the water's edge (negative in the water). */
-export function fromWater(x, z) { const r = riverAt(x, z); return Math.abs(x - r.c) - r.w / 2; }
+/** Distance from the water's edge (negative in the water; far from any pond, a large number). */
+export function fromWater(x, z) { const d = pondDistance(x, z).d; return Number.isFinite(d) ? d : 999; }
 
 /** Inside a building's levelled site (no planting there, except what the plan places). */
 const PADS = Object.values(SITES).map((s) => { const [x0, z0, x1, z1] = s.pad || [0, 0, 0, 0]; return [s.origin[0] + x0 - 4, s.origin[1] + z0 - 4, s.origin[0] + x1 + 4, s.origin[1] + z1 + 4]; });
 export function inSite(x, z) { return PADS.some((r) => x > r[0] && x < r[2] && z > r[1] && z < r[3]); }
 
-/** Keep-clear corridors (roads, processional ways) registered by the regions' features. */
+/** Keep-clear corridors (processional ways) registered by features. */
 const CLEAR = [];
 export function keepClear(poly, width) { CLEAR.push({ poly, width }); }
 function inClear(x, z) {
@@ -27,129 +30,127 @@ function inClear(x, z) {
   return false;
 }
 
+/** Patches of planting (gardens, groves): 0..1, varying over a few tens of metres. */
+const patch = (x, z, k, lo = 0.0, hi = 0.4, f = 0.02) => smooth(lo, hi, fbm(x * f + k, z * f - k));
+
 /**
- * Densities by region. Each function receives the place: { x, z, h (ground height),
- * ny (normal y), g (ground cover), w (distance from the water's edge) } and returns plants per 100 m².
+ * Densities by district. Each function receives the place: { x, z, h (ground height),
+ * ny (normal y), g (ground cover), w (distance from a pond's edge) } and returns plants per 100 m².
  */
 const RULES = {
   nile: {
-    // date palms: groves along the water and the field edges, thinning into the desert
-    date_palm: ({ x, z, w, g }) => (w < 0 ? 0 : 1.1 * Math.exp(-w / 90) * smooth(-0.25, 0.3, fbm(x * 0.01, z * 0.01)) + 0.35 * g.fields * smooth(0.0, 0.5, fbm(x * 0.03 + 5, z * 0.03))),
-    doum_palm: ({ x, z, w }) => (w < 4 ? 0 : 0.12 * Math.exp(-w / 120) * smooth(0, 0.5, fbm(x * 0.008 + 3, z * 0.008))),
-    sycamore_fig: ({ w, g }) => (w < 6 ? 0 : 0.03 * g.fields + 0.02 * Math.exp(-w / 60)),
-    acacia: ({ x, z, g, w }) => (w < 10 ? 0 : 0.06 * g.sand * smooth(0.02, 0.2, g.fields + 0.1 * Math.exp(-w / 200)) + 0.01 * g.sand * smooth(0.3, 0.6, fbm(x * 0.02, z * 0.02))),
-    tamarisk: ({ x, z, g, w }) => (w < 3 ? 0 : 0.12 * Math.exp(-w / 90) * g.sand + 0.02 * g.sand * smooth(0.35, 0.7, fbm(x * 0.03 + 9, z * 0.03))),
-    papyrus: ({ w, x, z }) => (w > -3 && w < 6 ? 2.2 * smooth(0, 0.4, fbm(x * 0.02, z * 0.02) + 0.2) : 0),
-    reeds: ({ w }) => (w > -4 && w < 10 ? 3.0 : 0),
-    halfa: ({ g, w, ny }) => (w < 8 ? 0 : 0.25 * g.sand * ny),
-    boulder: ({ h, ny, g }) => (ny < 0.9 && h > 4 ? 0.5 * g.rock : 0),
+    // date palms in groves and by the houses, doum palms, sycamore figs in the yards, tamarisks and
+    // acacias on the dry ground, halfa grass
+    date_palm: ({ x, z }) => 0.9 * patch(x, z, 1, -0.05, 0.3) + 0.05,
+    doum_palm: ({ x, z }) => 0.08 * patch(x, z, 3, 0.1, 0.45),
+    sycamore_fig: ({ x, z }) => 0.04 * patch(x, z, 5, 0.0, 0.4),
+    acacia: ({ x, z, g }) => 0.05 * g.sand * patch(x, z, 7, 0.2, 0.55),
+    tamarisk: ({ x, z, g }) => 0.08 * g.sand * patch(x, z, 9, 0.25, 0.6),
+    halfa: ({ g, ny }) => 0.25 * g.sand * ny,
+    boulder: ({ ny, g }) => (ny < 0.9 ? 0.3 * g.rock : 0),
   },
   rome: {
-    stone_pine: ({ x, z, h }) => 0.08 * smooth(-0.1, 0.35, fbm(x * 0.006 + 1, z * 0.006)) + (h > 8 ? 0.08 : 0),
-    cypress: ({ x, z }) => 0.025 * smooth(0.2, 0.5, fbm(x * 0.01 + 2, z * 0.01)),
-    holm_oak: ({ x, z, h, ny }) => (ny > 0.7 ? 0.1 * smooth(4, 14, h) + 0.03 * smooth(0.2, 0.6, fbm(x * 0.008, z * 0.008)) : 0),
-    oleander: ({ x, z, w }) => 0.06 * smooth(0.1, 0.5, fbm(x * 0.02 + 6, z * 0.02)) + (w > 0 && w < 30 ? 0.15 : 0),
-    reeds: ({ w }) => (w > -4 && w < 8 ? 2.4 : 0),
+    // stone pines and cypresses in the gardens, holm oaks, oleanders by the walls
+    stone_pine: ({ x, z }) => 0.1 * patch(x, z, 1, -0.1, 0.35),
+    cypress: ({ x, z }) => 0.04 * patch(x, z, 2, 0.15, 0.45, 0.03),
+    holm_oak: ({ x, z }) => 0.04 * patch(x, z, 4, 0.1, 0.5),
+    oleander: ({ x, z }) => 0.08 * patch(x, z, 6, 0.1, 0.5, 0.04),
     grass: ({ g }) => 70 * g.grass,
     boulder: ({ ny, g }) => (ny < 0.85 ? 0.3 * g.rock : 0),
   },
+  greece: {
+    // olives in rows on the level ground, Aleppo pines and maquis on the rock's slopes, cypresses
+    olive: ({ x, z, ny }) => (ny > 0.9 ? 0.5 * patch(x, z, 7, -0.15, 0.2, 0.012) : 0),
+    aleppo_pine: ({ x, z, ny }) => (ny > 0.55 ? 0.04 * patch(x, z, 1, 0.1, 0.5) + 0.05 * smooth(0.95, 0.75, ny) : 0),
+    cypress: ({ x, z }) => 0.02 * patch(x, z, 4, 0.25, 0.55, 0.03),
+    maquis: ({ ny, g }) => (ny > 0.5 ? 0.9 * (g.grass + g.rock * 0.6) : 0),
+    grass_dry: ({ g }) => 45 * g.grass,
+    boulder: ({ ny, g }) => 0.25 * g.rock + (ny < 0.8 ? 0.4 : 0),
+  },
   byzantium: {
-    // gardens of the city: cypresses (in groups, by churches and tombs), plane trees by the
-    // squares and the water, figs and vines, stone pines on the slopes, Judas trees omitted (L3)
-    cypress: ({ x, z }) => 0.05 * smooth(0.15, 0.45, fbm(x * 0.012 + 8, z * 0.012)),
-    plane_tree: ({ x, z, w }) => (w < 4 ? 0 : 0.03 * smooth(0.1, 0.5, fbm(x * 0.008 + 2, z * 0.008)) + (w < 60 ? 0.03 : 0)),
-    fig: ({ x, z, g }) => 0.05 * smooth(0.0, 0.4, fbm(x * 0.02 + 1, z * 0.02)) + 0.03 * g.fields,
-    stone_pine: ({ x, z, h, ny }) => (ny > 0.75 ? 0.05 * smooth(-0.1, 0.35, fbm(x * 0.006 + 6, z * 0.006)) + (h > 15 ? 0.03 : 0) : 0),
-    olive: ({ x, z, h, ny }) => (ny > 0.85 && h < 18 ? 0.12 * smooth(0.1, 0.4, fbm(x * 0.005 + 3, z * 0.005)) : 0),
-    holm_oak: ({ h, ny }) => (ny > 0.7 ? 0.05 * smooth(10, 30, h) : 0),
-    oleander: ({ x, z }) => 0.04 * smooth(0.2, 0.5, fbm(x * 0.02 + 4, z * 0.02)),
-    reeds: ({ w }) => (w > -4 && w < 7 ? 2.2 : 0),
+    // cypresses in groups by the churches, plane trees in the squares, figs and stone pines on the
+    // slopes of the first hill, oleanders
+    cypress: ({ x, z }) => 0.06 * patch(x, z, 8, 0.15, 0.45, 0.03),
+    plane_tree: ({ x, z }) => 0.04 * patch(x, z, 2, 0.05, 0.45),
+    fig: ({ x, z }) => 0.05 * patch(x, z, 1, 0.0, 0.4, 0.04),
+    stone_pine: ({ x, z, ny }) => (ny > 0.75 ? 0.05 * patch(x, z, 6, -0.1, 0.35) : 0),
+    oleander: ({ x, z }) => 0.04 * patch(x, z, 4, 0.2, 0.5, 0.04),
     grass: ({ g }) => 80 * g.grass,
     boulder: ({ ny, g }) => (ny < 0.85 ? 0.25 * g.rock : 0),
   },
-  tang: {
-    // Chinese pines and arborvitae on the hills and round the monastery, elms and poplars in the
-    // valley and by the villages, jujubes by the fields, dry grass on the loess
-    chinese_pine: ({ x, z, h, ny }) => (ny > 0.6 ? 0.06 * smooth(15, 45, h) + 0.02 * smooth(0.2, 0.5, fbm(x * 0.01 + 1, z * 0.01)) : 0),
-    arborvitae: ({ x, z }) => 0.02 * smooth(0.2, 0.5, fbm(x * 0.012 + 5, z * 0.012)),
-    elm: ({ h, x, z }) => (h < 25 ? 0.025 * smooth(0.0, 0.4, fbm(x * 0.008 + 3, z * 0.008)) : 0),
-    poplar: ({ w, x, z, h }) => (w > 3 && h < 15 ? 0.05 * smooth(0.1, 0.4, fbm(x * 0.015 + 8, z * 0.015)) + (w < 50 ? 0.08 : 0) : 0),
-    jujube: ({ g }) => 0.05 * g.fields + 0.01,
-    maquis: ({ ny, g }) => (ny > 0.5 ? 0.3 * (g.grass + g.rock * 0.5) : 0),
-    grass_dry: ({ g }) => 45 * g.grass,
-    boulder: ({ ny, g }) => 0.3 * g.rock,
-  },
-  heian: {
-    // Japanese red pines on the hills and by the water, cryptomerias in groves on the upper slopes,
-    // maples in autumn colour on the lower slopes and by streams, bamboo groves near the houses and
-    // at the foot of the hills, willows and reeds by the river, green grass and moss
-    red_pine: ({ x, z, h, ny }) => (ny > 0.6 ? 0.045 * smooth(6, 35, h) + 0.02 * smooth(0.15, 0.5, fbm(x * 0.01 + 2, z * 0.01)) : 0),
-    sugi: ({ x, z, h, ny }) => (ny > 0.6 ? 0.04 * smooth(18, 45, h) * smooth(0.0, 0.4, fbm(x * 0.007 + 8, z * 0.007)) : 0),
-    maple: ({ x, z, h }) => (h < 45 ? 0.04 * smooth(0.05, 0.45, fbm(x * 0.01 + 6, z * 0.01)) * smooth(2, 10, h) + 0.01 : 0),
-    bamboo: ({ x, z, h, ny }) => (ny > 0.7 && h < 30 ? 0.5 * smooth(0.32, 0.55, fbm(x * 0.012 + 3, z * 0.012)) : 0),
-    willow: ({ w }) => (w > 1 && w < 18 ? 0.1 : 0),
-    reeds: ({ w }) => (w > -4 && w < 7 ? 2.2 : 0),
-    grass: ({ g }) => 80 * g.grass,
-    boulder: ({ ny, g }) => (ny < 0.85 ? 0.2 * g.rock : 0),
-  },
-  india: {
-    // dry deciduous forest on the hills (teak, neem), great banyans by the villages and the roads,
-    // palmyra palms on the plain and by the water, acacias and scrub, dry grass
-    teak: ({ x, z, h, ny }) => (ny > 0.6 ? 0.04 * smooth(5, 30, h) + 0.02 * smooth(0.1, 0.5, fbm(x * 0.008 + 3, z * 0.008)) : 0),
-    neem: ({ x, z }) => 0.025 * smooth(0.0, 0.45, fbm(x * 0.01 + 7, z * 0.01)) + 0.005,
-    banyan: ({ x, z, h }) => (h < 20 ? 0.006 + 0.01 * smooth(0.3, 0.6, fbm(x * 0.006 + 1, z * 0.006)) : 0),
-    date_palm: ({ x, z, w, g }) => (w > 2 ? 0.25 * Math.exp(-w / 70) + 0.08 * g.fields * smooth(0.1, 0.5, fbm(x * 0.02 + 4, z * 0.02)) : 0),
-    acacia: ({ x, z, g }) => 0.03 * g.grass * smooth(0.2, 0.6, fbm(x * 0.02 + 9, z * 0.02)),
-    maquis: ({ ny, g }) => (ny > 0.5 ? 0.35 * (g.grass + g.rock * 0.5) : 0),
-    reeds: ({ w }) => (w > -4 && w < 6 ? 1.6 : 0),
-    grass_dry: ({ g }) => 45 * g.grass,
-    boulder: ({ ny, g }) => 0.3 * g.rock + (ny < 0.8 ? 0.2 : 0),
-  },
-  francia: {
-    // oaks and elms in the hedgerows and woods, poplars and willows by the water, apple orchards,
-    // lush grass
-    oak: ({ x, z, ny }) => (ny > 0.75 ? 0.05 * smooth(0.0, 0.4, fbm(x * 0.006 + 4, z * 0.006)) : 0),
-    elm: ({ x, z }) => 0.025 * smooth(0.1, 0.45, fbm(x * 0.009 + 6, z * 0.009)),
-    poplar: ({ w, x, z }) => (w > 3 && w < 60 ? 0.12 * smooth(-0.1, 0.3, fbm(x * 0.02 + 2, z * 0.02)) : 0),
-    willow: ({ w }) => (w > 1 && w < 22 ? 0.18 : 0),
-    apple: ({ x, z, h, ny }) => (ny > 0.85 && h < 30 ? 0.3 * smooth(0.15, 0.45, fbm(x * 0.006 + 9, z * 0.006)) : 0),
-    reeds: ({ w }) => (w > -4 && w < 6 ? 1.6 : 0),
-    grass: ({ g }) => 80 * g.grass,
-  },
   levant: {
-    // olive groves on terraces, cypresses and Aleppo pines, carobs, low garrigue, dry grass
-    olive: ({ x, z, h, ny }) => (ny > 0.8 && h < 50 ? 0.45 * smooth(-0.2, 0.15, fbm(x * 0.005 + 2, z * 0.005)) : 0),
-    cypress: ({ x, z }) => 0.025 * smooth(0.2, 0.5, fbm(x * 0.012 + 9, z * 0.012)),
-    aleppo_pine: ({ x, z, h, ny }) => (ny > 0.6 ? 0.05 * smooth(25, 60, h) + 0.015 * smooth(0.3, 0.6, fbm(x * 0.01 + 3, z * 0.01)) : 0),
-    carob: ({ x, z, ny }) => (ny > 0.7 ? 0.03 * smooth(0.1, 0.5, fbm(x * 0.008 + 7, z * 0.008)) : 0),
+    // olive groves on the slopes of Moriah, cypresses, carobs, garrigue, dry grass
+    olive: ({ x, z, ny }) => (ny > 0.8 ? 0.4 * patch(x, z, 2, -0.2, 0.15, 0.012) : 0),
+    cypress: ({ x, z }) => 0.03 * patch(x, z, 9, 0.2, 0.5, 0.03),
+    aleppo_pine: ({ x, z, ny }) => (ny > 0.6 ? 0.03 * patch(x, z, 3, 0.3, 0.6) : 0),
+    carob: ({ x, z, ny }) => (ny > 0.7 ? 0.04 * patch(x, z, 7, 0.1, 0.5) : 0),
     maquis: ({ ny, g }) => (ny > 0.5 ? 0.6 * (g.grass + g.rock * 0.5) : 0),
     grass_dry: ({ g }) => 40 * g.grass,
     boulder: ({ ny, g }) => 0.35 * g.rock + (ny < 0.8 ? 0.3 : 0),
   },
-  greece: {
-    // olive groves in rows on the plain, patchy
-    olive: ({ x, z, h, ny }) => (ny > 0.85 && h < 30 ? 0.55 * smooth(-0.15, 0.2, fbm(x * 0.004 + 7, z * 0.004)) : 0),
-    aleppo_pine: ({ x, z, h, ny }) => (ny > 0.55 ? 0.06 * smooth(15, 50, h) + 0.02 * smooth(0.3, 0.6, fbm(x * 0.01, z * 0.01)) : 0),
-    cypress: ({ x, z }) => 0.012 * smooth(0.3, 0.6, fbm(x * 0.01 + 4, z * 0.01)),
-    maquis: ({ ny, g }) => (ny > 0.5 ? 0.9 * (g.grass + g.rock * 0.6) : 0),
+  francia: {
+    // elms and oaks in the closes, apple orchards, poplars and willows, lush grass
+    oak: ({ x, z }) => 0.04 * patch(x, z, 4, 0.0, 0.4),
+    elm: ({ x, z }) => 0.04 * patch(x, z, 6, 0.1, 0.45),
+    poplar: ({ x, z }) => 0.05 * patch(x, z, 2, 0.2, 0.5, 0.03),
+    willow: ({ x, z }) => 0.03 * patch(x, z, 8, 0.3, 0.6),
+    apple: ({ x, z, ny }) => (ny > 0.9 ? 0.3 * patch(x, z, 9, 0.15, 0.45, 0.012) : 0),
+    grass: ({ g }) => 80 * g.grass,
+  },
+  tang: {
+    // Chinese pines and arborvitae round the monastery and on the hill behind it, elms and poplars
+    // by the courtyard houses, jujubes in the yards, dry grass on the loess
+    chinese_pine: ({ x, z, h }) => 0.06 * smooth(3, 14, h) + 0.02 * patch(x, z, 1, 0.2, 0.5),
+    arborvitae: ({ x, z }) => 0.03 * patch(x, z, 5, 0.2, 0.5, 0.03),
+    elm: ({ x, z }) => 0.03 * patch(x, z, 3, 0.0, 0.4),
+    poplar: ({ x, z }) => 0.05 * patch(x, z, 8, 0.15, 0.45, 0.03),
+    jujube: ({ x, z }) => 0.04 * patch(x, z, 6, 0.1, 0.4),
+    maquis: ({ ny, g }) => (ny > 0.5 ? 0.3 * (g.grass + g.rock * 0.5) : 0),
     grass_dry: ({ g }) => 45 * g.grass,
-    boulder: ({ ny, g }) => 0.25 * g.rock + (ny < 0.8 ? 0.4 : 0),
+    boulder: ({ g }) => 0.3 * g.rock,
+  },
+  heian: {
+    // red pines by the pond and the houses, maples, bamboo groves at the quarter's edge, willows
+    // and reeds at the water, cryptomerias, moss-green grass
+    red_pine: ({ x, z }) => 0.05 * patch(x, z, 2, 0.1, 0.45),
+    sugi: ({ x, z }) => 0.03 * patch(x, z, 8, 0.3, 0.6, 0.015),
+    maple: ({ x, z }) => 0.05 * patch(x, z, 6, 0.05, 0.45),
+    bamboo: ({ x, z }) => 0.5 * patch(x, z, 3, 0.32, 0.55, 0.03),
+    willow: ({ w }) => (w > 1 && w < 14 ? 0.12 : 0),
+    reeds: ({ w }) => (w > -3 && w < 4 ? 2.2 : 0),
+    grass: ({ g }) => 80 * g.grass,
+    boulder: ({ ny, g }) => (ny < 0.85 ? 0.2 * g.rock : 0),
+  },
+  india: {
+    // teak and neem on the hill of Sanchi, a few great banyans by the lanes, palmyra palms, acacias
+    // and scrub, dry grass
+    teak: ({ x, z, h, ny }) => (ny > 0.6 ? 0.05 * smooth(4, 18, h) + 0.02 * patch(x, z, 3, 0.1, 0.5) : 0),
+    neem: ({ x, z }) => 0.03 * patch(x, z, 7, 0.0, 0.45),
+    banyan: ({ x, z, h }) => (h < 6 ? 0.012 * patch(x, z, 1, 0.3, 0.6, 0.012) : 0),
+    date_palm: ({ x, z }) => 0.1 * patch(x, z, 4, 0.2, 0.5),
+    acacia: ({ x, z, g }) => 0.03 * g.grass * patch(x, z, 9, 0.2, 0.6),
+    maquis: ({ ny, g }) => (ny > 0.5 ? 0.35 * (g.grass + g.rock * 0.5) : 0),
+    grass_dry: ({ g }) => 45 * g.grass,
+    boulder: ({ ny, g }) => 0.3 * g.rock + (ny < 0.8 ? 0.2 : 0),
   },
 };
 
 /** Species that grow in rows (orchards), with their spacing in metres. */
 export const ROWS = { olive: 9, apple: 8 };
 
-/** All the species and densities at a place, blended across region boundaries. */
+/** All the species and densities at a place, blended across the districts' borders. */
 export function densities(x, z, place) {
   if (inSite(x, z) || inClear(x, z) || nearRoad(x, z)) return null;
+  // in a built block only grass grows between the houses
+  if (inQuarter(x, z)) { const g = (place.g?.grass || 0) * 40; return g > 0 ? { grass: g } : null; }
   const W = regionWeights(x, z), out = {};
-  // in a town only grass grows between the houses
-  if (inTown(x, z)) { const g = (place.g?.grass || 0) * 40; return g > 0 ? { grass: g } : null; }
+  // the garden blocks are planted thick: groves, orchards, a garden's trees (to the species' limit)
+  const k = inGarden(x, z) ? 4 : 1;
   REGIONS.forEach((r, i) => {
     if (W[i] < 0.02) return;
-    for (const [sp, f] of Object.entries(RULES[r.id] || {})) out[sp] = (out[sp] || 0) + W[i] * Math.max(0, f(place));
+    for (const [sp, f] of Object.entries(RULES[r.id] || {})) out[sp] = (out[sp] || 0) + W[i] * Math.max(0, f(place)) * (NEAR_ONLY.has(sp) || sp === 'boulder' ? 1 : k);
   });
+  if (k > 1) for (const sp in out) out[sp] = Math.min(out[sp], MAX_DENSITY[sp] ?? out[sp]);
   return out;
 }
 

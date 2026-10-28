@@ -77,6 +77,8 @@ The mosaic ornament (acanthus scrolls, vases, jewels, trees), the inscription ba
 
 The esplanade of the Haram on Mount Moriah, with olive trees and cypresses; the Kidron valley and the Mount of Olives to the east; the city on its hills west and south: houses of stone with flat roofs and small domes [inferred: the vernacular of the Levant, vaulted rooms with domed roofs]. **Built (L2):** the platform with its stairs, the Dome of the Chain, the esplanade, the town (`src/world/features/`). *L4: the Aqsa mosque, the Haram's walls and gates.*
 
+**In the city (2026-10-28):** Moriah is scaled to the Levant district (14 m, its gentle side west, where the way from the east avenue comes up to the esplanade and the platform's west stairs); the Kidron and the Mount of Olives are not shown; domed stone houses fill the district's blocks.
+
 ## 11. Music
 
 In the shrine no instruments: the human voice — the call to prayer and the recitation of the Qur'an, unaccompanied, melismatic. In the Umayyad town: the oud (lute), the reed flute (ney/qasaba) and the frame drum (daff). [general musicology; e.g. H. G. Farmer, *A History of Arabian Music* (1929)] Our synthesis (`src/buildings/dome-of-the-rock/music.js`): inside, a single voice in a slow, ornamented line over a soft drone, in a mode with a neutral (three-quarter-tone) second (Bayati-like, on D); outside, the oud and the reed flute with the frame drum. The modern maqam system is later; the neutral intervals are attested in early Arab theory (Farmer). [inferred]

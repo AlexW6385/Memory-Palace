@@ -75,6 +75,8 @@ Daylight only through the five doors and the two slatted windows, falling deep i
 
 Loess hills, terraced fields, Chinese pines and arborvitae on the slopes, elms and poplars in the valley; the monastery's terraces, its wall and gate, the Tang pillar and the old pagoda; a village of courtyard houses of grey brick and earth with tiled roofs below. [inferred] **Built (L2):** the three terraces and stairs, the dhāraṇī pillar, the Zushi pagoda, the gate, the village (`src/world/features/`). *L4: the Manjuśrī Hall (1137) and other buildings of later periods are not shown.*
 
+**In the city (2026-10-28):** the terraces stand in the Tang district, climbing east toward a wooded slope (18 m) that stands for Foguang Mountain; grey-brick courtyard houses fill the district's blocks; the loess hills and terraced fields are not shown.
+
 ## 11. Music
 
 Tang Buddhist liturgy: chanted sutras (*fanbai*) on a pentatonic scale, marked by the wooden fish (*muyu*) and the bowl-bell (*qing*); outside, the court and banquet music of the Tang (*yanyue*) with the pipa (plucked lute), the vertical flute (*xiao*) and the mouth organ (*sheng*). [general musicology, e.g. L. Picken (ed.), *Music from the Tang Court*] Our synthesis (`src/buildings/foguang-east-hall/music.js`): inside, a chanting voice on the *gong* pentatonic mode over a drone, the wooden fish keeping a steady beat, the bell now and then; outside, the pipa and the flute.

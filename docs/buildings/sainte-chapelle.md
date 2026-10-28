@@ -72,6 +72,8 @@ Upper chapel: almost all wall is glass — coloured light, dominated by red and 
 
 The Palais de la Cité (towers with conical roofs, the great hall), a town of timber-framed houses with steep gables, the Seine with its willows; meadows, orchards and vineyards on the hills around Paris; elms, oaks, poplars. [inferred: setting] **Built (L2):** the courtyard and its stair, a few palace towers, the town (`src/world/features/`). *L4: Notre-Dame (under construction in 1248), the Grand-Salle.*
 
+**In the city (2026-10-28):** the courtyard stands in the Francia district of the compact city, among blocks of timber-framed houses with elms, oaks and apple orchards in their gardens; the Seine is not shown.
+
 ## 11. Music
 
 Paris in the 1240s: the polyphony of the Notre-Dame school — Léonin and Pérotin — organum: a plainchant tenor held in long notes while one to three upper voices move above it in the rhythmic modes (long–short patterns in triple time); plainchant alone in the daily office. [general musicology, e.g. R. Hoppin, *Medieval Music* (1978)] Our synthesis (`src/buildings/sainte-chapelle/music.js`): in the upper chapel a held tenor (on D) with an upper voice moving in the first rhythmic mode in a resonant room; in the lower chapel plainchant alone; outside, a vielle-like bowed drone and bells.

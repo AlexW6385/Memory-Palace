@@ -37,17 +37,36 @@ function norm([x0, z0, x1, z1]) { return [Math.min(x0, x1), Math.min(z0, z1), Ma
  * Geometry is in world coordinates (the placement is applied); colliders too.
  */
 export function buildPlan(plan) {
+  const ctx = startBuild(plan);
+  for (const el of plan.elements) buildElement(el, ctx);
+  return finishBuild(ctx);
+}
+
+/**
+ * The same, a little at a time: it gives the browser back its frame every `budget` ms, so that a
+ * large building being raised does not freeze the view (the travel fade, the walking).
+ */
+export async function buildPlanAsync(plan, budget = 6) {
+  const ctx = startBuild(plan);
+  let t = performance.now();
+  for (const el of plan.elements) {
+    buildElement(el, ctx);
+    if (performance.now() - t > budget) { await new Promise((r) => setTimeout(r, 0)); t = performance.now(); }
+  }
+  return finishBuild(ctx);
+}
+
+function startBuild(plan) {
   const style = STYLES[plan.style];
   if (!style) throw new Error(`style ${plan.style} not registered`);
-  const bag = new GeoBag();
-  const col = new Colliders();
-  const lights = [];
-  const ctx = { bag, col, lights, style, plan };
-  for (const el of plan.elements) {
-    const fn = GENERIC[el.t] || style.elements?.[el.t];
-    if (!fn) throw new Error(`${plan.id}: no builder for element type ${el.t}`);
-    fn(el, ctx);
-  }
+  return { bag: new GeoBag(), col: new Colliders(), lights: [], style, plan };
+}
+function buildElement(el, ctx) {
+  const fn = GENERIC[el.t] || ctx.style.elements?.[el.t];
+  if (!fn) throw new Error(`${ctx.plan.id}: no builder for element type ${el.t}`);
+  fn(el, ctx);
+}
+function finishBuild({ bag, col, lights, plan }) {
   const m = placement(plan);
   const parts = bag.merged();
   for (const p of parts) { p.geometry.applyMatrix4(m); p.geometry.computeBoundingBox(); p.geometry.computeBoundingSphere(); }

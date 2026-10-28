@@ -70,6 +70,8 @@ Open sky; the region's winter afternoon sun in the south-west throws the gateway
 
 The hill's flat top with Stupa 3, the Ashoka pillar and a monastery; dry deciduous forest on the slopes (teak, neem, banyan, palmyra palms), fields and a village on the plain. [inferred] **Built (L2):** Stupa 3, the pillar, the monastery, the village (`src/world/features/`). *L4: Stupa 2 down the slope, Temple 40, the Gupta temples and later monasteries are not shown.*
 
+**In the city (2026-10-28):** the hill is scaled to the Indian district (22 m, its gentle side north toward the lower avenue, from which the way climbs to the hilltop and round to the south gateway); limewashed houses under tiles fill the blocks round its foot, with neem, banyans and palms.
+
 ## 11. Music
 
 No music of the period survives in notation; the early Buddhist recitation of the texts in Pali, the conch, bells and the vina are attested in reliefs and texts of the time. [general musicology, e.g. L. Rowell, *Music and Musical Thought in Early India*] Our synthesis (`src/buildings/sanchi-great-stupa/music.js`): a drone of the tonic and fifth (as of the tanpura, later), a plucked string in a slow raga-like mode, a recited chant near the stupa, bells.

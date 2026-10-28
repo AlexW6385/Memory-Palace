@@ -75,6 +75,8 @@ The hall faces the sunrise: the region's early-morning sun, low in the east-sout
 
 The Uji River close by on the east, wooded hills on the west; the pond with its island and pebble shores; Japanese red pines, maples (in autumn colour), cryptomerias and bamboo groves on the hills; reeds by the river; rice fields on the plain; a village of wooden houses with tiled and bark roofs. [inferred] **Built (L2):** the pond and island, the bridge, the lantern, the village (`src/world/features/`). *L4: the bell tower, the Kannon-dō and the later sub-temples are not shown.*
 
+**In the city (2026-10-28):** the pond and island stand in the Heian district of the compact city; timber houses under bark and thatch fill its blocks, with red pines, maples and bamboo in the gardens; the Uji River and the hills are not shown.
+
 ## 11. Music
 
 The music of the Heian court, *gagaku* (*tōgaku*): the mouth organ *shō* holding clusters, the double-reed *hichiriki* and the flute *ryūteki* in a slow heterophonic melody, the *biwa* and *koto* marking the beats; Buddhist chant (*shōmyō*) in the halls. [general musicology, e.g. W. P. Malm, *Traditional Japanese Music and Musical Instruments*] Our synthesis (`src/buildings/byodo-in-phoenix-hall/music.js`): outside, sustained shō-like clusters, a flute melody and a plucked koto on a pentatonic mode; inside, a chanting voice and a small bell.

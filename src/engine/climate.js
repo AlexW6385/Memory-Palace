@@ -1,11 +1,10 @@
-// Climate, weather and the time of day. Days pass (a day lasts DAY_SECONDS): the sun follows each
-// region's course for its latitude and season, sets, and the full moon and the stars come out;
-// or the time can be held (`baked`: each region at the moment its buildings' light was baked).
-// Each region also has a weather cycle drawn from its climate; the visitor's position blends the
-// regions across their boundaries. Drives the sun and moon light, the sky, the fog, cloud
+// Climate, weather and the time of day. The city has one sky (CITY in regions.js): days pass (a
+// day lasts DAY_SECONDS), the sun follows its course, sets, and the full moon and the stars come
+// out; or an hour is held; or `baked`: each district under the sky of the moment its building's
+// light was baked. The weather walks slowly through the city's states. Drives the sun and moon light, the sky, the fog, cloud
 // shadows, rain and wetness, the strength of the baked light, and gives the base exposure.
 
-import { REGIONS, regionWeights, sunDirection, sunAt, skyRadiance } from '../world/regions.js';
+import { CITY, regionAt, sunDirection, sunAt, skyRadiance } from '../world/regions.js';
 import { ENV } from './env.js';
 
 const params = new URLSearchParams(location.search);
@@ -18,7 +17,7 @@ const MOON = [0.55, 0.64, 0.9];
 function rng(seed) { let s = seed >>> 0 || 1; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
 const lerp = (a, b, t) => a + (b - a) * t;
 
-/** Weather of one region: a slow random walk through its states, each held for minutes. */
+/** The weather: a slow random walk through its states, each held for minutes. */
 class RegionWeather {
   constructor(region, seed) {
     this.r = region; this.rand = rng(seed);
@@ -56,11 +55,11 @@ export class Climate {
   constructor(renderer) {
     this.R = renderer;
     this.indoors = 0;              // 0 outdoors … 1 under a roof (set by the frame loop)
-    this.weather = REGIONS.map((r, i) => new RegionWeather(r, 7919 * (i + 1) + (Date.now() / 3.6e6 | 0)));
-    this.hemi = REGIONS.map((r) => hemisphere(r.climate));
+    this.weather = new RegionWeather(CITY, 7919 + (Date.now() / 3.6e6 | 0));
+    this.hemis = new Map();
     this.state = null;
     this.wet = 0;
-    // the time: 'cycle' (days pass), 'baked' (each region's baked moment) or an hour held fixed
+    // the time: 'cycle' (days pass), 'baked' (each district's baked moment) or an hour held fixed
     this.mode = 'cycle';
     this.hour = 16.5;
   }
@@ -72,18 +71,19 @@ export class Climate {
     else if (hour !== undefined) this.hour = hour;
   }
 
-  /** Blend the regions at (x, z) and apply the result. Returns the blended state. */
+  /** The sky at (x, z) now: the city's, or (baked) the district's. Applies it and returns the state. */
   update(x, z, dt) {
-    for (const w of this.weather) w.update(dt);
+    this.weather.update(dt);
     if (this.mode === 'cycle') this.hour = (this.hour + dt * 24 / DAY_SECONDS) % 24;
-    const W = regionWeights(x, z);
+    const zone = this.mode === 'baked' ? regionAt(x, z) : CITY;
+    if (!this.hemis.has(zone.id)) this.hemis.set(zone.id, hemisphere(zone.climate));
+    const hemi = this.hemis.get(zone.id);
     const acc = { sun: [0, 0, 0], sunColor: [0, 0, 0], zen: [0, 0, 0], hor: [0, 0, 0], fogColor: [0, 0, 0], fog: 0, falloff: 0, clouds: 0, density: 0,
       turb: 0, ray: 0, mie: 0, mieG: 0, exposure: 0, wind: [0, 0], rain: 0, sunFactor: 0, sky: [0, 0, 0], ground: [0, 0, 0], windy: 0,
       day: 0, moon: [0, 0, 0], moonLight: 0, sunEl: 0 };
-    REGIONS.forEach((r, i) => {
-      const w = W[i];
-      if (w <= 0) return;
-      const c = r.climate, wx = this.weather[i].get();
+    {
+      const w = 1;
+      const c = zone.climate, wx = this.weather.get();
       // the sun at this hour; its light reddens and fades as it sinks, and is gone below the horizon
       const baked = this.mode === 'baked';
       const S = baked ? { dir: sunDirection(c), el: c.sun.el } : sunAt(c, this.hour);
@@ -99,8 +99,8 @@ export class Climate {
         acc.zen[k] += w * lerp(0.004 + k * 0.002, c.sky.zenith[k] * lerp(1, 0.8, wx.clouds), day);
         acc.hor[k] += w * lerp(0.006 + k * 0.003, lerp(c.sky.horizon[k], 0.3, wx.clouds * 0.6), day);
         acc.fogColor[k] += w * wx.fogColor[k] * (0.06 + 0.94 * day) * (k === 2 ? 1 : 0.85 + 0.15 * day);
-        acc.sky[k] += w * (this.hemi[i].sky[k] * day + 0.012 * MOON[k] * moonUp);
-        acc.ground[k] += w * this.hemi[i].ground[k] * (0.4 + 0.6 * wx.sun) * day;
+        acc.sky[k] += w * (hemi.sky[k] * day + 0.012 * MOON[k] * moonUp);
+        acc.ground[k] += w * hemi.ground[k] * (0.4 + 0.6 * wx.sun) * day;
       }
       acc.moonLight += w * moonUp * (0.35 + 0.65 * wx.sun);
       acc.day += w * day; acc.sunEl += w * el;
@@ -109,7 +109,7 @@ export class Climate {
       acc.turb += w * c.sky.turbidity * (1 + wx.clouds); acc.ray += w * c.sky.rayleigh; acc.mie += w * c.sky.mie * (1 + wx.fog * 0.3); acc.mieG += w * c.sky.mieG;
       acc.exposure += w * c.exposure; acc.wind[0] += w * c.wind[0] * (1 + 2 * wx.windy); acc.wind[1] += w * c.wind[1] * (1 + 2 * wx.windy);
       acc.rain += w * wx.rain; acc.sunFactor += w * wx.sun; acc.windy += w * wx.windy;
-    });
+    }
     const l = Math.hypot(...acc.sun) || 1;
     acc.sun = acc.sun.map((v) => v / l);
     const lm = Math.hypot(...acc.moon) || 1;
@@ -118,7 +118,7 @@ export class Climate {
     this.wet += (acc.rain > 0.3 ? (1 - this.wet) * dt / 50 : -this.wet * dt / 400);
     this.wet = Math.min(1, Math.max(0, this.wet));
     this.apply(acc, dt);
-    this.state = { ...acc, wet: this.wet, ids: this.weather.map((w) => w.get().id), weights: W };
+    this.state = { ...acc, wet: this.wet, ids: [this.weather.get().id], zone: zone.id };
     return this.state;
   }
 

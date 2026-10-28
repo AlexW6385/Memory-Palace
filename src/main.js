@@ -16,7 +16,7 @@ const params = new URLSearchParams(location.search);
 // the default picture quality follows the machine: 'high' only on machines with many cores and
 // much memory (a laptop with 8 cores and 8 GB starts at 'medium'; the setting can be changed)
 const strong = (navigator.hardwareConcurrency || 4) >= 10 && (navigator.deviceMemory || 8) >= 8;
-const settings = load('mp.settings', { quality: strong ? 'high' : 'medium', music: 0.6, sensitivity: 1, timeRuns: true, hour: 16.5, speed: 0 });
+const settings = load('mp.settings', { quality: strong ? 'high' : 'medium', music: 0.6, sensitivity: 1, timeRuns: true, hour: 16.5 });
 if (params.get('quality')) settings.quality = params.get('quality');
 
 function load(k, d) { try { return { ...d, ...JSON.parse(localStorage.getItem(k) || '{}') }; } catch { return d; } }
@@ -81,7 +81,7 @@ async function main() {
   if (!navigator.gpu) { $('notice').textContent = t('no-webgpu'); $('notice').hidden = false; setTimeout(() => { $('notice').hidden = true; }, 12000); }
 
   // timings of the start, in the console (and kept for the next visit's estimate)
-  const T0 = performance.now(), times = {};
+  let T0 = performance.now(), times = {};
   const mark = (k) => { times[k] = Math.round(performance.now() - T0); };
   progress.set('start', 0.15);
   const R = await new Renderer(canvas).init(settings.quality);
@@ -154,8 +154,6 @@ async function main() {
   $('corner').hidden = false;
   $('stick').hidden = !controls.touch;
   $('touch-btns').hidden = !controls.touch;
-  $('btn-jump').onclick = () => controls.jump();
-  $('btn-speed').onclick = () => controls.setSpeed((controls.speed + 1) % 4);
   controls.enabled = true;
   hint.hidden = controls.touch;
   const panelsOpen = () => !mapPanel.hidden || !setPanel.hidden;
@@ -176,16 +174,23 @@ async function main() {
   const travel = async (fn) => {
     closePanels(); toast(t('travelling'));
     fade.hidden = false; requestAnimationFrame(() => fade.classList.add('on'));
+    T0 = performance.now(); times = {};
+    // the notice counts down what is still being made ready
+    const f = { build: 0, land: 0, plants: 0 };
+    const report = (stage, v) => { f[stage] = v; toast(`${t('travelling')} ${Math.round((f.build * 0.45 + f.land * 0.35 + f.plants * 0.2) * 90)}%`); };
     try {
-      await fn();
+      await fn(report);
       world.update(R.camera.position);
+      toast(`${t('travelling')} 95%`);
       await R.warmup();
+      mark('shaders');
+      console.info('[memory palace] travel (ms):', JSON.stringify(times));
     } finally {
       toast(''); fade.classList.remove('on'); setTimeout(() => { fade.hidden = true; }, 400);
     }
   };
-  const mapView = new MapView(world, (rec) => travel(() => goTo(rec)), (x, z) => travel(async () => {
-    await arrive(x, z);
+  const mapView = new MapView(world, (rec) => travel((report) => goTo(rec, report)), (x, z) => travel(async (report) => {
+    await arrive(x, z, report);
     const y = world.collide.groundAt(x, z, world.collide.terrain(x, z) + 2);
     // face the nearest building, so that one arrives looking at something
     let yaw = controls.yaw, best = Infinity;
@@ -223,7 +228,7 @@ async function main() {
   const q = $('set-quality'), mv = $('set-music'), sv = $('set-sens'), lang = $('set-lang');
   q.value = settings.quality; mv.value = settings.music; sv.value = settings.sensitivity;
   // the clock beside the small map: the hour (drag to change it) and run / hold
-  const clockTime = $('clock-time'), clockHour = $('clock-hour'), clockPlay = $('clock-play'), clockIcon = $('clock-icon');
+  const clockTime = $('clock-time'), clockHour = $('clock-hour'), clockPlay = $('clock-play'), clockIcon = $('clock-icon'), clockPeriod = $('clock-period');
   const paintClock = () => {
     const h = climate.hour, hh = Math.floor(h) % 24, mm = Math.floor((h - Math.floor(h)) * 60);
     clockTime.textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
@@ -231,8 +236,11 @@ async function main() {
     const runs = climate.mode === 'cycle';
     clockPlay.textContent = runs ? '❚❚' : '▶';
     const day = climate.state?.day ?? 1;
-    clockIcon.style.background = day > 0.5 ? '#ffcf6e' : '#cdd6ee';
-    clockIcon.style.boxShadow = day > 0.5 ? '0 0 8px #ffcf6e' : 'inset -4px -1px 0 #6f7891';
+    clockIcon.style.background = day > 0.5 ? '#ffcf6e' : '#dfe5f5';
+    clockIcon.style.boxShadow = day > 0.5 ? '0 0 10px #ffcf6e' : 'inset -4px -1px 0 #7d86a0, 0 0 6px rgba(200, 210, 240, 0.5)';
+    const periods = t('periods'), bounds = [5, 7, 11, 14, 17.5, 20, 22];
+    let k = bounds.findIndex((b) => h < b); if (k < 0) k = 7;
+    clockPeriod.textContent = periods[k];
   };
   clockHour.oninput = () => {
     climate.hour = +clockHour.value % 24;
@@ -247,12 +255,23 @@ async function main() {
   setInterval(() => { paintClock(); settings.hour = climate.hour; }, 1000);
   setInterval(save, 15000);
   paintClock();
-  // the walking speed: shown beside the clock, flashing when it changes
-  const speedEl = $('speed');
-  const paintSpeed = (i) => { speedEl.textContent = `${t('speeds')[i]} · ${t('speed-hint')}`; speedEl.classList.add('flash'); clearTimeout(paintSpeed.t); paintSpeed.t = setTimeout(() => speedEl.classList.remove('flash'), 1200); };
-  controls.onSpeed = (i) => { settings.speed = i; save(); paintSpeed(i); };
-  controls.setSpeed(settings.speed || 0);
-  onLang(() => { paintSpeed(controls.speed); paintClock(); });
+  // how the visitor is moving, under the clock: walking, running or flying, how fast, how high
+  const gaitIcon = $('gait-icon'), speedName = $('speed-name'), speedKmh = $('speed-kmh'), speedAlt = $('speed-alt'), speedBar = $('speed-bar');
+  const GLYPH = { still: '•', walk: '›', run: '»', fly: '⌃' };
+  const paintSpeed = () => {
+    const g = controls.gait, F = controls.feet;
+    if (gaitIcon.textContent !== GLYPH[g]) gaitIcon.textContent = GLYPH[g];
+    const name = t('gaits')[g];
+    if (speedName.textContent !== name) speedName.textContent = name;
+    const kmh = Math.round(controls.speedNow * 3.6);
+    speedKmh.textContent = String(kmh);
+    const up = g === 'fly' ? Math.max(0, F.y - world.collide.groundAt(F.x, F.z, F.y + 0.01)) : 0;
+    speedAlt.textContent = up >= 1 ? `${Math.round(up)} ${t('above-ground')}` : '';
+    speedBar.style.width = `${Math.min(100, kmh / 65 * 100)}%`;
+    speedBar.classList.toggle('fly', g === 'fly');
+  };
+  setInterval(paintSpeed, 250);
+  onLang(() => { paintSpeed(); paintClock(); });
   q.onchange = () => { settings.quality = q.value; R.setQuality(q.value); world.flora.scale = floraScale[q.value] ?? 1; world.flora.dirty = true; save(); };
   mv.oninput = () => { settings.music = +mv.value; music.setVolume(settings.music); save(); };
   sv.oninput = () => { settings.sensitivity = +sv.value; controls.sensitivity = settings.sensitivity; save(); };
