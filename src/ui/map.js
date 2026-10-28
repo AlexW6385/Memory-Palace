@@ -4,7 +4,7 @@
 
 import { tr, t } from './i18n.js';
 import { WORLD } from '../world/regions.js';
-import { terrainHeight, regionWeights, REGIONS, inPond } from '../world/regions.js';
+import { terrainHeight, regionWeights, REGIONS, inPond, inCity } from '../world/regions.js';
 
 export class MapView {
   constructor(world, onJump, onGo) {
@@ -140,14 +140,13 @@ export class MapView {
     const g = cv.getContext('2d'), img = g.createImageData(W, H);
     const h = new Float32Array((W + 1) * (H + 1));
     for (let j = 0; j <= H; j++) for (let i = 0; i <= W; i++) h[j * (W + 1) + i] = terrainHeight(rect[0] + i * S, rect[1] + j * S);
-    const tint = { nile: [196, 170, 128], rome: [150, 152, 112], greece: [170, 140, 110], byzantium: [140, 150, 120], levant: [180, 160, 125], francia: [130, 150, 105], tang: [176, 152, 110], heian: [120, 140, 100], india: [172, 148, 112] };
     for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
       const x = rect[0] + i * S, z = rect[1] + j * S, y = h[j * (W + 1) + i];
       const dx = h[j * (W + 1) + i + 1] - y, dz = h[(j + 1) * (W + 1) + i] - y;
       const shade = Math.max(0.35, Math.min(1.25, 0.9 - (dx * 0.7 + dz * 0.7) / S * 0.9));
       const w = regionWeights(x, z);
       let c = [0, 0, 0];
-      REGIONS.forEach((r, k) => { for (let q = 0; q < 3; q++) c[q] += w[k] * tint[r.id][q]; });
+      REGIONS.forEach((r, k) => { for (let q = 0; q < 3; q++) c[q] += w[k] * r.tint[q]; });
       const lift = Math.min(1, y / 120) * 30;
       c = c.map((v) => v * shade + lift);
       if (inPond(x, z)) c = [52, 82, 92];
@@ -220,8 +219,7 @@ export class MapView {
     }
     if (near && (nd < 25 || nd * this.view.s < 40 * devicePixelRatio)) { this.onJump(near); return; }
     // anywhere else in the city (not in a pond, not beyond its edge)
-    const [X0, Z0, X1, Z1] = WORLD.bounds;
-    if (x < X0 + 5 || x > X1 - 5 || z < Z0 + 5 || z > Z1 - 5) return;
+    if (inCity(x, z) < 5) return;
     if (inPond(x, z)) return;
     this.onGo?.(x, z);
   }

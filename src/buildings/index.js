@@ -11,4 +11,5 @@ export const BUILDINGS = [
   { id: 'foguang-east-hall', district: 'tang', load: () => import('./foguang-east-hall/index.js') },
   { id: 'byodo-in-phoenix-hall', district: 'heian', load: () => import('./byodo-in-phoenix-hall/index.js') },
   { id: 'sanchi-great-stupa', district: 'india', load: () => import('./sanchi-great-stupa/index.js') },
+  { id: 'sainte-foy-conques', district: 'rouergue', load: () => import('./sainte-foy-conques/index.js') },
 ];

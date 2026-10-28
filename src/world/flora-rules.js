@@ -5,7 +5,7 @@
 // The reasoning for each district's planting is in its building's dossier (§10) and docs/world.md.
 
 import { REGIONS, regionWeights, pondDistance, SITES, fbm, nearRoad } from './regions.js';
-import { inQuarter, inGarden } from './city.js';
+import { inQuarter, inGarden, inSquare } from './city.js';
 
 const smooth = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
 
@@ -37,7 +37,7 @@ const patch = (x, z, k, lo = 0.0, hi = 0.4, f = 0.02) => smooth(lo, hi, fbm(x * 
  * Densities by district. Each function receives the place: { x, z, h (ground height),
  * ny (normal y), g (ground cover), w (distance from a pond's edge) } and returns plants per 100 m².
  */
-const RULES = {
+export const RULES = {
   nile: {
     // date palms in groves and by the houses, doum palms, sycamore figs in the yards, tamarisks and
     // acacias on the dry ground, halfa grass
@@ -133,6 +133,18 @@ const RULES = {
     grass_dry: ({ g }) => 45 * g.grass,
     boulder: ({ ny, g }) => 0.3 * g.rock + (ny < 0.8 ? 0.2 : 0),
   },
+  rouergue: {
+    // the slopes of Conques: oaks (and chestnuts, shown as oaks until they have their own form),
+    // walnuts and elms by the houses, apple trees in the terraced gardens, poplars low down,
+    // broom and box (as scrub) on the schist, green grass
+    oak: ({ x, z, h }) => 0.04 * patch(x, z, 3, 0.0, 0.4) + 0.04 * smooth(3, 12, h),
+    elm: ({ x, z }) => 0.03 * patch(x, z, 7, 0.1, 0.45),
+    apple: ({ x, z, ny }) => (ny > 0.88 ? 0.25 * patch(x, z, 5, 0.15, 0.45, 0.012) : 0),
+    poplar: ({ x, z }) => 0.03 * patch(x, z, 9, 0.25, 0.55, 0.03),
+    maquis: ({ ny, g }) => (ny > 0.5 ? 0.5 * (g.grass * 0.4 + g.rock) : 0),
+    grass: ({ g }) => 80 * g.grass,
+    boulder: ({ ny, g }) => (ny < 0.9 ? 0.3 * g.rock : 0),
+  },
 };
 
 /** Species that grow in rows (orchards), with their spacing in metres. */
@@ -140,7 +152,7 @@ export const ROWS = { olive: 9, apple: 8 };
 
 /** All the species and densities at a place, blended across the districts' borders. */
 export function densities(x, z, place) {
-  if (inSite(x, z) || inClear(x, z) || nearRoad(x, z)) return null;
+  if (inSite(x, z) || inClear(x, z) || nearRoad(x, z) || inSquare(x, z)) return null;
   // in a built block only grass grows between the houses
   if (inQuarter(x, z)) { const g = (place.g?.grass || 0) * 40; return g > 0 ? { grass: g } : null; }
   const W = regionWeights(x, z), out = {};

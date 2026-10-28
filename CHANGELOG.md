@@ -2,6 +2,13 @@
 
 Newest first. What you can visit and what looks better, in plain words.
 
+## v7.1 — Romanesque: Sainte-Foy de Conques (2026-10-28)
+
+- **A new district, Rouergue,** at the west edge of the city beside Francia: a slope of schist and stone houses under steep stone-slab roofs, lanes, orchards, oaks and walnuts.
+- **Sainte-Foy de Conques** (c. 1050–1120), the pilgrimage church on the road to Santiago: enter under the tympanum of the Last Judgment into the tall, dim nave under its barrel vault, between arcades on piers with half-columns and the tribunes above; the crossing opens upward to the octagonal lantern on its squinches; the aisled transept with its two chapels; the choir behind iron grilles with the golden statue of the saint, the ambulatory round it and three chapels under half-domes. Red sandstone below, yellow limestone above. South of the nave, the cloister of Bégon with arcades on paired columns and its green serpentine basin.
+- **Music:** chant over the drone of an organistrum, an early organum voice in the choir, bells outside.
+- **A square in every district,** where the way to its building leaves the avenue: paved in the district's manner — flags, travertine, marble, pebbles, brick — with a well in the middle.
+
 ## v7.0 — One compact city (2026-10-28)
 
 - **The world is now one dense palace-city** instead of a land of separate valleys: nine districts of about 200 × 200 m that touch directly, each with its building and a small surrounding of its own time — streets and lanes, some 1,400 houses of the period (mud-brick tower and courtyard houses round Edfu, tiled houses in Rome, Athens and Constantinople, domed stone houses by the Haram, timber-framed houses in Paris, grey-brick courtyard houses at Foguang, timber houses at Uji, limewashed houses at Sanchi), gardens, its own trees and ground, and the rock, hill or pond it stands on. From Edfu it is a short walk to the Pantheon, up the Acropolis or across to Hagia Sophia.
